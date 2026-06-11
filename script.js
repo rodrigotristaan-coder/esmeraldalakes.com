@@ -2,8 +2,8 @@
    Esmeralda · Diamante Lakes — idioma (ES/EN) + reserva por la página
    =================================================================== */
 
-// 👉 AL DESPLEGAR: cambia apiBase por tu dominio HTTPS del bot, ej. "https://api.tudominio.com".
-const API_BASE = "http://localhost:8080";
+// Las funciones viven en el mismo dominio (Vercel) → rutas relativas.
+const API_BASE = "";
 
 const CONFIG = {
   bookingEndpoint: API_BASE + "/api/booking",
