@@ -1,6 +1,7 @@
-// Función serverless de Vercel: lee el calendario iCal de Airbnb en vivo
-// (del lado del servidor, sin problemas de CORS) y devuelve las fechas ocupadas.
-// El enlace iCal vive en las variables de entorno de Vercel.
+// Función serverless de Vercel: lee uno o varios calendarios iCal en vivo
+// (Airbnb + tu calendario de "Reservas directas") y devuelve TODAS las fechas
+// ocupadas combinadas, para que el calendario de la web no permita dobles reservas.
+// Los enlaces iCal viven en variables de entorno de Vercel.
 
 function matchDate(block, field) {
   const re = new RegExp(field + "[^:\\n]*:(\\d{8})");
@@ -10,32 +11,37 @@ function matchDate(block, field) {
   return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
 }
 
-function parseICal(text) {
+function parseICal(text, source) {
   const out = [];
   const blocks = text.split("BEGIN:VEVENT").slice(1);
   for (const blk of blocks) {
     const start = matchDate(blk, "DTSTART");
     const end = matchDate(blk, "DTEND");
-    if (start && end) out.push({ start, end, source: "airbnb" });
+    if (start && end) out.push({ start, end, source });
   }
   return out;
 }
 
-module.exports = async (req, res) => {
-  res.setHeader("Content-Type", "application/json");
-  // Cachea 1h en el borde de Vercel para no golpear a Airbnb en cada visita.
-  res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=86400");
-
-  const url = process.env.AIRBNB_ICAL_URL;
-  if (!url) return res.status(200).json({ blocked: [] });
-
+async function fetchBlocks(url, source) {
   try {
     const r = await fetch(url);
-    if (!r.ok) throw new Error("airbnb " + r.status);
-    const text = await r.text();
-    return res.status(200).json({ blocked: parseICal(text) });
+    if (!r.ok) throw new Error(source + " " + r.status);
+    return parseICal(await r.text(), source);
   } catch (err) {
-    console.error("Error leyendo iCal:", err.message);
-    return res.status(200).json({ blocked: [] });
+    console.error("iCal error:", err.message);
+    return [];
   }
+}
+
+module.exports = async (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=86400");
+
+  const sources = [
+    [process.env.AIRBNB_ICAL_URL, "airbnb"],
+    [process.env.DIRECT_ICAL_URL, "directo"], // tu calendario de reservas directas
+  ].filter(([url]) => Boolean(url));
+
+  const results = await Promise.all(sources.map(([url, src]) => fetchBlocks(url, src)));
+  return res.status(200).json({ blocked: results.flat() });
 };

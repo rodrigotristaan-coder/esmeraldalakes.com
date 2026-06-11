@@ -41,7 +41,7 @@ function applyLang(lang) {
 const T = {
   es: {
     sending: "Enviando tu solicitud…",
-    ok: "¡Solicitud enviada! Te contactaremos muy pronto para confirmar. 🌴",
+    ok: "✅ ¡Solicitud recibida! En breve te contactamos para confirmar disponibilidad, precio y forma de pago. ¡Gracias! 🌴",
     badDates: "Revisa las fechas: la salida debe ser posterior a la llegada.",
     noDates: "Elige tus fechas de llegada y salida en el calendario.",
     fail: "No pudimos enviar tu solicitud ahora. Inténtalo de nuevo o escríbenos directamente.",
@@ -53,7 +53,7 @@ const T = {
   },
   en: {
     sending: "Sending your request…",
-    ok: "Request sent! We’ll contact you very soon to confirm. 🌴",
+    ok: "✅ Request received! We’ll contact you shortly to confirm availability, price and payment. Thank you! 🌴",
     badDates: "Check the dates: check-out must be after check-in.",
     noDates: "Pick your check-in and check-out dates on the calendar.",
     fail: "We couldn’t send your request right now. Please try again or contact us directly.",
