@@ -93,7 +93,37 @@ img { max-width: 100%; display: block; }
   background-size: cover;
   background-position: center;
 }
-.hero__content { position: relative; max-width: var(--max); margin: 0 auto; padding: 7rem 1.5rem 4rem; }
+.hero__content { position: relative; z-index: 2; max-width: var(--max); margin: 0 auto; padding: 7rem 1.5rem 4rem; }
+
+/* Año junto al título */
+.hero__year {
+  font-family: "Inter", sans-serif; font-size: clamp(0.8rem, 1.6vw, 1.1rem); font-weight: 700;
+  color: var(--emerald-bright); border: 1.5px solid var(--emerald-bright); border-radius: 999px;
+  padding: 0.12em 0.6em; margin-left: 0.6rem; vertical-align: middle; letter-spacing: 0.06em;
+  position: relative; top: -0.5em;
+}
+
+/* Globo transparente con punto titilando en Acapulco */
+.hero__globe {
+  position: absolute; right: -40px; bottom: -50px; z-index: 1;
+  width: clamp(220px, 38vw, 460px); color: #ffffff; pointer-events: none;
+}
+.globe__svg { width: 100%; height: auto; display: block; }
+.globe__lines { fill: none; stroke: currentColor; stroke-width: 1; opacity: 0.22; }
+.globe__dot {
+  fill: var(--emerald-bright); filter: drop-shadow(0 0 6px var(--emerald-bright));
+  animation: globeBlink 1.6s ease-in-out infinite;
+}
+.globe__ring {
+  fill: none; stroke: var(--emerald-bright); stroke-width: 2;
+  transform-box: fill-box; transform-origin: center; animation: globePing 2.2s ease-out infinite;
+}
+.globe__label { fill: #eafff6; font: 700 11px "Inter", sans-serif; letter-spacing: 0.04em; }
+@keyframes globePing { 0% { transform: scale(1); opacity: 0.9; } 70%, 100% { transform: scale(3.4); opacity: 0; } }
+@keyframes globeBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@media (max-width: 540px) {
+  .hero__globe { width: 200px; right: -50px; bottom: -25px; opacity: 0.85; }
+}
 .hero__eyebrow { letter-spacing: 0.18em; text-transform: uppercase; font-size: 0.8rem; opacity: 0.9; margin-bottom: 0.8rem; }
 .hero__title { font-size: clamp(3.5rem, 11vw, 7rem); font-weight: 700; }
 .hero__sub { font-size: clamp(1.1rem, 3vw, 1.6rem); font-family: "Fraunces", serif; opacity: 0.95; margin-top: 0.2rem; }
