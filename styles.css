@@ -196,6 +196,10 @@ section { padding: 5rem 1.5rem; }
 .amen__card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
 .amen__ico { font-size: 2.2rem; display: block; margin-bottom: 0.6rem; }
 .amen__card h4 { font-size: 1rem; color: var(--emerald-dark); }
+.amen__card--photo { padding: 0; overflow: hidden; background: var(--white); }
+.amen__card--photo img { width: 100%; height: 150px; object-fit: cover; display: block; transition: transform .4s ease; }
+.amen__card--photo:hover img { transform: scale(1.06); }
+.amen__card--photo h4 { padding: 0.9rem 0.6rem; }
 
 /* ---------- Ubicación ---------- */
 .loc { background: var(--sand); }
