@@ -20,7 +20,7 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; width: 100%; }
 
 body {
   font-family: "Inter", system-ui, -apple-system, sans-serif;
@@ -31,9 +31,11 @@ body {
   overflow-x: hidden;
 }
 
-h1, h2, h3, h4 { font-family: "Fraunces", Georgia, serif; line-height: 1.1; font-weight: 600; }
+h1, h2, h3, h4 { font-family: "Fraunces", Georgia, serif; line-height: 1.1; font-weight: 600; overflow-wrap: break-word; }
 
-img { max-width: 100%; display: block; }
+img, svg, iframe, video { max-width: 100%; }
+img { display: block; }
+p, li, a, h1, h2, h3, h4, span { overflow-wrap: break-word; }
 
 /* ---------- Botones ---------- */
 .btn {
@@ -409,11 +411,15 @@ section { padding: 5rem 1.5rem; }
   section { padding: 4.5rem 1.5rem; }
 }
 
-/* Móviles pequeños */
-@media (max-width: 400px) {
-  .nav__brand { font-size: 1.2rem; }
-  .nav__inner { padding: 0.8rem 1rem; }
+/* Móviles (iPhone y similares) */
+@media (max-width: 480px) {
+  .nav__inner { padding: 0.7rem 0.9rem; gap: 0.5rem; }
+  .nav__brand { font-size: 1.15rem; }
+  .nav__right { gap: 0.5rem; }
+  .btn--sm { padding: 0.45rem 0.85rem; font-size: 0.82rem; }
+  .lang__btn { padding: 0.3rem 0.5rem; font-size: 0.72rem; }
   .hero__content { padding-top: 6rem; }
+  .hero__title { font-size: clamp(2.8rem, 13vw, 4.5rem); }
+  .hero__sub { font-size: 1.05rem; }
   .hero__stats { gap: 1.1rem; }
-  .lang__btn { padding: 0.3rem 0.55rem; }
 }
