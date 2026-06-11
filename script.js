@@ -235,15 +235,17 @@ document.addEventListener("DOMContentLoaded", () => {
     window.addEventListener("scroll", onScroll, { passive: true });
   }
 
-  // Botón flotante de WhatsApp
-  const wa = document.getElementById("wa-float");
-  if (wa && CONFIG.whatsappNumber) {
+  // Botones de WhatsApp (flotante + dentro del formulario)
+  if (CONFIG.whatsappNumber) {
     const lang = document.body.dataset.lang || "es";
     const msg = lang === "en"
       ? "Hi! I'm interested in the Esmeralda apartment at Diamante Lakes, Acapulco. Is it available?"
       : "¡Hola! Me interesa el departamento Esmeralda en Diamante Lakes, Acapulco. ¿Está disponible?";
-    wa.href = `https://wa.me/${CONFIG.whatsappNumber}?text=${encodeURIComponent(msg)}`;
-    wa.style.display = "inline-flex";
+    const waUrl = `https://wa.me/${CONFIG.whatsappNumber}?text=${encodeURIComponent(msg)}`;
+    const waFloat = document.getElementById("wa-float");
+    if (waFloat) { waFloat.href = waUrl; waFloat.style.display = "inline-flex"; }
+    const waBook = document.getElementById("book-wa");
+    if (waBook) { waBook.href = waUrl; waBook.style.display = "block"; }
   }
 
   // Galería: botón "ver más / ver menos"

@@ -284,6 +284,9 @@ section { padding: 5rem 1.5rem; }
 .book__status { margin-top: 0.9rem; font-size: 0.95rem; min-height: 1.2em; text-align: center; }
 .book__status--ok { color: var(--emerald-dark); font-weight: 600; }
 .book__status--err { color: #b23b3b; font-weight: 600; }
+.book__hint { font-size: 0.85rem; color: var(--emerald-dark); margin-bottom: 0.5rem; }
+.book__wa { display: block; text-align: center; margin-top: 0.9rem; color: #128C3F; font-weight: 700; text-decoration: none; }
+.book__wa:hover { text-decoration: underline; }
 .book__note { margin-top: 0.8rem; font-size: 0.82rem; color: var(--muted); text-align: center; }
 
 /* ---------- FAQ ---------- */
