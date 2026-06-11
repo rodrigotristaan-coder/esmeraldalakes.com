@@ -1,0 +1,16 @@
+# Secretos — NUNCA subir llaves, tokens ni credenciales
+.env
+.env.*
+*.key
+*.pem
+secrets/
+config.local.js
+
+# Dependencias / build
+node_modules/
+dist/
+.cache/
+
+# Sistema
+.DS_Store
+Thumbs.db
