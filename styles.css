@@ -92,7 +92,7 @@ p, li, a, h1, h2, h3, h4, span { overflow-wrap: break-word; }
   position: absolute; inset: 0;
   background-image:
     linear-gradient(120deg, rgba(10,89,68,0.82) 0%, rgba(15,122,95,0.55) 45%, rgba(10,40,35,0.55) 100%),
-    url("assets/images/pool-aerial.jpg");
+    url("assets/images/pool-aerial.webp");
   background-size: cover;
   background-position: center;
 }
@@ -172,7 +172,7 @@ section { padding: 5rem 1.5rem; }
 .rooms { max-width: var(--max); margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
 .room { background: var(--white); border-radius: var(--radius); padding: 1.8rem; box-shadow: var(--shadow); }
 .room__tag {
-  display: inline-block; background: var(--emerald-light); color: var(--white);
+  display: inline-block; background: var(--emerald-dark); color: var(--white);
   font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
   padding: 0.3rem 0.8rem; border-radius: 999px; margin-bottom: 1rem;
 }
@@ -195,11 +195,11 @@ section { padding: 5rem 1.5rem; }
 }
 .amen__card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
 .amen__ico { font-size: 2.2rem; display: block; margin-bottom: 0.6rem; }
-.amen__card h4 { font-size: 1rem; color: var(--emerald-dark); }
+.amen__card h3 { font-size: 1rem; color: var(--emerald-dark); }
 .amen__card--photo { padding: 0; overflow: hidden; background: var(--white); }
 .amen__card--photo img { width: 100%; height: 150px; object-fit: cover; display: block; transition: transform .4s ease; }
 .amen__card--photo:hover img { transform: scale(1.06); }
-.amen__card--photo h4 { padding: 0.9rem 0.6rem; }
+.amen__card--photo h3 { padding: 0.9rem 0.6rem; }
 
 /* ---------- Ubicación ---------- */
 .loc { background: var(--sand); }
@@ -215,7 +215,7 @@ section { padding: 5rem 1.5rem; }
 .loc__card:hover { transform: translateY(-4px); }
 .loc__card--wide { grid-column: span 4; }
 .loc__ico { font-size: 2rem; }
-.loc__card h4 { color: var(--emerald-dark); font-size: 1.05rem; }
+.loc__card h3 { color: var(--emerald-dark); font-size: 1.05rem; }
 .loc__link { color: var(--emerald); font-weight: 600; font-size: 0.9rem; }
 
 /* ---------- Seguridad ---------- */
@@ -225,7 +225,7 @@ section { padding: 5rem 1.5rem; }
   background: var(--sand); border-radius: var(--radius); padding: 2rem 1rem; text-align: center;
   border: 1px solid #e0e8e4;
 }
-.safety__card h4 { color: var(--emerald-dark); margin-top: 0.4rem; }
+.safety__card h3 { color: var(--emerald-dark); margin-top: 0.4rem; }
 
 /* ---------- CTA ---------- */
 .cta { background: linear-gradient(135deg, var(--emerald-dark), var(--emerald)); }
@@ -289,7 +289,7 @@ section { padding: 5rem 1.5rem; }
 .book__status--ok { color: var(--emerald-dark); font-weight: 600; }
 .book__status--err { color: #b23b3b; font-weight: 600; }
 .book__hint { font-size: 0.85rem; color: var(--emerald-dark); margin-bottom: 0.5rem; }
-.book__wa { display: block; text-align: center; margin-top: 0.9rem; color: #128C3F; font-weight: 700; text-decoration: none; }
+.book__wa { display: block; text-align: center; margin-top: 0.9rem; color: #0a5944; font-weight: 700; text-decoration: none; }
 .book__wa:hover { text-decoration: underline; }
 .book__note { margin-top: 0.8rem; font-size: 0.82rem; color: var(--muted); text-align: center; }
 
@@ -359,7 +359,7 @@ section { padding: 5rem 1.5rem; }
   box-shadow: var(--shadow); margin-bottom: 2.2rem;
 }
 .post__cat {
-  display: inline-block; background: var(--emerald-light); color: var(--white);
+  display: inline-block; background: var(--emerald-dark); color: var(--white);
   font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
   padding: 0.3rem 0.8rem; border-radius: 999px; margin-bottom: 1rem;
 }
