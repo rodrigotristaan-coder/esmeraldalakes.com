@@ -2,6 +2,12 @@
    Esmeralda · Diamante Lakes — idioma (ES/EN) + reserva por la página
    =================================================================== */
 
+// Aplica las fuentes de Google (cargadas sin bloquear el render).
+(function () {
+  var gf = document.getElementById("gfont");
+  if (gf) gf.media = "all";
+})();
+
 // Las funciones viven en el mismo dominio (Vercel) → rutas relativas.
 const API_BASE = "";
 

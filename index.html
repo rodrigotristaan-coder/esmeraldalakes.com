@@ -95,7 +95,11 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Precarga la imagen del hero (mejora LCP) -->
+  <link rel="preload" as="image" href="/assets/images/pool-aerial.jpg" fetchpriority="high" />
+  <!-- Fuentes NO bloqueantes: cargan en segundo plano y se aplican vía script.js (mejora FCP) -->
+  <link id="gfont" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
