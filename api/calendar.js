@@ -15,7 +15,14 @@ module.exports = async (req, res) => {
       "END:VEVENT",
     ].join("\r\n");
 
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Esmeralda//Reservas//ES", "CALSCALE:GREGORIAN"];
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Esmeralda//Reservas//ES",
+    "CALSCALE:GREGORIAN",
+    "X-WR-CALNAME:Esmeralda — Reservas directas",
+    "NAME:Esmeralda — Reservas directas",
+  ];
   blocks.forEach((b, i) => lines.push(ev(`d${i}-${b.start}@esmeralda`, b.start, b.end)));
   lines.push("END:VCALENDAR");
 
