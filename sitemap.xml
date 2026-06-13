@@ -2,12 +2,12 @@
 <!-- Reemplaza el dominio cuando despliegues -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://esmeralda-diamante-lakes.example/</loc>
+    <loc>https://esmeraldalakes.com/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://esmeralda-diamante-lakes.example/blog.html</loc>
+    <loc>https://esmeraldalakes.com/blog.html</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>

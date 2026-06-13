@@ -18,4 +18,4 @@ User-agent: Google-Extended
 Allow: /
 
 # Reemplaza el dominio cuando despliegues:
-Sitemap: https://esmeralda-diamante-lakes.example/sitemap.xml
+Sitemap: https://esmeraldalakes.com/sitemap.xml
