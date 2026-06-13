@@ -120,6 +120,13 @@ p, li, a, h1, h2, h3, h4, span { overflow-wrap: break-word; }
   background-size: cover;
   background-position: center;
 }
+@media (max-width: 768px) {
+  .hero__overlay {
+    background-image:
+      linear-gradient(120deg, rgba(10,89,68,0.82) 0%, rgba(15,122,95,0.55) 45%, rgba(10,40,35,0.55) 100%),
+      url("assets/images/pool-aerial-sm.webp");
+  }
+}
 .hero__content { position: relative; z-index: 2; max-width: var(--max); margin: 0 auto; padding: 7rem 1.5rem 4rem; }
 
 /* Año junto al título — mismo formato que el título */
