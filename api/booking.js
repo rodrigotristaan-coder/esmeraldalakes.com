@@ -2,6 +2,8 @@
 // y la notifica al anfitrión por Telegram. El token vive solo en las variables
 // de entorno de Vercel (nunca en el código del sitio).
 
+const { sign } = require("./_lib");
+
 const esc = (s = "") =>
   String(s)
     .replace(/[*_`\[\]]/g, "")          // neutraliza Markdown
@@ -34,6 +36,10 @@ module.exports = async (req, res) => {
     return res.status(500).json({ ok: false, error: "config" });
   }
 
+  const host = req.headers.host || "esmeraldalakes.com";
+  const sig = sign(b.checkin + "|" + b.checkout);
+  const confirmUrl = `https://${host}/api/confirm?ci=${b.checkin}&co=${b.checkout}&sig=${sig}`;
+
   const text = [
     "🆕 *Nueva solicitud de reserva* (esmeraldalakes.com)",
     "",
@@ -44,7 +50,8 @@ module.exports = async (req, res) => {
     `👥 *Huéspedes:* ${esc(b.guests)}`,
     b.message ? `📝 *Mensaje:* ${esc(b.message)}` : null,
     "",
-    "_Responde al huésped para confirmar disponibilidad y precio._",
+    "Cuando lo confirmes con el huésped, bloquea estas fechas (web + Airbnb):",
+    confirmUrl,
   ].filter(Boolean).join("\n");
 
   try {

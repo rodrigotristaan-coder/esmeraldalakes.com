@@ -42,6 +42,10 @@ module.exports = async (req, res) => {
     [process.env.DIRECT_ICAL_URL, "directo"], // tu calendario de reservas directas
   ].filter(([url]) => Boolean(url));
 
-  const results = await Promise.all(sources.map(([url, src]) => fetchBlocks(url, src)));
-  return res.status(200).json({ blocked: results.flat() });
+  const { readBlocks } = require("./_lib");
+  const [icalResults, directBlocks] = await Promise.all([
+    Promise.all(sources.map(([url, src]) => fetchBlocks(url, src))),
+    readBlocks(), // reservas directas confirmadas (guardadas en la web)
+  ]);
+  return res.status(200).json({ blocked: [...icalResults.flat(), ...directBlocks] });
 };
