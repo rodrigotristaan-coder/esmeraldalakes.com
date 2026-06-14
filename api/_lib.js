@@ -42,6 +42,7 @@ async function writeBlocks(arr) {
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: "application/json",
+    cacheControlMaxAge: 0, // sin caché: lecturas siempre frescas (bloqueos inmediatos)
   });
 }
 
