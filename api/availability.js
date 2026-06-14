@@ -35,7 +35,7 @@ async function fetchBlocks(url, source) {
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
-  res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=86400");
+  res.setHeader("Cache-Control", "s-maxage=120, stale-while-revalidate=600");
 
   const sources = [
     [process.env.AIRBNB_ICAL_URL, "airbnb"],
