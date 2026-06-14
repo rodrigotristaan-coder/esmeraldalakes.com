@@ -44,6 +44,8 @@ const T = {
     ok: "✅ ¡Solicitud recibida! En breve te contactamos para confirmar disponibilidad, precio y forma de pago. ¡Gracias! 🌴",
     badDates: "Revisa las fechas: la salida debe ser posterior a la llegada.",
     noDates: "Elige tus fechas de llegada y salida en el calendario.",
+    consent: "Por favor acepta el aviso de privacidad para continuar.",
+    minNights: "La estancia mínima es de 2 noches.",
     fail: "No pudimos enviar tu solicitud ahora. Inténtalo de nuevo o escríbenos directamente.",
     months: ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"],
     dows: ["L","M","M","J","V","S","D"],
@@ -56,6 +58,8 @@ const T = {
     ok: "✅ Request received! We’ll contact you shortly to confirm availability, price and payment. Thank you! 🌴",
     badDates: "Check the dates: check-out must be after check-in.",
     noDates: "Pick your check-in and check-out dates on the calendar.",
+    consent: "Please accept the privacy notice to continue.",
+    minNights: "Minimum stay is 2 nights.",
     fail: "We couldn’t send your request right now. Please try again or contact us directly.",
     months: ["January","February","March","April","May","June","July","August","September","October","November","December"],
     dows: ["M","T","W","T","F","S","S"],
@@ -82,6 +86,20 @@ async function submitBooking(e) {
     status.textContent = tr("badDates");
     return;
   }
+  // Mínimo de noches (2)
+  const nights = Math.round((new Date(data.checkout) - new Date(data.checkin)) / 86400000);
+  if (nights < 2) {
+    status.className = "book__status book__status--err";
+    status.textContent = tr("minNights");
+    return;
+  }
+  // Consentimiento de privacidad
+  const consent = document.getElementById("bf-consent");
+  if (consent && !consent.checked) {
+    status.className = "book__status book__status--err";
+    status.textContent = tr("consent");
+    return;
+  }
 
   status.className = "book__status";
   status.textContent = tr("sending");
@@ -94,6 +112,12 @@ async function submitBooking(e) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...data, lang: document.body.dataset.lang }),
     });
+    if (res.status === 422) {
+      const j = await res.json().catch(() => ({}));
+      status.className = "book__status book__status--err";
+      status.textContent = j.error === "min_nights" ? tr("minNights") : tr("fail");
+      return;
+    }
     if (!res.ok) throw new Error("bad status " + res.status);
     status.className = "book__status book__status--ok";
     status.textContent = tr("ok");
@@ -262,6 +286,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const form = document.getElementById("booking-form");
   if (form) form.addEventListener("submit", submitBooking);
+  const tsEl = document.getElementById("bf-ts");
+  if (tsEl) tsEl.value = String(Date.now());
 
   // Calendario de disponibilidad
   wireCalendar();

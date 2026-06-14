@@ -412,6 +412,8 @@ section { padding: 5rem 1.5rem; }
 .book__status--ok { color: var(--emerald-dark); font-weight: 600; }
 .book__status--err { color: #b23b3b; font-weight: 600; }
 .book__hint { font-size: 0.85rem; color: var(--emerald-dark); margin-bottom: 0.5rem; }
+.consent { display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.8rem; color: var(--muted); margin: 0.6rem 0 0.2rem; }
+.consent input { margin-top: 0.2rem; flex-shrink: 0; }
 .book__wa { display: block; text-align: center; margin-top: 0.9rem; color: #0a5944; font-weight: 700; text-decoration: none; }
 .book__wa:hover { text-decoration: underline; }
 .book__note { margin-top: 0.8rem; font-size: 0.82rem; color: var(--muted); text-align: center; }
@@ -810,8 +812,13 @@ section { padding: 5rem 1.5rem; }
           <label for="bf-msg" data-es="Mensaje (opcional)" data-en="Message (optional)"></label>
           <textarea id="bf-msg" name="message" rows="3"></textarea>
         </div>
-        <!-- Honeypot anti-bots: invisible para humanos; si se llena, se descarta -->
+        <label class="consent">
+          <input type="checkbox" id="bf-consent" />
+          <span data-es="Acepto que mis datos se usen para gestionar mi solicitud de reserva." data-en="I agree that my data may be used to manage my booking request."></span>
+        </label>
+        <!-- Honeypot + trampa de tiempo anti-bots -->
         <input type="text" name="company" id="bf-company" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
+        <input type="hidden" name="ts" id="bf-ts" />
         <button type="submit" class="btn btn--lg book__submit" data-es="Solicitar reserva" data-en="Request booking"></button>
         <p class="book__status" id="booking-status" role="status"></p>
         <a class="book__wa" id="book-wa" href="#" target="_blank" rel="noopener" style="display:none" data-es="💬 o agenda por WhatsApp" data-en="💬 or book via WhatsApp"></a>
