@@ -105,4 +105,23 @@ function rangeOverlaps(ci, co, blocks) {
   return blocks.some((b) => ci < b.end && co > b.start);
 }
 
-module.exports = { sign, safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, rangeOverlaps };
+// --- Envío de correo (Resend). Best-effort: si no hay API key, no hace nada. ---
+async function sendEmail(to, subject, html) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key || !to) return false;
+  const from = process.env.FROM_EMAIL || "Esmeralda <onboarding@resend.dev>";
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
+      body: JSON.stringify({ from, to, subject, html }),
+    });
+    if (!r.ok) console.error("Resend:", r.status, await r.text());
+    return r.ok;
+  } catch (e) {
+    console.error("Resend error:", e.message);
+    return false;
+  }
+}
+
+module.exports = { sign, safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, rangeOverlaps, sendEmail };

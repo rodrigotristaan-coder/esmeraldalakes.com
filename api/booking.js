@@ -1,6 +1,8 @@
 // Función serverless: recibe la solicitud de reserva, valida, re-chequea
 // disponibilidad y notifica al anfitrión por Telegram con un link de confirmación.
-const { sign, getAllBlocks, rangeOverlaps } = require("./_lib");
+const { sign, getAllBlocks, rangeOverlaps, sendEmail } = require("./_lib");
+
+const htmlEsc = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c])).slice(0, 600);
 
 const esc = (s = "") =>
   String(s)
@@ -71,9 +73,37 @@ module.exports = async (req, res) => {
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown", disable_web_page_preview: true }),
     });
     if (!tg.ok) throw new Error("telegram " + tg.status);
+
+    // Correos (best-effort; solo si RESEND_API_KEY está configurada)
+    await sendBookingEmails(b, nights);
+
     return res.status(200).json({ ok: true, conflict });
   } catch (err) {
     console.error("Error Telegram:", err.message);
     return res.status(500).json({ ok: false, error: "No se pudo notificar" });
   }
 };
+
+async function sendBookingEmails(b, nights) {
+  const en = b.lang === "en";
+  const name = htmlEsc(b.name), ci = htmlEsc(b.checkin), co = htmlEsc(b.checkout), g = htmlEsc(b.guests);
+  const wrap = (inner) =>
+    `<div style="font-family:system-ui,Arial,sans-serif;max-width:540px;margin:auto;color:#16231f;line-height:1.6">${inner}<p style="color:#5e6e68;font-size:.8rem;margin-top:24px">Esmeralda · Condominio Diamante Lakes · Acapulco<br><a href="https://esmeraldalakes.com" style="color:#0a5944">esmeraldalakes.com</a></p></div>`;
+
+  // 1) Confirmación al huésped
+  const guestSubject = en ? "We received your booking request · Esmeralda Acapulco" : "Recibimos tu solicitud de reserva · Esmeralda Acapulco";
+  const guestHtml = wrap(
+    en
+      ? `<h2 style="color:#0a5944">Thank you, ${name}! 🌴</h2><p>We received your booking request for <b>Esmeralda — Diamante Lakes</b>, Acapulco.</p><p><b>Check-in:</b> ${ci}<br><b>Check-out:</b> ${co} (${nights} nights)<br><b>Guests:</b> ${g}</p><p>We'll contact you shortly to confirm availability, price and payment. This is not a final confirmation yet.</p>`
+      : `<h2 style="color:#0a5944">¡Gracias, ${name}! 🌴</h2><p>Recibimos tu solicitud de reserva para <b>Esmeralda — Diamante Lakes</b>, Acapulco.</p><p><b>Llegada:</b> ${ci}<br><b>Salida:</b> ${co} (${nights} noches)<br><b>Huéspedes:</b> ${g}</p><p>Te contactaremos muy pronto para confirmar disponibilidad, precio y forma de pago. Aún no es una confirmación final.</p>`
+  );
+  await sendEmail(b.email, guestSubject, guestHtml);
+
+  // 2) Copia al anfitrión (respaldo del Telegram)
+  if (process.env.OWNER_EMAIL) {
+    const ownerHtml = wrap(
+      `<h2 style="color:#0a5944">Nueva solicitud de reserva</h2><p><b>Nombre:</b> ${name}<br><b>Correo:</b> ${htmlEsc(b.email)}<br>${b.phone ? `<b>Tel:</b> ${htmlEsc(b.phone)}<br>` : ""}<b>Llegada:</b> ${ci} · <b>Salida:</b> ${co} (${nights} noches)<br><b>Huéspedes:</b> ${g}</p>${b.message ? `<p><b>Mensaje:</b> ${htmlEsc(b.message)}</p>` : ""}`
+    );
+    await sendEmail(process.env.OWNER_EMAIL, `Reserva: ${name} (${ci}→${co})`, ownerHtml);
+  }
+}
