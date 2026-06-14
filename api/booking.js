@@ -47,10 +47,6 @@ module.exports = async (req, res) => {
   let conflict = false;
   try { conflict = rangeOverlaps(b.checkin, b.checkout, await getAllBlocks()); } catch {}
 
-  const host = req.headers.host || "esmeraldalakes.com";
-  const sig = sign(b.checkin + "|" + b.checkout);
-  const confirmUrl = `https://${host}/api/confirm?ci=${b.checkin}&co=${b.checkout}&sig=${sig}`;
-
   const text = [
     "🆕 *Nueva solicitud de reserva* (esmeraldalakes.com)",
     conflict ? "⚠️ *OJO: estas fechas ya parecen ocupadas (Airbnb o reserva directa).*" : null,
@@ -62,15 +58,18 @@ module.exports = async (req, res) => {
     `👥 *Huéspedes:* ${esc(b.guests)}`,
     b.message ? `📝 *Mensaje:* ${esc(b.message)}` : null,
     "",
-    "Cuando lo confirmes con el huésped, bloquea estas fechas (web + Airbnb):",
-    confirmUrl,
+    "Cuando cierres con el huésped, confírmala con el botón 👇 (te pedirá confirmar para no bloquear por error).",
   ].filter(Boolean).join("\n");
+
+  const reply_markup = {
+    inline_keyboard: [[{ text: "✅ Confirmar reserva", callback_data: `ask|${b.checkin}|${b.checkout}` }]],
+  };
 
   try {
     const tg = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown", disable_web_page_preview: true }),
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown", disable_web_page_preview: true, reply_markup }),
     });
     if (!tg.ok) throw new Error("telegram " + tg.status);
 
