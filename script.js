@@ -135,6 +135,42 @@ const pad = (n) => String(n).padStart(2, "0");
 const ymd = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
+// ---------- Calculadora de precios (MXN) ----------
+const PRICING = {
+  rateBase: 2800,      // entre semana, temporada baja
+  rateWeekend: 3800,   // viernes y sábado
+  rateHigh: 5200,      // temporada alta
+  eventSurcharge: 0.30, // +30% en fechas de eventos de la Arena GNP
+  // Temporada alta (MM-DD). El primero cruza fin de año.
+  highRanges: [["12-15", "01-06"], ["03-25", "04-15"], ["07-01", "08-18"]],
+  // Eventos Arena GNP (rangos YYYY-MM-DD) — conciertos + semana del Abierto de Tenis
+  eventRanges: [
+    ["2026-07-04", "2026-07-04"], ["2026-08-01", "2026-08-01"], ["2026-09-20", "2026-09-20"],
+    ["2026-10-02", "2026-10-02"], ["2026-10-31", "2026-10-31"], ["2026-11-14", "2026-11-14"],
+    ["2027-02-22", "2027-02-28"],
+  ],
+};
+function isHighSeason(mmdd) {
+  return PRICING.highRanges.some(([a, b]) => (a <= b ? mmdd >= a && mmdd <= b : mmdd >= a || mmdd <= b));
+}
+function isEventDay(ds) {
+  return PRICING.eventRanges.some(([a, b]) => ds >= a && ds <= b);
+}
+function estimatePrice(ci, co) {
+  let total = 0, nights = 0;
+  const cur = new Date(ci + "T00:00:00"), end = new Date(co + "T00:00:00");
+  while (cur < end && nights < 365) {
+    const ds = ymd(cur.getFullYear(), cur.getMonth(), cur.getDate());
+    const dow = cur.getDay();
+    let rate = isHighSeason(ds.slice(5)) ? PRICING.rateHigh : (dow === 5 || dow === 6 ? PRICING.rateWeekend : PRICING.rateBase);
+    if (isEventDay(ds)) rate = Math.round(rate * (1 + PRICING.eventSurcharge));
+    total += rate; nights++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return { total, nights };
+}
+const money = (n) => "$" + n.toLocaleString("es-MX") + " MXN";
+
 const CAL = {
   view: new Date(),         // mes mostrado
   blocked: [],              // [{start, end}] end exclusivo (estilo iCal)
@@ -209,14 +245,20 @@ function renderCalendar() {
 
   // Resumen
   const summary = document.getElementById("cal-summary");
+  const priceEl = document.getElementById("book-price");
+  const lang = document.body.dataset.lang || "es";
   if (summary) {
     if (CAL.checkin && CAL.checkout) {
       const nights = Math.round((new Date(CAL.checkout) - new Date(CAL.checkin)) / 86400000);
       summary.textContent = `${CAL.checkin} → ${CAL.checkout} · ${t.nightWord(nights)}`;
-    } else if (CAL.checkin) {
-      summary.textContent = `${CAL.checkin} → …`;
+      if (priceEl) {
+        const { total } = estimatePrice(CAL.checkin, CAL.checkout);
+        priceEl.textContent = (lang === "en" ? "Estimate: " : "Estimado: ") + money(total) +
+          (lang === "en" ? " · final price confirmed by host" : " · precio final por confirmar");
+      }
     } else {
-      summary.textContent = t.summaryEmpty;
+      summary.textContent = CAL.checkin ? `${CAL.checkin} → …` : t.summaryEmpty;
+      if (priceEl) priceEl.textContent = "";
     }
   }
 }

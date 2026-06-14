@@ -110,11 +110,13 @@ async function sendEmail(to, subject, html) {
   const key = process.env.RESEND_API_KEY;
   if (!key || !to) return false;
   const from = process.env.FROM_EMAIL || "Esmeralda <onboarding@resend.dev>";
+  const payload = { from, to, subject, html };
+  if (process.env.REPLY_TO) payload.reply_to = process.env.REPLY_TO; // respuestas del huésped van a tu correo
   try {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to, subject, html }),
+      body: JSON.stringify(payload),
     });
     if (!r.ok) console.error("Resend:", r.status, await r.text());
     return r.ok;
