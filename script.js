@@ -121,7 +121,10 @@ async function submitBooking(e) {
     if (!res.ok) throw new Error("bad status " + res.status);
     status.className = "book__status book__status--ok";
     status.textContent = tr("ok");
+    if (window.gtag) gtag("event", "generate_lead", { event_category: "booking", currency: "MXN" });
     form.reset();
+    // Redirige a la página de gracias (deja ~700ms para que el evento de conversión se envíe).
+    setTimeout(function () { window.location.href = "/gracias.html"; }, 700);
   } catch (err) {
     status.className = "book__status book__status--err";
     status.textContent = tr("fail");
@@ -137,9 +140,9 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 
 // ---------- Calculadora de precios (MXN) ----------
 const PRICING = {
-  rateBase: 2800,      // entre semana, temporada baja
-  rateWeekend: 3800,   // viernes y sábado
-  rateHigh: 5200,      // temporada alta
+  rateBase: 2000,      // entre semana, temporada baja (precio "desde")
+  rateWeekend: 2700,   // viernes y sábado (+35%)
+  rateHigh: 3700,      // temporada alta (+85%)
   eventSurcharge: 0.30, // +30% en fechas de eventos de la Arena GNP
   // Temporada alta (MM-DD). El primero cruza fin de año.
   highRanges: [["12-15", "01-06"], ["03-25", "04-15"], ["07-01", "08-18"]],
@@ -169,7 +172,13 @@ function estimatePrice(ci, co) {
   }
   return { total, nights };
 }
-const money = (n) => "$" + n.toLocaleString("es-MX") + " MXN";
+const TC_USD = 17.2; // tipo de cambio para mostrar precios en USD (versión EN)
+const money = (n) => {
+  const lang = document.body.dataset.lang || "es";
+  return lang === "en"
+    ? "$" + Math.round(n / TC_USD).toLocaleString("en-US") + " USD"
+    : "$" + n.toLocaleString("es-MX") + " MXN";
+};
 
 const CAL = {
   view: new Date(),         // mes mostrado
@@ -283,6 +292,123 @@ function wireCalendar() {
   renderCalendar();
 }
 
+// ---------- Reseñas ----------
+const escHtml = (s = "") => String(s).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+const escAttr = (s = "") => escHtml(s).replace(/"/g, "&quot;");
+
+async function loadReviews() {
+  const list = document.getElementById("reviews-list");
+  if (!list) return;
+  try {
+    const r = await fetch(API_BASE + "/api/review");
+    const { reviews } = await r.json();
+    for (const rv of reviews || []) list.appendChild(reviewCard(rv));
+  } catch {}
+}
+
+function reviewCard(rv) {
+  const fig = document.createElement("figure");
+  fig.className = "review-card";
+  const rating = Math.max(1, Math.min(5, rv.rating || 5));
+  const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
+  const initials = (rv.name || "?").trim().slice(0, 1).toUpperCase();
+  const avatar = rv.photo
+    ? `<img class="review-card__avatar" src="${escAttr(rv.photo)}" alt="${escAttr(rv.name)}" width="52" height="52" loading="lazy" />`
+    : `<span class="review-card__avatar" aria-hidden="true">${initials}</span>`;
+  fig.innerHTML =
+    `<div class="review-card__stars">${stars}</div>` +
+    `<blockquote class="review-card__quote">${escHtml(rv.text)}</blockquote>` +
+    `<figcaption class="review-card__who">${avatar}<span class="review-card__meta"><span class="review-card__name">${escHtml(rv.name)}</span></span></figcaption>`;
+  return fig;
+}
+
+// Redimensiona la foto elegida (File) a un cuadrado pequeño → data URL JPEG (ligero).
+function fileToAvatarDataUrl(file, size = 256) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const s = Math.min(img.width, img.height);
+      const sx = (img.width - s) / 2, sy = (img.height - s) / 2;
+      const c = document.createElement("canvas");
+      c.width = c.height = size;
+      c.getContext("2d").drawImage(img, sx, sy, s, s, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL("image/jpeg", 0.8));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("img")); };
+    img.src = url;
+  });
+}
+
+function wireReviewForm() {
+  const form = document.getElementById("review-form");
+  if (!form) return;
+
+  // El formulario aparece solo al tocar "Dejar una reseña".
+  const toggle = document.getElementById("review-toggle");
+  const wrap = document.getElementById("review-form-wrap");
+  if (toggle && wrap) {
+    toggle.addEventListener("click", () => {
+      wrap.hidden = false;
+      toggle.style.display = "none";
+      const nm = document.getElementById("rv-name");
+      if (nm) nm.focus();
+      wrap.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+  const starsBox = document.getElementById("rv-stars");
+  const ratingInput = document.getElementById("rv-rating");
+  const paint = (v) => starsBox.querySelectorAll("button").forEach((b) => b.classList.toggle("on", Number(b.dataset.v) <= v));
+  paint(Number(ratingInput.value) || 5);
+  starsBox.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-v]");
+    if (!b) return;
+    ratingInput.value = b.dataset.v;
+    paint(Number(b.dataset.v));
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const status = document.getElementById("review-status");
+    const en = (document.body.dataset.lang || "es") === "en";
+    const name = document.getElementById("rv-name").value.trim();
+    const text = document.getElementById("rv-text").value.trim();
+    if (!name || !text) {
+      status.style.color = "#b23b3b";
+      status.textContent = en ? "Please add your name and review." : "Completa tu nombre y reseña.";
+      return;
+    }
+    const btn = form.querySelector("button[type=submit]");
+    btn.disabled = true;
+    status.style.color = "";
+    status.textContent = en ? "Sending…" : "Enviando…";
+    let photo = null;
+    const f = document.getElementById("rv-photo").files[0];
+    try { if (f) photo = await fileToAvatarDataUrl(f); } catch {}
+    try {
+      const res = await fetch(API_BASE + "/api/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, text, rating: Number(ratingInput.value) || 5, photo, company: document.getElementById("rv-company").value }),
+      });
+      if (!res.ok) throw new Error("bad");
+      status.style.color = "#0a5944";
+      status.textContent = en
+        ? "Thank you! Your review will appear after a quick check. 🌴"
+        : "¡Gracias! Tu reseña aparecerá tras una breve revisión. 🌴";
+      form.reset();
+      ratingInput.value = "5";
+      paint(5);
+    } catch {
+      status.style.color = "#b23b3b";
+      status.textContent = en ? "Couldn't send. Please try again." : "No se pudo enviar. Intenta de nuevo.";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 // ---------- Arranque ----------
 document.addEventListener("DOMContentLoaded", () => {
   applyLang(detectLang());
@@ -308,10 +434,11 @@ document.addEventListener("DOMContentLoaded", () => {
       ? "Hi! I'm interested in the Esmeralda apartment at Diamante Lakes, Acapulco. Is it available?"
       : "¡Hola! Me interesa el departamento Esmeralda en Diamante Lakes, Acapulco. ¿Está disponible?";
     const waUrl = `https://wa.me/${CONFIG.whatsappNumber}?text=${encodeURIComponent(msg)}`;
+    const waEvent = () => { if (window.gtag) gtag("event", "contact", { method: "WhatsApp" }); };
     const waFloat = document.getElementById("wa-float");
-    if (waFloat) { waFloat.href = waUrl; waFloat.style.display = "inline-flex"; }
+    if (waFloat) { waFloat.href = waUrl; waFloat.style.display = "inline-flex"; waFloat.addEventListener("click", waEvent); }
     const waBook = document.getElementById("book-wa");
-    if (waBook) { waBook.href = waUrl; waBook.style.display = "block"; }
+    if (waBook) { waBook.href = waUrl; waBook.style.display = "block"; waBook.addEventListener("click", waEvent); }
   }
 
   // Galería: botón "ver más / ver menos"
@@ -333,4 +460,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Calendario de disponibilidad
   wireCalendar();
+
+  // Reseñas (carga aprobadas + formulario para dejar reseña)
+  loadReviews();
+  wireReviewForm();
 });
