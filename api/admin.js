@@ -1,5 +1,5 @@
 // Panel de administración (protegido con ADMIN_KEY): ver, liberar y bloquear fechas.
-const { safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks } = require("./_lib");
+const { safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, readReviews, writeReviews } = require("./_lib");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
@@ -25,6 +25,20 @@ module.exports = async (req, res) => {
       await addBlock(start, end);
       return res.status(200).json({ ok: true });
     }
+    // --- Reseñas ---
+    if (action === "reviews") {
+      const reviews = (await readReviews()).sort((a, b) => b.ts - a.ts);
+      return res.status(200).json({ ok: true, reviews });
+    }
+    if (action === "review-approve" || action === "review-reject") {
+      const id = q.id;
+      let all = await readReviews();
+      if (action === "review-approve") all = all.map((r) => (r.id === id ? { ...r, status: "approved" } : r));
+      else all = all.filter((r) => r.id !== id);
+      await writeReviews(all);
+      return res.status(200).json({ ok: true });
+    }
+
     // list
     const today = new Date().toISOString().slice(0, 10);
     const direct = (await readBlocks()).filter((b) => (b.end || b.start) >= today)

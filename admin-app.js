@@ -56,6 +56,55 @@ async function load() {
     div.innerHTML = `<span>${fmt(b)}</span><span class="muted">${b.source}</span>`;
     a.appendChild(div);
   }
+
+  loadReviews();
+}
+
+const escHtml = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
+
+async function loadReviews() {
+  let data;
+  try { data = await api("&action=reviews"); } catch { return; }
+  const pending = (data.reviews || []).filter((r) => r.status !== "approved");
+  const approved = (data.reviews || []).filter((r) => r.status === "approved");
+
+  const renderInto = (elId, list, isPending) => {
+    const box = $(elId);
+    box.innerHTML = list.length ? "" : '<p class="muted">Sin reseñas.</p>';
+    for (const r of list) {
+      const div = document.createElement("div");
+      div.className = "card";
+      const photo = r.photo ? `<img src="${r.photo}" alt="" style="width:46px;height:46px;border-radius:50%;object-fit:cover" />` : "";
+      div.innerHTML = `<span style="display:flex;align-items:center;gap:10px;text-align:left">${photo}<span><b>${escHtml(r.name)}</b> <span class="muted">${"★".repeat(r.rating)}</span><br><span class="muted">${escHtml(r.text)}</span></span></span>`;
+      const wrap = document.createElement("span");
+      wrap.className = "row";
+      if (isPending) {
+        const ok = document.createElement("button");
+        ok.textContent = "Aprobar";
+        ok.addEventListener("click", () => reviewAction("approve", r.id));
+        wrap.appendChild(ok);
+      }
+      const del = document.createElement("button");
+      del.className = "danger";
+      del.textContent = isPending ? "Rechazar" : "Quitar";
+      del.addEventListener("click", () => reviewAction("reject", r.id, isPending));
+      wrap.appendChild(del);
+      div.appendChild(wrap);
+      box.appendChild(div);
+    }
+  };
+  renderInto("rv-pending", pending, true);
+  renderInto("rv-approved", approved, false);
+}
+
+async function reviewAction(act, id, isPending) {
+  const verb = act === "approve" ? "aprobar" : (isPending ? "rechazar" : "quitar");
+  if (!confirm(`¿Seguro que quieres ${verb} esta reseña?`)) return;
+  try {
+    await api(`&action=review-${act}&id=${encodeURIComponent(id)}`);
+    msg(act === "approve" ? "Reseña publicada ✅" : "Reseña eliminada 🗑️");
+    loadReviews();
+  } catch { msg("Error con la reseña.", false); }
 }
 
 async function release(start, end) {

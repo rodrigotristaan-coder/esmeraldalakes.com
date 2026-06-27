@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const { put, list } = require("@vercel/blob");
 
 const FILE = "blocks.json";
+const REVIEWS = "reviews.json";
 
 function sign(value) {
   return crypto
@@ -60,6 +61,30 @@ async function removeBlock(start, end) {
   const next = arr.filter((b) => !(b.start === start && b.end === end));
   if (next.length !== arr.length) await writeBlocks(next);
   return next;
+}
+
+// --- Reseñas (Vercel Blob) ---
+async function readReviews() {
+  try {
+    const { blobs } = await list({ prefix: REVIEWS });
+    if (!blobs.length) return [];
+    const r = await fetch(blobs[0].url, { cache: "no-store" });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return Array.isArray(j) ? j : [];
+  } catch (e) {
+    console.error("readReviews:", e.message);
+    return [];
+  }
+}
+async function writeReviews(arr) {
+  await put(REVIEWS, JSON.stringify(arr), {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "application/json",
+    cacheControlMaxAge: 0,
+  });
 }
 
 // --- Calendarios iCal externos (Airbnb / directo extra) ---
@@ -127,4 +152,4 @@ async function sendEmail(to, subject, html) {
   }
 }
 
-module.exports = { sign, safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, rangeOverlaps, sendEmail };
+module.exports = { sign, safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, rangeOverlaps, sendEmail, readReviews, writeReviews };
