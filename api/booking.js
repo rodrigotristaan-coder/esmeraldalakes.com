@@ -57,12 +57,12 @@ module.exports = async (req, res) => {
     b.country ? `🌎 *País:* ${esc(b.country)}` : null,
     b.message ? `📝 *Mensaje:* ${esc(b.message)}` : null,
     "",
-    "Cuando cierres con el huésped, confírmala con el botón 👇 (te pedirá confirmar para no bloquear por error).",
+    "Cuando recibas el pago, márcalo con el botón 👇 — bloquea las fechas, manda la confirmación al huésped y crea el evento en tu calendario (te pedirá confirmar para no hacerlo por error).",
     process.env.EXCEL_VIEW_URL ? `\n📊 Reservas (solo lectura): ${process.env.EXCEL_VIEW_URL}` : null,
   ].filter(Boolean).join("\n");
 
   const reply_markup = {
-    inline_keyboard: [[{ text: "✅ Confirmar reserva", callback_data: `ask|${b.checkin}|${b.checkout}|${b.lang || "es"}` }]],
+    inline_keyboard: [[{ text: "💰 Pago recibido", callback_data: `ask|${b.checkin}|${b.checkout}|${b.lang || "es"}` }]],
   };
 
   try {

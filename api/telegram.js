@@ -32,45 +32,40 @@ module.exports = async (req, res) => {
 
   try {
     if (action === "ask") {
+      // Botón "Pago recibido" → pide una confirmación antes de disparar toda la cadena
       await tg("editMessageReplyMarkup", {
         chat_id: chatId, message_id: msgId,
         reply_markup: { inline_keyboard: [[
-          { text: "✅ Sí, bloquear", callback_data: `do|${ci}|${co}|${lang || "es"}` },
+          { text: "✅ Sí, registrar pago", callback_data: `do|${ci}|${co}|${lang || "es"}` },
           { text: "↩️ Cancelar", callback_data: `no|${ci}|${co}|${lang || "es"}` },
         ]] },
       });
-      await answer("Confirma para bloquear estas fechas");
+      await answer("Esto bloquea las fechas, manda el correo al huésped y crea el evento en tu calendario");
     } else if (action === "do") {
-      await addBlock(ci, co);
-      await tg("editMessageReplyMarkup", {
-        chat_id: chatId, message_id: msgId,
-        reply_markup: { inline_keyboard: [
-          [{ text: `✅ CONFIRMADA · ${ci} → ${co}`, callback_data: "done" }],
-          [{ text: "💰 Pago recibido → enviar confirmación", callback_data: `pay|${ci}|${co}|${lang || "es"}` }],
-        ] },
-      });
-      await answer("¡Reserva confirmada y fechas bloqueadas! 🌴");
-    } else if (action === "pay") {
+      // Cadena completa: bloquea fechas + correo de confirmación + evento de calendario (vía n8n)
       const text = (cq.message && cq.message.text) || "";
       const email = (text.match(/Correo:\s*([^\s]+@[^\s]+)/i) || [])[1];
       const name = (text.match(/Nombre:\s*(.+)/i) || [])[1] || "";
       const guests = (text.match(/Hu[eé]spedes:\s*(\d+)/i) || [])[1] || "";
       const nights = (text.match(/\((\d+)\s*noches?\)/i) || [])[1] || "";
-      if (!email) { await answer("No pude leer el correo del huésped en el mensaje"); return res.status(200).json({ ok: true }); }
-      if (!process.env.N8N_POSTPAGO_WEBHOOK) { await answer("Falta configurar el correo post-pago"); return res.status(200).json({ ok: true }); }
-      await fetch(process.env.N8N_POSTPAGO_WEBHOOK, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name, checkin: ci, checkout: co, nights, guests, lang: lang || "es" }),
-      });
+      await addBlock(ci, co);
+      let mailNote = "";
+      if (email && process.env.N8N_POSTPAGO_WEBHOOK) {
+        await fetch(process.env.N8N_POSTPAGO_WEBHOOK, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, name, checkin: ci, checkout: co, nights, guests, lang: lang || "es" }),
+        });
+        mailNote = " · 📧 correo + 📅 calendario";
+      }
       await tg("editMessageReplyMarkup", {
         chat_id: chatId, message_id: msgId,
-        reply_markup: { inline_keyboard: [[{ text: `📧 Confirmación enviada a ${email}`, callback_data: "done" }]] },
+        reply_markup: { inline_keyboard: [[{ text: `✅ Pago recibido · ${ci} → ${co} bloqueado${mailNote}`, callback_data: "done" }]] },
       });
-      await answer("Correo de confirmación enviado al huésped 📧");
+      await answer("¡Pago registrado, fechas bloqueadas y confirmación enviada! 🌴");
     } else if (action === "no") {
       await tg("editMessageReplyMarkup", {
         chat_id: chatId, message_id: msgId,
-        reply_markup: { inline_keyboard: [[{ text: "✅ Confirmar reserva", callback_data: `ask|${ci}|${co}|${lang || "es"}` }]] },
+        reply_markup: { inline_keyboard: [[{ text: "💰 Pago recibido", callback_data: `ask|${ci}|${co}|${lang || "es"}` }]] },
       });
       await answer("Cancelado");
     } else {
