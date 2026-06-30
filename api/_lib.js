@@ -270,6 +270,34 @@ async function upsertCustomerFromBooking({ email, name, checkin, checkout, night
   return { ok: true, isNew, email: key, refCode: c.refCode };
 }
 
+// Crea una cuenta de cliente "a mano" (admin), sin reserva. Idempotente: si ya
+// existe, no la duplica. Opcionalmente añade una reserva de muestra.
+async function seedCustomer({ email, name, sampleReservation }) {
+  const key = normEmail(email);
+  if (!isEmail(key)) return { ok: false, reason: "email" };
+  const customers = await readCustomers();
+  const codes = new Set(Object.values(customers).map((c) => c.refCode).filter(Boolean));
+  if (!customers[key]) {
+    customers[key] = {
+      email: key,
+      name: String(name || "").slice(0, 80),
+      refCode: genRefCode(codes),
+      referredBy: null,
+      freeNights: 0,
+      createdAt: new Date().toISOString(),
+      reservations: [],
+      credits: [],
+    };
+  } else if (name && !customers[key].name) {
+    customers[key].name = String(name).slice(0, 80);
+  }
+  if (sampleReservation && customers[key].reservations.length === 0) {
+    customers[key].reservations.push({ ...sampleReservation, at: new Date().toISOString(), sample: true });
+  }
+  await writeCustomers(customers);
+  return { ok: true, email: key, refCode: customers[key].refCode };
+}
+
 // --- Magic-link: códigos de 6 dígitos (Vercel Blob) ---
 const genCode = () => String(crypto.randomInt(0, 1000000)).padStart(6, "0");
 
@@ -333,6 +361,6 @@ const clearSessionCookie = () => "esm_portal=; HttpOnly; Secure; SameSite=Lax; P
 module.exports = {
   sign, safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, rangeOverlaps, sendEmail, readReviews, writeReviews,
   // portal
-  normEmail, isEmail, readCustomers, writeCustomers, upsertCustomerFromBooking, ownerOfRefCode,
+  normEmail, isEmail, readCustomers, writeCustomers, upsertCustomerFromBooking, ownerOfRefCode, seedCustomer,
   issueCode, verifyCode, sessionCookie, clearSessionCookie, readSession,
 };
