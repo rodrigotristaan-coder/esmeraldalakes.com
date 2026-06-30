@@ -35,8 +35,8 @@ module.exports = async (req, res) => {
       await tg("editMessageReplyMarkup", {
         chat_id: chatId, message_id: msgId,
         reply_markup: { inline_keyboard: [[
-          { text: "✅ Sí, bloquear", callback_data: `do|${ci}|${co}` },
-          { text: "↩️ Cancelar", callback_data: `no|${ci}|${co}` },
+          { text: "✅ Sí, bloquear", callback_data: `do|${ci}|${co}|${lang || "es"}` },
+          { text: "↩️ Cancelar", callback_data: `no|${ci}|${co}|${lang || "es"}` },
         ]] },
       });
       await answer("Confirma para bloquear estas fechas");
@@ -70,7 +70,7 @@ module.exports = async (req, res) => {
     } else if (action === "no") {
       await tg("editMessageReplyMarkup", {
         chat_id: chatId, message_id: msgId,
-        reply_markup: { inline_keyboard: [[{ text: "✅ Confirmar reserva", callback_data: `ask|${ci}|${co}` }]] },
+        reply_markup: { inline_keyboard: [[{ text: "✅ Confirmar reserva", callback_data: `ask|${ci}|${co}|${lang || "es"}` }]] },
       });
       await answer("Cancelado");
     } else {
