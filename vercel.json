@@ -1,7 +1,8 @@
 {
   "rewrites": [
     { "source": "/calendar.ics", "destination": "/api/calendar" },
-    { "source": "/guia", "destination": "/guia.html" }
+    { "source": "/guia", "destination": "/guia.html" },
+    { "source": "/portal", "destination": "/portal.html" }
   ],
   "headers": [
     {

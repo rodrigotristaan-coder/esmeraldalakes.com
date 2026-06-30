@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mi portal · Esmeralda · Diamante Lakes</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+  <meta name="theme-color" content="#0a5944" />
+  <style>
+    @font-face{font-family:'Fraunces';font-style:normal;font-weight:700;font-display:swap;src:url(/assets/fonts/fraunces-700-latin.woff2) format('woff2');}
+    @font-face{font-family:'Inter';font-style:normal;font-weight:400;font-display:swap;src:url(/assets/fonts/inter-400-latin.woff2) format('woff2');}
+    @font-face{font-family:'Inter';font-style:normal;font-weight:600;font-display:swap;src:url(/assets/fonts/inter-600-latin.woff2) format('woff2');}
+    @font-face{font-family:'Inter';font-style:normal;font-weight:700;font-display:swap;src:url(/assets/fonts/inter-700-latin.woff2) format('woff2');}
+    :root{--emerald:#0f7a5f;--emerald-dark:#0a5944;--aqua:#06d67e;--ink:#16231f;--white:#fff;--gold:#A67C00;--gold-soft:#e7c66a}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:"Inter",system-ui,sans-serif;color:var(--white);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2.5rem 1.2rem;background:linear-gradient(135deg,var(--emerald-dark),var(--emerald) 70%,#2bc4c9)}
+    .lang{position:fixed;top:1rem;right:1.2rem;display:inline-flex;border:1px solid rgba(255,255,255,.5);border-radius:999px;overflow:hidden;z-index:5}
+    .lang button{background:transparent;border:0;color:#fff;font:600 .8rem "Inter",sans-serif;padding:.35rem .7rem;cursor:pointer;letter-spacing:.04em}
+    .lang button.on{background:var(--aqua);color:#062c22}
+    .wrap{max-width:560px;width:100%}
+    .gem{color:var(--aqua)}
+    .brand{font-family:"Fraunces",serif;font-weight:700;font-size:1.2rem;margin-bottom:1.6rem;opacity:.92;text-align:center}
+    .card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:1.8rem 1.6rem;backdrop-filter:blur(6px)}
+    h1{font-family:"Fraunces",serif;font-size:clamp(1.8rem,6vw,2.4rem);margin-bottom:.5rem;text-align:center}
+    .sub{font-size:1rem;opacity:.92;line-height:1.55;margin:0 auto 1.4rem;text-align:center;max-width:420px}
+    label{display:block;font-weight:600;font-size:.85rem;margin:0 0 .35rem;opacity:.9}
+    input{width:100%;padding:.8rem .9rem;border:1px solid rgba(255,255,255,.3);border-radius:12px;font:inherit;background:rgba(255,255,255,.95);color:var(--ink)}
+    input:focus{outline:2px solid var(--aqua);outline-offset:1px}
+    .code-input{letter-spacing:.5em;text-align:center;font-size:1.4rem;font-weight:700}
+    .btn{width:100%;margin-top:1rem;padding:.85rem 1rem;border:0;border-radius:999px;background:var(--aqua);color:#062c22;font:700 1rem "Inter",sans-serif;cursor:pointer;transition:transform .15s ease,opacity .15s ease}
+    .btn:hover{transform:translateY(-2px)}
+    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    .btn--ghost{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.45)}
+    .status{min-height:1.3em;margin-top:.9rem;font-weight:600;font-size:.92rem;text-align:center}
+    .status--err{color:#ffd1cf}
+    .status--ok{color:var(--aqua)}
+    .hidden{display:none!important}
+    .muted{opacity:.8;font-size:.85rem;text-align:center;margin-top:1rem}
+    .link{color:var(--aqua);cursor:pointer;text-decoration:underline;background:0;border:0;font:inherit;padding:0}
+    /* Dashboard */
+    .hello{text-align:center;margin-bottom:1.4rem}
+    .stats{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;margin-bottom:1.3rem}
+    .stat{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:1rem .8rem;text-align:center}
+    .stat__num{font-family:"Fraunces",serif;font-size:2.1rem;font-weight:700;line-height:1}
+    .stat--gold{border-color:var(--gold-soft);background:linear-gradient(160deg,rgba(166,124,0,.28),rgba(231,198,106,.12))}
+    .stat--gold .stat__num{color:var(--gold-soft)}
+    .stat__lbl{font-size:.78rem;opacity:.9;margin-top:.4rem;display:block}
+    .refbox{background:rgba(6,44,34,.45);border:1px dashed var(--gold-soft);border-radius:14px;padding:1.1rem;margin-bottom:1.3rem;text-align:center}
+    .refcode{font-family:"Fraunces",serif;font-size:1.8rem;font-weight:700;letter-spacing:.06em;color:var(--gold-soft)}
+    .refrow{display:flex;gap:.5rem;margin-top:.8rem}
+    .refrow input{font-size:.85rem;padding:.6rem .7rem}
+    .refrow .btn{margin:0;width:auto;padding:.6rem 1rem;white-space:nowrap;font-size:.85rem}
+    .resv{margin-top:.3rem}
+    .resv h3{font-family:"Fraunces",serif;font-size:1.15rem;margin-bottom:.6rem}
+    .resv__item{display:flex;justify-content:space-between;align-items:center;padding:.7rem .2rem;border-bottom:1px solid rgba(255,255,255,.12);font-size:.92rem}
+    .resv__item:last-child{border-bottom:0}
+    .resv__nights{opacity:.8;font-size:.82rem}
+    .foot{display:flex;gap:.7rem;margin-top:1.4rem;justify-content:center;flex-wrap:wrap}
+    .foot a,.foot button{font-size:.9rem}
+    .loader{text-align:center;padding:2rem 0;opacity:.85}
+  </style>
+</head>
+<body>
+  <div class="lang">
+    <button type="button" data-lang="es">ES</button>
+    <button type="button" data-lang="en">EN</button>
+  </div>
+
+  <div class="wrap">
+    <p class="brand"><span class="gem">◆</span> Esmeralda</p>
+
+    <!-- Cargando sesión -->
+    <div id="view-loading" class="card loader" data-es="Cargando…" data-en="Loading…"></div>
+
+    <!-- Paso 1: email -->
+    <form id="view-email" class="card hidden" novalidate>
+      <h1 data-es="Mi portal" data-en="My portal"></h1>
+      <p class="sub" data-es="Entra con tu correo. Si ya te hospedaste con nosotros, te enviaremos un código para acceder." data-en="Sign in with your email. If you've stayed with us, we'll send you a code to access."></p>
+      <label for="p-email" data-es="Tu correo" data-en="Your email"></label>
+      <input id="p-email" name="email" type="email" autocomplete="email" required />
+      <input type="text" name="company" id="p-company" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px" />
+      <button type="submit" class="btn" data-es="Enviar código" data-en="Send code"></button>
+      <p id="email-status" class="status" role="status"></p>
+    </form>
+
+    <!-- Paso 2: código -->
+    <form id="view-code" class="card hidden" novalidate>
+      <h1 data-es="Revisa tu correo" data-en="Check your email"></h1>
+      <p class="sub" data-es="Si tu correo está registrado, te llegó un código de 6 dígitos. Escríbelo aquí." data-en="If your email is registered, you got a 6-digit code. Enter it here."></p>
+      <label for="p-code" data-es="Código de 6 dígitos" data-en="6-digit code"></label>
+      <input id="p-code" name="code" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required />
+      <button type="submit" class="btn" data-es="Entrar" data-en="Enter"></button>
+      <p id="code-status" class="status" role="status"></p>
+      <p class="muted">
+        <button type="button" id="resend" class="link" data-es="Reenviar código" data-en="Resend code"></button>
+        ·
+        <button type="button" id="change-email" class="link" data-es="Cambiar correo" data-en="Change email"></button>
+      </p>
+    </form>
+
+    <!-- Dashboard -->
+    <div id="view-dash" class="card hidden">
+      <div class="hello">
+        <h1 id="d-hello"></h1>
+      </div>
+      <div class="stats">
+        <div class="stat stat--gold">
+          <span class="stat__num" id="d-nights">0</span>
+          <span class="stat__lbl" data-es="Noches gratis acumuladas" data-en="Free nights earned"></span>
+        </div>
+        <div class="stat">
+          <span class="stat__num" id="d-refs">0</span>
+          <span class="stat__lbl" data-es="Amigos que reservaron" data-en="Friends who booked"></span>
+        </div>
+      </div>
+
+      <div class="refbox">
+        <p style="font-size:.85rem;opacity:.9;margin-bottom:.4rem" data-es="Tu código de recomendación" data-en="Your referral code"></p>
+        <div class="refcode" id="d-code">ESM-····</div>
+        <p style="font-size:.82rem;opacity:.85;margin-top:.6rem" data-es="Compártelo: cuando un amigo reserve con tu código, ganas 1 noche gratis. 🌴" data-en="Share it: when a friend books with your code, you earn 1 free night. 🌴"></p>
+        <div class="refrow">
+          <input id="d-link" type="text" readonly />
+          <button type="button" class="btn" id="copy-link" data-es="Copiar" data-en="Copy"></button>
+        </div>
+      </div>
+
+      <div class="resv">
+        <h3 data-es="Tus reservas" data-en="Your bookings"></h3>
+        <div id="d-resv"></div>
+      </div>
+
+      <div class="foot">
+        <a class="btn btn--ghost" href="/" data-es="Ir al sitio" data-en="Go to site" style="text-decoration:none;display:inline-block;width:auto;padding:.6rem 1.1rem;margin:0"></a>
+        <button type="button" class="btn btn--ghost" id="logout" data-es="Cerrar sesión" data-en="Log out" style="width:auto;padding:.6rem 1.1rem;margin:0"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/portal.js"></script>
+</body>
+</html>

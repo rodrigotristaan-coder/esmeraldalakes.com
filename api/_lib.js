@@ -6,6 +6,8 @@ const { put, list } = require("@vercel/blob");
 
 const FILE = "blocks.json";
 const REVIEWS = "reviews.json";
+const CUSTOMERS = "customers.json";
+const CODES = "portal-codes.json";
 
 function sign(value) {
   return crypto
@@ -152,4 +154,185 @@ async function sendEmail(to, subject, html) {
   }
 }
 
-module.exports = { sign, safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, rangeOverlaps, sendEmail, readReviews, writeReviews };
+// ===================== Portal de clientes =====================
+// Almacenamiento de clientes (Vercel Blob). Objeto keyed por email (minúsculas):
+//   { email, name, refCode, referredBy, freeNights, createdAt, reservations[], credits[] }
+const PORTAL_SECRET = () => process.env.PORTAL_SECRET || process.env.CONFIRM_SECRET || "";
+const SESSION_TTL = 30 * 24 * 60 * 60 * 1000; // 30 días
+const CODE_TTL = 10 * 60 * 1000;              // código válido 10 min
+const CODE_COOLDOWN = 45 * 1000;              // 45 s entre envíos
+const CODE_MAX_ATTEMPTS = 5;
+
+const normEmail = (e) => String(e || "").trim().toLowerCase();
+const isEmail = (e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(e || ""));
+
+// HMAC con la llave del portal (firma de cookie de sesión y hash de códigos)
+function psign(value) {
+  return crypto.createHmac("sha256", PORTAL_SECRET()).update(String(value)).digest("hex");
+}
+
+// Lee/escribe un JSON arbitrario en Blob (objeto). Devuelve {} si no existe.
+async function readJsonObj(name) {
+  try {
+    const { blobs } = await list({ prefix: name });
+    if (!blobs.length) return {};
+    const r = await fetch(blobs[0].url, { cache: "no-store" });
+    if (!r.ok) return {};
+    const j = await r.json();
+    return j && typeof j === "object" && !Array.isArray(j) ? j : {};
+  } catch (e) {
+    console.error("readJsonObj " + name + ":", e.message);
+    return {};
+  }
+}
+async function writeJsonObj(name, obj) {
+  await put(name, JSON.stringify(obj), {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "application/json",
+    cacheControlMaxAge: 0,
+  });
+}
+
+const readCustomers = () => readJsonObj(CUSTOMERS);
+const writeCustomers = (o) => writeJsonObj(CUSTOMERS, o);
+
+// Código de referido tipo ESM-XXXX (alfabeto sin caracteres ambiguos)
+const REF_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function genRefCode(existing) {
+  for (let tries = 0; tries < 50; tries++) {
+    let s = "";
+    const bytes = crypto.randomBytes(4);
+    for (let i = 0; i < 4; i++) s += REF_ALPHABET[bytes[i] % REF_ALPHABET.length];
+    const code = "ESM-" + s;
+    if (!existing || !existing.has(code)) return code;
+  }
+  return "ESM-" + crypto.randomBytes(3).toString("hex").toUpperCase();
+}
+
+// Busca el email dueño de un código de referido
+function ownerOfRefCode(customers, refCode) {
+  const code = String(refCode || "").trim().toUpperCase();
+  if (!code) return null;
+  for (const email of Object.keys(customers)) {
+    if (customers[email].refCode === code) return email;
+  }
+  return null;
+}
+
+// Crea/actualiza un cliente a partir de una reserva CONFIRMADA (pago recibido).
+// Acredita +1 noche gratis al dueño del refCode si éste es el primer hospedaje del nuevo cliente.
+async function upsertCustomerFromBooking({ email, name, checkin, checkout, nights, guests, refCode }) {
+  const key = normEmail(email);
+  if (!isEmail(key)) return { ok: false, reason: "email" };
+
+  const customers = await readCustomers();
+  const codes = new Set(Object.values(customers).map((c) => c.refCode).filter(Boolean));
+  const isNew = !customers[key];
+
+  if (isNew) {
+    customers[key] = {
+      email: key,
+      name: String(name || "").slice(0, 80),
+      refCode: genRefCode(codes),
+      referredBy: null,
+      freeNights: 0,
+      createdAt: new Date().toISOString(),
+      reservations: [],
+      credits: [],
+    };
+  } else if (name && !customers[key].name) {
+    customers[key].name = String(name).slice(0, 80);
+  }
+
+  const c = customers[key];
+  const n = Number(nights) || Math.round((new Date(checkout) - new Date(checkin)) / 86400000) || 0;
+
+  // Crédito por referido: solo en la PRIMERA reserva confirmada del cliente, y si el código es de otro.
+  const wasFirstStay = c.reservations.length === 0;
+  if (wasFirstStay && refCode) {
+    const refOwner = ownerOfRefCode(customers, refCode);
+    if (refOwner && refOwner !== key) {
+      c.referredBy = customers[refOwner].refCode;
+      customers[refOwner].freeNights = (customers[refOwner].freeNights || 0) + 1;
+      customers[refOwner].credits.push({
+        type: "referral", from: key, nights: 1, at: new Date().toISOString(),
+      });
+    }
+  }
+
+  c.reservations.push({
+    checkin, checkout, nights: n, guests: Number(guests) || null, at: new Date().toISOString(),
+  });
+
+  await writeCustomers(customers);
+  return { ok: true, isNew, email: key, refCode: c.refCode };
+}
+
+// --- Magic-link: códigos de 6 dígitos (Vercel Blob) ---
+const genCode = () => String(crypto.randomInt(0, 1000000)).padStart(6, "0");
+
+async function issueCode(email) {
+  const key = normEmail(email);
+  const all = await readJsonObj(CODES);
+  const now = Date.now();
+  // poda expirados
+  for (const k of Object.keys(all)) if ((all[k].exp || 0) < now) delete all[k];
+
+  const prev = all[key];
+  if (prev && prev.sent && now - prev.sent < CODE_COOLDOWN) {
+    return { ok: false, reason: "cooldown", wait: Math.ceil((CODE_COOLDOWN - (now - prev.sent)) / 1000) };
+  }
+  const code = genCode();
+  all[key] = { hash: psign(key + "|" + code), exp: now + CODE_TTL, sent: now, attempts: 0 };
+  await writeJsonObj(CODES, all);
+  return { ok: true, code };
+}
+
+async function verifyCode(email, code) {
+  const key = normEmail(email);
+  const all = await readJsonObj(CODES);
+  const rec = all[key];
+  const now = Date.now();
+  if (!rec || (rec.exp || 0) < now) return { ok: false, reason: "expired" };
+  if ((rec.attempts || 0) >= CODE_MAX_ATTEMPTS) { delete all[key]; await writeJsonObj(CODES, all); return { ok: false, reason: "attempts" }; }
+  const good = safeEqual(rec.hash, psign(key + "|" + String(code || "").trim()));
+  if (!good) {
+    rec.attempts = (rec.attempts || 0) + 1;
+    await writeJsonObj(CODES, all);
+    return { ok: false, reason: "bad" };
+  }
+  delete all[key]; // un solo uso
+  await writeJsonObj(CODES, all);
+  return { ok: true };
+}
+
+// --- Sesión: cookie firmada HttpOnly ---
+function makeSession(email) {
+  const key = normEmail(email);
+  const exp = Date.now() + SESSION_TTL;
+  const payload = Buffer.from(key + "|" + exp).toString("base64url");
+  return payload + "." + psign(payload);
+}
+function readSession(cookieHeader) {
+  const m = String(cookieHeader || "").match(/(?:^|;\s*)esm_portal=([^;]+)/);
+  if (!m) return null;
+  const [payload, sig] = decodeURIComponent(m[1]).split(".");
+  if (!payload || !sig || !safeEqual(sig, psign(payload))) return null;
+  const [email, exp] = Buffer.from(payload, "base64url").toString("utf8").split("|");
+  if (!email || Number(exp) < Date.now()) return null;
+  return { email };
+}
+function sessionCookie(email) {
+  const v = makeSession(email);
+  return `esm_portal=${v}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${Math.floor(SESSION_TTL / 1000)}`;
+}
+const clearSessionCookie = () => "esm_portal=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0";
+
+module.exports = {
+  sign, safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, rangeOverlaps, sendEmail, readReviews, writeReviews,
+  // portal
+  normEmail, isEmail, readCustomers, writeCustomers, upsertCustomerFromBooking, ownerOfRefCode,
+  issueCode, verifyCode, sessionCookie, clearSessionCookie, readSession,
+};

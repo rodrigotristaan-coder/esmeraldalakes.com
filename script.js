@@ -458,6 +458,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const tsEl = document.getElementById("bf-ts");
   if (tsEl) tsEl.value = String(Date.now());
 
+  // Link de referido: ?ref=ESM-XXXX precarga el campo del formulario
+  const ref = new URLSearchParams(location.search).get("ref");
+  const refEl = document.getElementById("bf-refcode");
+  if (ref && refEl) {
+    const clean = ref.trim().toUpperCase().match(/^ESM-[A-Z0-9]{4,8}$/);
+    if (clean) {
+      refEl.value = clean[0];
+      try { sessionStorage.setItem("esm_ref", clean[0]); } catch {}
+    }
+  } else if (refEl) {
+    try { const saved = sessionStorage.getItem("esm_ref"); if (saved) refEl.value = saved; } catch {}
+  }
+
   // Calendario de disponibilidad
   wireCalendar();
 

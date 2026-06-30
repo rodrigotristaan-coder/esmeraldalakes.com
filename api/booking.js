@@ -45,6 +45,10 @@ module.exports = async (req, res) => {
   let conflict = false;
   try { conflict = rangeOverlaps(b.checkin, b.checkout, await getAllBlocks()); } catch {}
 
+  // Código de referido (opcional): ESM-XXXX. Se normaliza y se incluye en el mensaje
+  // para que el handler de confirmación acredite la noche gratis al dueño del código.
+  const refcode = (String(b.refcode || "").trim().toUpperCase().match(/^ESM-[A-Z0-9]{4,8}$/) || [])[0] || "";
+
   const text = [
     "🆕 *Nueva solicitud de reserva* (esmeraldalakes.com)",
     conflict ? "⚠️ *OJO: estas fechas ya parecen ocupadas (Airbnb o reserva directa).*" : null,
@@ -55,6 +59,7 @@ module.exports = async (req, res) => {
     `📅 *Llegada:* ${esc(b.checkin)}   *Salida:* ${esc(b.checkout)}  (${nights} noches)`,
     `👥 *Huéspedes:* ${esc(b.guests)}`,
     b.country ? `🌎 *País:* ${esc(b.country)}` : null,
+    refcode ? `🎟 *Código ref:* ${refcode}` : null,
     b.message ? `📝 *Mensaje:* ${esc(b.message)}` : null,
     "",
     "Cuando recibas el pago, márcalo con el botón 👇 — bloquea las fechas, manda la confirmación al huésped y crea el evento en tu calendario (te pedirá confirmar para no hacerlo por error).",

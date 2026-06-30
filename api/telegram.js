@@ -1,6 +1,6 @@
 // Webhook de Telegram: maneja los botones de confirmación de reserva (doble toque).
 // Solo actúa sobre el grupo/chat configurado y verifica el secreto del webhook.
-const { addBlock } = require("./_lib");
+const { addBlock, upsertCustomerFromBooking } = require("./_lib");
 
 async function tg(method, body) {
   return fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/${method}`, {
@@ -48,6 +48,7 @@ module.exports = async (req, res) => {
       const name = (text.match(/Nombre:\s*(.+)/i) || [])[1] || "";
       const guests = (text.match(/Hu[eé]spedes:\s*(\d+)/i) || [])[1] || "";
       const nights = (text.match(/\((\d+)\s*noches?\)/i) || [])[1] || "";
+      const refcode = (text.match(/C[oó]digo ref:\s*(ESM-[A-Z0-9]+)/i) || [])[1] || "";
       await addBlock(ci, co);
       let mailNote = "";
       if (email && process.env.N8N_POSTPAGO_WEBHOOK) {
@@ -57,9 +58,17 @@ module.exports = async (req, res) => {
         });
         mailNote = " · 📧 correo + 📅 calendario";
       }
+      // Alta/actualización del cliente en el portal (+ noche gratis al referidor si aplica)
+      let portalNote = "";
+      if (email) {
+        try {
+          const r = await upsertCustomerFromBooking({ email, name, checkin: ci, checkout: co, nights, guests, refCode: refcode });
+          if (r.ok) portalNote = " · 👤 portal" + (refcode ? " 🎟" : "");
+        } catch (e) { console.error("upsertCustomer:", e.message); }
+      }
       await tg("editMessageReplyMarkup", {
         chat_id: chatId, message_id: msgId,
-        reply_markup: { inline_keyboard: [[{ text: `✅ Pago recibido · ${ci} → ${co} bloqueado${mailNote}`, callback_data: "done" }]] },
+        reply_markup: { inline_keyboard: [[{ text: `✅ Pago recibido · ${ci} → ${co} bloqueado${mailNote}${portalNote}`, callback_data: "done" }]] },
       });
       await answer("¡Pago registrado, fechas bloqueadas y confirmación enviada! 🌴");
     } else if (action === "no") {
