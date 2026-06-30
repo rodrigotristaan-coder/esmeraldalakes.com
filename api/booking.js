@@ -62,7 +62,7 @@ module.exports = async (req, res) => {
   ].filter(Boolean).join("\n");
 
   const reply_markup = {
-    inline_keyboard: [[{ text: "✅ Confirmar reserva", callback_data: `ask|${b.checkin}|${b.checkout}` }]],
+    inline_keyboard: [[{ text: "✅ Confirmar reserva", callback_data: `ask|${b.checkin}|${b.checkout}|${b.lang || "es"}` }]],
   };
 
   try {

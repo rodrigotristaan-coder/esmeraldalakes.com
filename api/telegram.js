@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
 
   const chatId = cq.message && cq.message.chat && cq.message.chat.id;
   const msgId = cq.message && cq.message.message_id;
-  const [action, ci, co] = String(cq.data || "").split("|");
+  const [action, ci, co, lang] = String(cq.data || "").split("|");
   const answer = (text) => tg("answerCallbackQuery", { callback_query_id: cq.id, text }).catch(() => {});
 
   // Solo el grupo/chat configurado puede confirmar
@@ -44,9 +44,29 @@ module.exports = async (req, res) => {
       await addBlock(ci, co);
       await tg("editMessageReplyMarkup", {
         chat_id: chatId, message_id: msgId,
-        reply_markup: { inline_keyboard: [[{ text: `✅ CONFIRMADA · ${ci} → ${co}`, callback_data: "done" }]] },
+        reply_markup: { inline_keyboard: [
+          [{ text: `✅ CONFIRMADA · ${ci} → ${co}`, callback_data: "done" }],
+          [{ text: "💰 Pago recibido → enviar confirmación", callback_data: `pay|${ci}|${co}|${lang || "es"}` }],
+        ] },
       });
       await answer("¡Reserva confirmada y fechas bloqueadas! 🌴");
+    } else if (action === "pay") {
+      const text = (cq.message && cq.message.text) || "";
+      const email = (text.match(/Correo:\s*([^\s]+@[^\s]+)/i) || [])[1];
+      const name = (text.match(/Nombre:\s*(.+)/i) || [])[1] || "";
+      const guests = (text.match(/Hu[eé]spedes:\s*(\d+)/i) || [])[1] || "";
+      const nights = (text.match(/\((\d+)\s*noches?\)/i) || [])[1] || "";
+      if (!email) { await answer("No pude leer el correo del huésped en el mensaje"); return res.status(200).json({ ok: true }); }
+      if (!process.env.N8N_POSTPAGO_WEBHOOK) { await answer("Falta configurar el correo post-pago"); return res.status(200).json({ ok: true }); }
+      await fetch(process.env.N8N_POSTPAGO_WEBHOOK, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, checkin: ci, checkout: co, nights, guests, lang: lang || "es" }),
+      });
+      await tg("editMessageReplyMarkup", {
+        chat_id: chatId, message_id: msgId,
+        reply_markup: { inline_keyboard: [[{ text: `📧 Confirmación enviada a ${email}`, callback_data: "done" }]] },
+      });
+      await answer("Correo de confirmación enviado al huésped 📧");
     } else if (action === "no") {
       await tg("editMessageReplyMarkup", {
         chat_id: chatId, message_id: msgId,
