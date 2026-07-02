@@ -60,6 +60,13 @@
     .foot{display:flex;gap:.7rem;margin-top:1.4rem;justify-content:center;flex-wrap:wrap}
     .foot a,.foot button{font-size:.9rem}
     .loader{text-align:center;padding:2rem 0;opacity:.85}
+    /* Sin cuenta */
+    .contact{background:rgba(6,44,34,.4);border:1px solid rgba(231,198,106,.4);border-radius:14px;padding:1.2rem;margin:0 0 1rem;text-align:center}
+    .contact__name{font-family:"Fraunces",serif;font-weight:700;font-size:1.1rem;color:var(--gold-soft);margin-bottom:.9rem}
+    .contact .btn{margin-top:0}
+    .contact__line{font-size:.95rem;margin-top:.7rem}
+    .contact__line a{color:#fff;text-decoration:none;font-weight:600;border-bottom:1px solid rgba(255,255,255,.4)}
+    #view-noaccount .btn--ghost{display:block;text-align:center;text-decoration:none;margin-top:.2rem}
   </style>
 </head>
 <body>
@@ -81,9 +88,23 @@
       <label for="p-email" data-es="Tu correo" data-en="Your email"></label>
       <input id="p-email" name="email" type="email" autocomplete="email" required />
       <input type="text" name="company" id="p-company" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px" />
-      <button type="submit" class="btn" data-es="Enviar código" data-en="Send code"></button>
+      <button type="submit" class="btn" data-es="Continuar" data-en="Continue"></button>
       <p id="email-status" class="status" role="status"></p>
     </form>
+
+    <!-- Sin cuenta: se obtiene tras la 1ª reserva con el socio -->
+    <div id="view-noaccount" class="card hidden">
+      <h1 data-es="Aún no tienes cuenta" data-en="No account yet"></h1>
+      <p class="sub" data-es="Tu cuenta se crea automáticamente después de tu primera reservación directa con nosotros. Escríbenos y con gusto te ayudamos a reservar. 🌴" data-en="Your account is created automatically after your first direct booking with us. Message us and we'll gladly help you book. 🌴"></p>
+      <div class="contact">
+        <div class="contact__name">Rodrigo · Esmeralda</div>
+        <a class="btn" id="wa-link" href="#" target="_blank" rel="noopener" data-es="Reservar por WhatsApp" data-en="Book via WhatsApp"></a>
+        <p class="contact__line">📱 <a id="tel-link" href="tel:+525650058363">+52 56 5005 8363</a></p>
+        <p class="contact__line">✉️ <a href="mailto:hola@satorimkt.com">hola@satorimkt.com</a></p>
+      </div>
+      <a class="btn btn--ghost" href="/#reservar" data-es="Ver disponibilidad y reservar" data-en="See availability &amp; book"></a>
+      <p class="muted"><button type="button" id="try-other" class="link" data-es="Usar otro correo" data-en="Try another email"></button></p>
+    </div>
 
     <!-- Paso 2: código -->
     <form id="view-code" class="card hidden" novalidate>

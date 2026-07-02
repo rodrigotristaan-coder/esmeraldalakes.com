@@ -38,6 +38,7 @@
       b.classList.toggle("on", b.dataset.lang === l);
     });
     localStorage.setItem(LS, l);
+    updateWa();
     if (window.__dash) renderDash(window.__dash); // refresca textos dinámicos
   }
   document.querySelectorAll(".lang button").forEach(function (b) {
@@ -48,8 +49,20 @@
     loading: document.getElementById("view-loading"),
     email: document.getElementById("view-email"),
     code: document.getElementById("view-code"),
+    noaccount: document.getElementById("view-noaccount"),
     dash: document.getElementById("view-dash"),
   };
+
+  // Link de WhatsApp del socio (con mensaje según idioma)
+  var WA_NUMBER = "525650058363";
+  function updateWa() {
+    var link = document.getElementById("wa-link");
+    if (!link) return;
+    var msg = lang === "en"
+      ? "Hi! I'd like to book the Esmeralda apartment at Diamante Lakes, Acapulco."
+      : "¡Hola! Quiero reservar el departamento Esmeralda en Diamante Lakes, Acapulco.";
+    link.href = "https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent(msg);
+  }
   function show(name) {
     Object.keys(views).forEach(function (k) { views[k].classList.toggle("hidden", k !== name); });
   }
@@ -86,6 +99,8 @@
       if (res.status === 429) { setStatus(emailStatus, tr("cooldown"), "err"); return; }
       currentEmail = email;
       setStatus(emailStatus, "");
+      // Sin cuenta → se obtiene tras la 1ª reserva con el socio
+      if (res.json && res.json.exists === false) { show("noaccount"); apply(lang); return; }
       show("code"); apply(lang);
       setStatus(codeStatus, tr("sent"), "ok");
       codeEl.focus();
@@ -110,6 +125,9 @@
 
   document.getElementById("change-email").addEventListener("click", function () {
     show("email"); apply(lang); setStatus(emailStatus, ""); emailEl.focus();
+  });
+  document.getElementById("try-other").addEventListener("click", function () {
+    emailEl.value = ""; show("email"); apply(lang); setStatus(emailStatus, ""); emailEl.focus();
   });
   document.getElementById("resend").addEventListener("click", async function () {
     if (!currentEmail) { show("email"); return; }

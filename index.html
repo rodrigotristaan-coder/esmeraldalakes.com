@@ -197,6 +197,16 @@ p, li, a, h1, h2, h3, h4, span { overflow-wrap: break-word; }
 .nav__links a:hover { opacity: 1; }
 .nav--scrolled .nav__links a { color: var(--emerald-dark); }
 
+/* Botón "Soy cliente" */
+.nav__client {
+  color: var(--emerald-dark); text-decoration: none; font-weight: 600; font-size: 0.9rem;
+  padding: 0.4rem 0.9rem; border: 1px solid rgba(15,122,95,0.35); border-radius: 999px;
+  white-space: nowrap; transition: background .18s ease, color .18s ease;
+}
+.nav__client:hover { background: var(--emerald-dark); color: #fff; }
+.nav--solid .nav__client { color: var(--white); border-color: rgba(255,255,255,0.5); }
+.nav--solid .nav__client:hover { background: var(--white); color: var(--emerald-dark); }
+
 /* Selector de idioma */
 .nav__right { display: flex; align-items: center; gap: 0.8rem; }
 .lang { display: inline-flex; border: 1px solid var(--emerald-dark); border-radius: 999px; overflow: hidden; }
@@ -603,8 +613,9 @@ section { padding: 5rem 1.5rem; }
 @media (max-width: 480px) {
   .nav__inner { padding: 0.7rem 0.9rem; gap: 0.5rem; }
   .nav__brand { font-size: 1.15rem; }
-  .nav__right { gap: 0.5rem; }
-  .btn--sm { padding: 0.45rem 0.85rem; font-size: 0.82rem; }
+  .nav__right { gap: 0.4rem; }
+  .nav__client { font-size: 0.75rem; padding: 0.3rem 0.55rem; }
+  .btn--sm { padding: 0.45rem 0.8rem; font-size: 0.8rem; }
   .lang__btn { padding: 0.3rem 0.5rem; font-size: 0.72rem; }
   .hero__content { padding-top: 6rem; }
   .hero__title { font-size: clamp(2.8rem, 13vw, 4.5rem); }
@@ -628,6 +639,7 @@ section { padding: 5rem 1.5rem; }
         <a href="blog.html" data-es="Blog" data-en="Blog"></a>
       </nav>
       <div class="nav__right">
+        <a href="/portal" class="nav__client" data-es="Soy cliente" data-en="I'm a guest"></a>
         <div class="lang" role="group" aria-label="Idioma">
           <button type="button" class="lang__btn" data-lang="es">ES</button>
           <button type="button" class="lang__btn" data-lang="en">EN</button>
