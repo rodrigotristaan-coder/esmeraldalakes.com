@@ -1,5 +1,5 @@
 // Panel de administración (protegido con ADMIN_KEY): ver, liberar y bloquear fechas.
-const { safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, readReviews, writeReviews, readCustomers, seedCustomer } = require("./_lib");
+const { safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail } = require("./_lib");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
@@ -48,6 +48,22 @@ module.exports = async (req, res) => {
       const customers = await readCustomers();
       const list = Object.values(customers).sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
       return res.status(200).json({ ok: true, customers: list });
+    }
+    // Ajustar noches gratis: delta=-1 redime una noche, delta=1 acredita una manualmente.
+    if (action === "customer-nights") {
+      const email = normEmail(q.email);
+      const delta = parseInt(q.delta, 10);
+      if (!email || !delta || Math.abs(delta) > 30) return res.status(422).json({ ok: false, error: "datos" });
+      const customers = await readCustomers();
+      const c = customers[email];
+      if (!c) return res.status(404).json({ ok: false, error: "cliente" });
+      const before = c.freeNights || 0;
+      if (delta < 0 && before + delta < 0) return res.status(422).json({ ok: false, error: "sin-noches" });
+      c.freeNights = before + delta;
+      c.credits = c.credits || [];
+      c.credits.push({ type: delta < 0 ? "redeem" : "manual", nights: delta, at: new Date().toISOString() });
+      await writeCustomers(customers);
+      return res.status(200).json({ ok: true, freeNights: c.freeNights });
     }
     if (action === "customer-seed") {
       const sample = q.sci && q.sco

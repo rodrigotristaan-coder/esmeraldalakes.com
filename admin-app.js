@@ -58,6 +58,7 @@ async function load() {
   }
 
   loadReviews();
+  loadCustomers();
 }
 
 const escHtml = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
@@ -95,6 +96,62 @@ async function loadReviews() {
   };
   renderInto("rv-pending", pending, true);
   renderInto("rv-approved", approved, false);
+}
+
+// --- Clientes del portal ---
+async function loadCustomers() {
+  let data;
+  try { data = await api("&action=customers"); } catch { return; }
+  const box = $("customers");
+  const list = data.customers || [];
+  box.innerHTML = list.length ? "" : '<p class="muted">Sin clientes todavía.</p>';
+  for (const c of list) {
+    const refs = (c.credits || []).filter((x) => x.type === "referral").length;
+    const resv = (c.reservations || []).length;
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML =
+      `<span style="text-align:left"><b>${escHtml(c.name || "(sin nombre)")}</b> <span class="muted">${escHtml(c.email)}</span><br>` +
+      `<span class="muted">🎟 ${escHtml(c.refCode || "—")} · 🌙 ${c.freeNights || 0} noches gratis · 👥 ${refs} referidos · 📅 ${resv} reservas</span></span>`;
+    const wrap = document.createElement("span");
+    wrap.className = "row";
+    const plus = document.createElement("button");
+    plus.textContent = "+1 noche";
+    plus.addEventListener("click", () => nightsAction(c.email, 1));
+    wrap.appendChild(plus);
+    if ((c.freeNights || 0) > 0) {
+      const redeem = document.createElement("button");
+      redeem.className = "danger";
+      redeem.textContent = "Redimir 1";
+      redeem.addEventListener("click", () => nightsAction(c.email, -1));
+      wrap.appendChild(redeem);
+    }
+    div.appendChild(wrap);
+    box.appendChild(div);
+  }
+}
+
+async function nightsAction(email, delta) {
+  const verb = delta > 0 ? `acreditar 1 noche gratis a` : `redimir 1 noche gratis de`;
+  if (!confirm(`¿Seguro que quieres ${verb} ${email}?`)) return;
+  try {
+    const r = await api(`&action=customer-nights&email=${encodeURIComponent(email)}&delta=${delta}`);
+    if (!r.ok) throw new Error(r.error);
+    msg(delta > 0 ? "Noche acreditada ✅" : "Noche redimida ✅");
+    loadCustomers();
+  } catch { msg("Error al ajustar noches.", false); }
+}
+
+async function seedCustomer() {
+  const name = $("c-name").value.trim(), email = $("c-email").value.trim();
+  if (!email) return msg("Falta el correo del cliente.", false);
+  try {
+    const r = await api(`&action=customer-seed&email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}`);
+    if (!r.ok) throw new Error(r.error);
+    msg(`Cliente dado de alta ✅ (código ${r.refCode})`);
+    $("c-name").value = ""; $("c-email").value = "";
+    loadCustomers();
+  } catch { msg("Error al dar de alta.", false); }
 }
 
 async function reviewAction(act, id, isPending) {
@@ -139,6 +196,7 @@ document.addEventListener("DOMContentLoaded", () => {
     load();
   });
   $("addblock").addEventListener("click", addBlock);
+  $("c-seed").addEventListener("click", seedCustomer);
   $("logout").addEventListener("click", () => {
     localStorage.removeItem(KEY_STORE); KEY = ""; showLogin(); $("key").value = "";
   });
