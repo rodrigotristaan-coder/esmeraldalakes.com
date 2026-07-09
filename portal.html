@@ -30,7 +30,7 @@
     input{width:100%;padding:.8rem 1.1rem;border:1px solid rgba(255,255,255,.3);border-radius:999px;font:inherit;background:rgba(255,255,255,.92);color:var(--ink)}
     input:focus{outline:2px solid var(--aqua);outline-offset:1px}
     .code-input{letter-spacing:.5em;text-align:center;font-size:1.4rem;font-weight:700}
-    .btn{width:100%;margin-top:1rem;padding:.85rem 1rem;border:0;border-radius:999px;background:var(--aqua);color:#062c22;font:700 1rem "Inter",sans-serif;cursor:pointer;transition:transform .15s ease,opacity .15s ease}
+    .btn{display:block;width:100%;margin-top:1rem;padding:.85rem 1rem;border:0;border-radius:999px;background:var(--aqua);color:#062c22;font:700 1rem "Inter",sans-serif;cursor:pointer;transition:transform .15s ease,opacity .15s ease;text-decoration:none;text-align:center}
     .btn:hover{transform:translateY(-2px)}
     .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
     .btn--ghost{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.45)}
@@ -62,11 +62,12 @@
     .foot a,.foot button{font-size:.9rem}
     .loader{text-align:center;padding:2rem 0;opacity:.85}
     /* Sin cuenta */
-    .contact{background:rgba(6,44,34,.4);border:1px solid rgba(231,198,106,.4);border-radius:20px;padding:1.2rem;margin:0 0 1rem;text-align:center}
-    .contact__name{font-family:"Fraunces",serif;font-weight:700;font-size:1.1rem;color:var(--gold-soft);margin-bottom:.9rem}
+    .contact{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.22);border-radius:22px;padding:1.4rem 1.2rem 1.2rem;margin:0 0 1rem;text-align:center;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+    .contact__name{font-family:"Fraunces",serif;font-weight:700;font-size:1.15rem;color:var(--gold-soft);margin-bottom:.9rem}
     .contact .btn{margin-top:0}
-    .contact__line{font-size:.95rem;margin-top:.7rem}
-    .contact__line a{color:#fff;text-decoration:none;font-weight:600;border-bottom:1px solid rgba(255,255,255,.4)}
+    .contact__line{font-size:.9rem;margin-top:.7rem;opacity:.95}
+    .contact__line a{color:#eafff6;text-decoration:none;font-weight:600;border-bottom:1px solid rgba(255,255,255,.28);padding-bottom:1px}
+    .contact__line a:hover{border-color:var(--aqua)}
     #view-noaccount .btn--ghost{display:block;text-align:center;text-decoration:none;margin-top:.2rem}
   </style>
 </head>
@@ -99,8 +100,8 @@
       <p class="sub" data-es="Tu cuenta se crea automáticamente después de tu primera reservación directa con nosotros. Escríbenos y con gusto te ayudamos a reservar. 🌴" data-en="Your account is created automatically after your first direct booking with us. Message us and we'll gladly help you book. 🌴"></p>
       <div class="contact">
         <div class="contact__name">Rodrigo · Esmeralda</div>
-        <a class="btn" id="wa-link" href="#" target="_blank" rel="noopener" data-es="Reservar por WhatsApp" data-en="Book via WhatsApp"></a>
-        <p class="contact__line">📱 <a id="tel-link" href="tel:+525650058363">+52 56 5005 8363</a></p>
+        <a class="btn" id="wa-link" href="#" target="_blank" rel="noopener" data-es="💬 Reservar por WhatsApp" data-en="💬 Book via WhatsApp"></a>
+        <p class="contact__line">📞 <a id="tel-link" href="tel:+525650058363">+52 56 5005 8363</a></p>
         <p class="contact__line">✉️ <a href="mailto:hola@satorimkt.com">hola@satorimkt.com</a></p>
       </div>
       <a class="btn btn--ghost" href="/#reservar" data-es="Ver disponibilidad y reservar" data-en="See availability &amp; book"></a>
