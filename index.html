@@ -107,8 +107,8 @@
   </script>
 
   <!-- Recursos críticos precargados: imagen del hero (LCP) + fuentes propias (sin CLS) -->
-  <link rel="preload" as="image" href="/assets/images/pool-hero4.webp" media="(min-width: 769px)" fetchpriority="high" />
-  <link rel="preload" as="image" href="/assets/images/pool-hero4-sm.webp" media="(max-width: 768px)" fetchpriority="high" />
+  <link rel="preload" as="image" href="/assets/images/balcony-pool-view.webp" media="(min-width: 769px)" fetchpriority="high" />
+  <link rel="preload" as="image" href="/assets/images/balcony-pool-view-sm.webp" media="(max-width: 768px)" fetchpriority="high" />
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/inter-400-latin.woff2" />
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/inter-600-latin.woff2" />
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/fraunces-700-latin.woff2" />
@@ -244,14 +244,17 @@ p, li, a, h1, h2, h3, h4, span { overflow-wrap: break-word; }
 .hero { overflow: hidden; padding: 5.6rem 0.9rem 0; }
 .hero__photo {
   min-height: calc(54vh - 1cm);
-  background-image: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 16%), url("assets/images/pool-hero4.webp");
+  background-image: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 16%), url("assets/images/balcony-pool-view.webp");
   background-size: cover; background-position: center;
   border-radius: var(--radius-lg); box-shadow: var(--shadow);
 }
 .hero__bottom {
-  background: linear-gradient(135deg, var(--emerald-dark), var(--emerald)); color: var(--white); text-align: center; position: relative; overflow: hidden;
+  background-image: linear-gradient(160deg, rgba(6,44,34,0.86) 0%, rgba(10,89,68,0.78) 55%, rgba(15,122,95,0.7) 100%), url("assets/images/caseta-entrance.webp");
+  background-size: cover; background-position: center;
+  color: var(--white); text-align: center; position: relative; overflow: hidden;
   border-radius: var(--radius-lg); margin-top: 0.9rem; box-shadow: var(--shadow);
 }
+.hero__bottominner { text-shadow: 0 1px 14px rgba(0,0,0,0.35); }
 .hero__bottominner { position: relative; z-index: 2; max-width: 760px; margin: 0 auto; padding: 2.6rem 1.5rem 3rem; display: flex; flex-direction: column; align-items: center; }
 .hero__bottom .hero__title { font-size: clamp(2.6rem, 7vw, 4.6rem); }
 .hero__bottom .hero__cta, .hero__bottom .hero__stats { justify-content: center; }
@@ -261,7 +264,8 @@ p, li, a, h1, h2, h3, h4, span { overflow-wrap: break-word; }
 .hero__bottom .btn:not(.btn--ghost):hover { background: #05c070; }
 @media (max-width: 768px) {
   .hero { padding: 5rem 0.7rem 0; }
-  .hero__photo { min-height: calc(40vh - 1cm); background-image: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0) 18%), url("assets/images/pool-hero4-sm.webp"); }
+  .hero__photo { min-height: calc(40vh - 1cm); background-image: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0) 18%), url("assets/images/balcony-pool-view-sm.webp"); }
+  .hero__bottom { background-image: linear-gradient(160deg, rgba(6,44,34,0.86) 0%, rgba(10,89,68,0.78) 55%, rgba(15,122,95,0.7) 100%), url("assets/images/caseta-entrance-sm.webp"); }
 }
 .hero__overlay {
   position: absolute; inset: 0;

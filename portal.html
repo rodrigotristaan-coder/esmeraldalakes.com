@@ -15,18 +15,19 @@
     @font-face{font-family:'Inter';font-style:normal;font-weight:700;font-display:swap;src:url(/assets/fonts/inter-700-latin.woff2) format('woff2');}
     :root{--emerald:#0f7a5f;--emerald-dark:#0a5944;--aqua:#06d67e;--ink:#16231f;--white:#fff;--gold:#A67C00;--gold-soft:#e7c66a}
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:"Inter",system-ui,sans-serif;color:var(--white);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2.5rem 1.2rem;background:linear-gradient(135deg,var(--emerald-dark),var(--emerald) 70%,#2bc4c9)}
+    body{font-family:"Inter",system-ui,sans-serif;color:var(--white);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2.5rem 1.2rem;background:linear-gradient(160deg,rgba(6,44,34,.88) 0%,rgba(10,89,68,.8) 55%,rgba(15,122,95,.72) 100%),url(/assets/images/caseta-entrance.webp) center/cover no-repeat fixed var(--emerald-dark)}
+    @media (max-width:768px){body{background:linear-gradient(160deg,rgba(6,44,34,.88) 0%,rgba(10,89,68,.8) 55%,rgba(15,122,95,.72) 100%),url(/assets/images/caseta-entrance-sm.webp) center/cover no-repeat var(--emerald-dark)}}
     .lang{position:fixed;top:1rem;right:1.2rem;display:inline-flex;border:1px solid rgba(255,255,255,.5);border-radius:999px;overflow:hidden;z-index:5}
     .lang button{background:transparent;border:0;color:#fff;font:600 .8rem "Inter",sans-serif;padding:.35rem .7rem;cursor:pointer;letter-spacing:.04em}
     .lang button.on{background:var(--aqua);color:#062c22}
     .wrap{max-width:560px;width:100%}
     .gem{color:var(--aqua)}
     .brand{font-family:"Fraunces",serif;font-weight:700;font-size:1.2rem;margin-bottom:1.6rem;opacity:.92;text-align:center}
-    .card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:1.8rem 1.6rem;backdrop-filter:blur(6px)}
+    .card{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:28px;padding:1.8rem 1.6rem;-webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4);box-shadow:0 24px 48px -28px rgba(4,38,28,.7)}
     h1{font-family:"Fraunces",serif;font-size:clamp(1.8rem,6vw,2.4rem);margin-bottom:.5rem;text-align:center}
     .sub{font-size:1rem;opacity:.92;line-height:1.55;margin:0 auto 1.4rem;text-align:center;max-width:420px}
     label{display:block;font-weight:600;font-size:.85rem;margin:0 0 .35rem;opacity:.9}
-    input{width:100%;padding:.8rem .9rem;border:1px solid rgba(255,255,255,.3);border-radius:12px;font:inherit;background:rgba(255,255,255,.95);color:var(--ink)}
+    input{width:100%;padding:.8rem 1.1rem;border:1px solid rgba(255,255,255,.3);border-radius:999px;font:inherit;background:rgba(255,255,255,.92);color:var(--ink)}
     input:focus{outline:2px solid var(--aqua);outline-offset:1px}
     .code-input{letter-spacing:.5em;text-align:center;font-size:1.4rem;font-weight:700}
     .btn{width:100%;margin-top:1rem;padding:.85rem 1rem;border:0;border-radius:999px;background:var(--aqua);color:#062c22;font:700 1rem "Inter",sans-serif;cursor:pointer;transition:transform .15s ease,opacity .15s ease}
@@ -42,12 +43,12 @@
     /* Dashboard */
     .hello{text-align:center;margin-bottom:1.4rem}
     .stats{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;margin-bottom:1.3rem}
-    .stat{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:1rem .8rem;text-align:center}
+    .stat{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);border-radius:20px;padding:1rem .8rem;text-align:center;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
     .stat__num{font-family:"Fraunces",serif;font-size:2.1rem;font-weight:700;line-height:1}
     .stat--gold{border-color:var(--gold-soft);background:linear-gradient(160deg,rgba(166,124,0,.28),rgba(231,198,106,.12))}
     .stat--gold .stat__num{color:var(--gold-soft)}
     .stat__lbl{font-size:.78rem;opacity:.9;margin-top:.4rem;display:block}
-    .refbox{background:rgba(6,44,34,.45);border:1px dashed var(--gold-soft);border-radius:14px;padding:1.1rem;margin-bottom:1.3rem;text-align:center}
+    .refbox{background:rgba(6,44,34,.45);border:1px dashed var(--gold-soft);border-radius:20px;padding:1.1rem;margin-bottom:1.3rem;text-align:center}
     .refcode{font-family:"Fraunces",serif;font-size:1.8rem;font-weight:700;letter-spacing:.06em;color:var(--gold-soft)}
     .refrow{display:flex;gap:.5rem;margin-top:.8rem}
     .refrow input{font-size:.85rem;padding:.6rem .7rem}
@@ -61,7 +62,7 @@
     .foot a,.foot button{font-size:.9rem}
     .loader{text-align:center;padding:2rem 0;opacity:.85}
     /* Sin cuenta */
-    .contact{background:rgba(6,44,34,.4);border:1px solid rgba(231,198,106,.4);border-radius:14px;padding:1.2rem;margin:0 0 1rem;text-align:center}
+    .contact{background:rgba(6,44,34,.4);border:1px solid rgba(231,198,106,.4);border-radius:20px;padding:1.2rem;margin:0 0 1rem;text-align:center}
     .contact__name{font-family:"Fraunces",serif;font-weight:700;font-size:1.1rem;color:var(--gold-soft);margin-bottom:.9rem}
     .contact .btn{margin-top:0}
     .contact__line{font-size:.95rem;margin-top:.7rem}
