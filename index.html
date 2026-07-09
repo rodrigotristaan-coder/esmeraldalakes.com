@@ -341,8 +341,10 @@ section { padding: 5rem 1.5rem; }
 .review-card { border-radius: var(--radius); padding: 1.8rem; box-shadow: var(--shadow); text-align: left; display: flex; flex-direction: column; }
 .review-card--host { border-top: 4px solid var(--aqua); }
 .review-card__stars { color: #f5b301; font-size: 1.15rem; letter-spacing: 2px; }
-.review-card__quote { font-size: 1.02rem; line-height: 1.65; margin: 0.8rem 0 1.2rem; color: var(--ink); font-style: italic; flex: 1; }
-.review-card__who { display: flex; align-items: center; gap: 0.8rem; margin-top: auto; }
+.review-card__quote { font-size: 1.02rem; line-height: 1.65; margin: 0 0 0.8rem; color: var(--ink); font-style: italic; flex: 1; }
+.review-card__who { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1rem; }
+.review-card__who .review-card__stars { margin-left: auto; font-size: 1rem; }
+.review-card__date { margin-top: auto; color: var(--muted); font-size: 0.85rem; }
 .review-card__avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: var(--emerald); color: var(--white); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.05rem; font-family: "Fraunces", serif; flex: none; }
 .review-card__meta { display: flex; flex-direction: column; }
 .review-card__name { font-weight: 700; color: var(--ink); }
@@ -388,8 +390,12 @@ section { padding: 5rem 1.5rem; }
 
 /* ---------- Departamento ---------- */
 .dept { background: transparent; }
-.rooms { max-width: var(--max); margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+.rooms { max-width: var(--max); margin: 0 auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
 .room { border-radius: var(--radius); padding: 1.8rem; box-shadow: var(--shadow); }
+.room__photo {
+  width: 100%; height: 230px; object-fit: cover; display: block;
+  border-radius: 18px; margin-bottom: 1.3rem; border: 1px solid var(--glass-border);
+}
 .room__tag {
   display: inline-block; background: var(--emerald-dark); color: var(--white);
   font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
@@ -747,15 +753,15 @@ section { padding: 5rem 1.5rem; }
     </div>
     <div class="reviews__grid" id="reviews-list">
       <figure class="review-card review-card--host">
-        <div class="review-card__stars" aria-label="5 de 5 estrellas">★★★★★</div>
-        <blockquote class="review-card__quote" data-es="“Amo este depa con todo mi corazón. Ha sido el escenario de muchas de las mejores memorias de mi vida, y hoy tengo el gusto de abrirlo a viajeros de todo el mundo. Estoy comprometido al 100% con dar el mejor servicio: siempre estoy disponible para conocer y platicar con mis huéspedes.”" data-en="“I love this place with all my heart. It has been the backdrop to many of the best memories of my life, and today I'm delighted to open it to travelers from all over the world. I'm 100% committed to giving the best service — I'm always happy to meet and talk with my guests.”"></blockquote>
         <figcaption class="review-card__who">
           <img class="review-card__avatar" src="assets/images/host-rodrigo.webp" alt="Rodrigo Tristán" width="52" height="52" loading="lazy" />
           <span class="review-card__meta">
             <span class="review-card__name">Rodrigo Tristán</span>
             <span class="review-card__role" data-es="Socio-propietario" data-en="Co-owner"></span>
           </span>
+          <span class="review-card__stars" aria-label="5 de 5 estrellas">★★★★★</span>
         </figcaption>
+        <blockquote class="review-card__quote" data-es="“Amo este depa con todo mi corazón. Ha sido el escenario de muchas de las mejores memorias de mi vida, y hoy tengo el gusto de abrirlo a viajeros de todo el mundo. Estoy comprometido al 100% con dar el mejor servicio: siempre estoy disponible para conocer y platicar con mis huéspedes.”" data-en="“I love this place with all my heart. It has been the backdrop to many of the best memories of my life, and today I'm delighted to open it to travelers from all over the world. I'm 100% committed to giving the best service — I'm always happy to meet and talk with my guests.”"></blockquote>
       </figure>
     </div>
 
@@ -804,18 +810,16 @@ section { padding: 5rem 1.5rem; }
       <p data-es="Conoce cada rincón del departamento y del condominio." data-en="Get to know every corner of the apartment and the condo."></p>
     </div>
     <div class="gallery__grid is-collapsed" id="gallery-grid">
-      <figure class="gallery__item gallery__item--lg"><img src="assets/images/pool-aerial-v2.webp" alt="Vista de la alberca del condominio" loading="lazy" /></figure>
+      <figure class="gallery__item gallery__item--lg"><img src="assets/images/caseta-entrance.webp" alt="Caseta de acceso del condominio Diamante Lakes" loading="lazy" /></figure>
+      <figure class="gallery__item"><img src="assets/images/balcony-pool-view.webp" alt="Vista a la alberca desde la terraza" loading="lazy" /></figure>
       <figure class="gallery__item"><img src="assets/images/living-dining.webp" alt="Sala y comedor" loading="lazy" /></figure>
       <figure class="gallery__item"><img src="assets/images/kitchen-bar.webp" alt="Cocina con barra" loading="lazy" /></figure>
-      <figure class="gallery__item"><img src="assets/images/pool-resort.webp" alt="Vista del condominio y la alberca" loading="lazy" /></figure>
-      <figure class="gallery__item"><img src="assets/images/balcony-pool-view.webp" alt="Vista a la alberca desde el balcón" loading="lazy" /></figure>
       <figure class="gallery__item"><img src="assets/images/pool-night-jacuzzi.webp" alt="Alberca iluminada de noche y jacuzzi" loading="lazy" /></figure>
-      <figure class="gallery__item gallery__item--more"><img src="assets/images/bedroom1-two-beds.webp" alt="Recámara principal con dos camas matrimoniales" loading="lazy" /></figure>
+      <figure class="gallery__item"><img src="assets/images/bedroom1-two-beds.webp" alt="Recámara principal con dos camas matrimoniales" loading="lazy" /></figure>
       <figure class="gallery__item gallery__item--more"><img src="assets/images/bedroom2-full.webp" alt="Recámara 2 con litera y cama matrimonial" loading="lazy" /></figure>
       <figure class="gallery__item gallery__item--more"><img src="assets/images/bedroom2-red.webp" alt="Recámara 2: cama matrimonial" loading="lazy" /></figure>
       <figure class="gallery__item gallery__item--more"><img src="assets/images/bedroom2-bunk.webp" alt="Litera: individual arriba y matrimonial abajo" loading="lazy" /></figure>
       <figure class="gallery__item gallery__item--more"><img src="assets/images/bedroom1-dresser.webp" alt="Recámara principal con cajonera y espejo" loading="lazy" /></figure>
-      <figure class="gallery__item gallery__item--more"><img src="assets/images/caseta-entrance.webp" alt="Caseta de acceso del condominio Diamante Lakes" loading="lazy" /></figure>
       <figure class="gallery__item gallery__item--more"><img src="assets/images/balcony-hammock-view.webp" alt="Balcón con hamaca y vista a la alberca" loading="lazy" /></figure>
       <figure class="gallery__item gallery__item--more"><img src="assets/images/bathroom-shower.webp" alt="Baño con regadera" loading="lazy" /></figure>
       <figure class="gallery__item gallery__item--more"><img src="assets/images/terrace-dining.webp" alt="Terraza con comedor exterior" loading="lazy" /></figure>
@@ -845,6 +849,7 @@ section { padding: 5rem 1.5rem; }
 
     <div class="rooms">
       <article class="room">
+        <img class="room__photo" src="assets/images/bedroom1-two-beds.webp" alt="Recámara principal con dos camas matrimoniales" loading="lazy" />
         <div class="room__tag" data-es="Recámara 1" data-en="Bedroom 1"></div>
         <h3 data-es="Suite principal con baño propio" data-en="Master suite with private bath"></h3>
         <ul class="checks">
@@ -858,6 +863,7 @@ section { padding: 5rem 1.5rem; }
       </article>
 
       <article class="room">
+        <img class="room__photo" src="assets/images/bedroom2-red.webp" alt="Recámara 2 con cama matrimonial" loading="lazy" />
         <div class="room__tag" data-es="Recámara 2" data-en="Bedroom 2"></div>
         <h3 data-es="Recámara familiar" data-en="Family bedroom"></h3>
         <ul class="checks">
@@ -870,21 +876,29 @@ section { padding: 5rem 1.5rem; }
       </article>
 
       <article class="room">
-        <div class="room__tag" data-es="Áreas comunes" data-en="Common areas"></div>
-        <h3 data-es="Sala, comedor y cocina" data-en="Living room, dining & kitchen"></h3>
+        <img class="room__photo" src="assets/images/living-dining.webp" alt="Sala y comedor" loading="lazy" />
+        <div class="room__tag" data-es="Sala y comedor" data-en="Living & dining"></div>
+        <h3 data-es="Para convivir y descansar" data-en="To hang out and unwind"></h3>
         <ul class="checks">
           <li data-es="Sala con sofá y Smart TV: Netflix y canales de televisión" data-en="Living room with sofa and Smart TV: Netflix and cable channels"></li>
           <li data-es="Aire acondicionado en sala y comedor" data-en="Air conditioning in the living and dining areas"></li>
-          <li data-es="Cocina equipada: estufa, microondas, refri" data-en="Fully equipped kitchen: stove, microwave, fridge"></li>
+          <li data-es="Terraza propia con mesa y ventiladores" data-en="Private terrace with table and fans"></li>
+          <li data-es="Wi-Fi de alta velocidad" data-en="High-speed Wi-Fi"></li>
+          <li data-es="Estacionamiento para 1 auto" data-en="Parking for 1 car"></li>
+        </ul>
+      </article>
+
+      <article class="room">
+        <img class="room__photo" src="assets/images/kitchen-bar.webp" alt="Cocina equipada con barra" loading="lazy" />
+        <div class="room__tag" data-es="Cocina y servicio" data-en="Kitchen & laundry"></div>
+        <h3 data-es="Cocina equipada con barra" data-en="Fully equipped kitchen with bar"></h3>
+        <ul class="checks">
+          <li data-es="Estufa, microondas y refri" data-en="Stove, microwave and fridge"></li>
           <li data-es="Vajilla, sartenes, tostador y más" data-en="Dishware, pans, toaster and more"></li>
           <li data-es="Cafetera, azúcar, sal y aceite siempre" data-en="Coffee maker, sugar, salt and oil always stocked"></li>
-          <li data-es="Terraza propia con mesa y ventiladores" data-en="Private terrace with table and fans"></li>
           <li data-es="Cuarto de servicio con lavadora" data-en="Service room with washer"></li>
           <li data-es="Plancha de vapor y secadora de pelo" data-en="Steam iron and hair dryer"></li>
           <li data-es="Toallas suficientes de baño y de alberca" data-en="Plenty of bath and pool towels"></li>
-          <li data-es="Aire acondicionado en cada recámara" data-en="Air conditioning in every bedroom"></li>
-          <li data-es="Wi-Fi de alta velocidad" data-en="High-speed Wi-Fi"></li>
-          <li data-es="Estacionamiento para 1 auto" data-en="Parking for 1 car"></li>
         </ul>
       </article>
     </div>
@@ -899,12 +913,12 @@ section { padding: 5rem 1.5rem; }
       <p data-es="Diamante Lakes pone el resort a tu disposición." data-en="Diamante Lakes puts the whole resort at your fingertips."></p>
     </div>
     <div class="amen__grid">
-      <div class="amen__card amen__card--photo"><img src="assets/images/pool-resort.webp" alt="Alberca" loading="lazy" /><h3 data-es="Alberca" data-en="Swimming pool"></h3></div>
-      <div class="amen__card amen__card--photo"><img src="assets/images/pool-night-jacuzzi.webp" alt="Jacuzzi" loading="lazy" /><h3 data-es="Jacuzzi" data-en="Jacuzzi"></h3></div>
-      <div class="amen__card amen__card--photo"><img src="assets/images/pool-aerial.webp" alt="Chapoteadero" loading="lazy" /><h3 data-es="Chapoteadero" data-en="Kiddie pool"></h3></div>
-      <div class="amen__card amen__card--photo"><img src="assets/images/pool-loungers.webp" alt="Tobogán" loading="lazy" /><h3 data-es="Tobogán" data-en="Water slide"></h3></div>
-      <div class="amen__card amen__card--photo"><img src="assets/images/pool-day.webp" alt="Bar en la alberca" loading="lazy" /><h3 data-es="Bar en la alberca" data-en="Swim-up bar"></h3></div>
-      <div class="amen__card amen__card--photo"><img src="assets/images/pool-night.webp" alt="Camastros y sillones" loading="lazy" /><h3 data-es="Camastros y sillones" data-en="Loungers & sofas"></h3></div>
+      <div class="amen__card"><span class="amen__ico">🏊</span><h3 data-es="Alberca" data-en="Swimming pool"></h3></div>
+      <div class="amen__card"><span class="amen__ico">♨️</span><h3 data-es="Jacuzzi" data-en="Jacuzzi"></h3></div>
+      <div class="amen__card"><span class="amen__ico">👶</span><h3 data-es="Chapoteadero" data-en="Kiddie pool"></h3></div>
+      <div class="amen__card"><span class="amen__ico">🛝</span><h3 data-es="Tobogán" data-en="Water slide"></h3></div>
+      <div class="amen__card"><span class="amen__ico">🍹</span><h3 data-es="Bar en la alberca" data-en="Swim-up bar"></h3></div>
+      <div class="amen__card"><span class="amen__ico">⛱️</span><h3 data-es="Camastros y sillones" data-en="Loungers & sofas"></h3></div>
     </div>
 
     <div class="section__head" style="margin-top:3.5rem">

@@ -315,10 +315,13 @@ function reviewCard(rv) {
   const avatar = rv.photo
     ? `<img class="review-card__avatar" src="${escAttr(rv.photo)}" alt="${escAttr(rv.name)}" width="52" height="52" loading="lazy" />`
     : `<span class="review-card__avatar" aria-hidden="true">${initials}</span>`;
+  const date = rv.ts
+    ? `<time class="review-card__date" datetime="${new Date(rv.ts).toISOString().slice(0, 10)}">${new Date(rv.ts).toLocaleDateString(document.documentElement.lang === "en" ? "en-US" : "es-MX", { year: "numeric", month: "long" })}</time>`
+    : "";
   fig.innerHTML =
-    `<div class="review-card__stars">${stars}</div>` +
+    `<figcaption class="review-card__who">${avatar}<span class="review-card__meta"><span class="review-card__name">${escHtml(rv.name)}</span></span><span class="review-card__stars">${stars}</span></figcaption>` +
     `<blockquote class="review-card__quote">${escHtml(rv.text)}</blockquote>` +
-    `<figcaption class="review-card__who">${avatar}<span class="review-card__meta"><span class="review-card__name">${escHtml(rv.name)}</span></span></figcaption>`;
+    date;
   return fig;
 }
 
