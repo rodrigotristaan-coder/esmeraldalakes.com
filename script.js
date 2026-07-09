@@ -302,7 +302,12 @@ async function loadReviews() {
   try {
     const r = await fetch(API_BASE + "/api/review");
     const { reviews } = await r.json();
-    for (const rv of reviews || []) list.appendChild(reviewCard(rv));
+    // No duplicar reseñas que ya están fijas en el HTML (p. ej. Paulina)
+    const staticNames = new Set([...list.querySelectorAll("[data-review-name]")].map((el) => el.dataset.reviewName));
+    for (const rv of reviews || []) {
+      if (staticNames.has(rv.name)) continue;
+      list.appendChild(reviewCard(rv));
+    }
   } catch {}
 }
 
