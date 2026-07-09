@@ -5,8 +5,7 @@ Sitio para promocionar el departamento **Esmeralda** en Revolcadero, Puerto Marq
 ## 📂 Estructura
 ```
 esmeralda-landing/
-├── index.html        ← la página
-├── styles.css        ← estilos
+├── index.html        ← la página (los estilos van en su <style> inline, no hay .css aparte)
 ├── script.js         ← configuración + interacciones (EDITA AQUÍ tus links)
 ├── assets/images/    ← pon aquí tus fotos
 ├── .gitignore        ← protege secretos (NUNCA subir .env)

@@ -64,7 +64,10 @@
       { "@type": "LocationFeatureSpecification", "name": "Bar en la alberca", "value": true },
       { "@type": "LocationFeatureSpecification", "name": "Aire acondicionado", "value": true },
       { "@type": "LocationFeatureSpecification", "name": "Cocina equipada", "value": true },
-      { "@type": "LocationFeatureSpecification", "name": "Lavadora y secadora", "value": true },
+      { "@type": "LocationFeatureSpecification", "name": "Lavadora", "value": true },
+      { "@type": "LocationFeatureSpecification", "name": "Plancha de vapor", "value": true },
+      { "@type": "LocationFeatureSpecification", "name": "Secadora de pelo", "value": true },
+      { "@type": "LocationFeatureSpecification", "name": "Estacionamiento", "value": true },
       { "@type": "LocationFeatureSpecification", "name": "WiFi", "value": true }
     ],
     "nearbyAttraction": {
@@ -92,7 +95,7 @@
       {
         "@type": "Question",
         "name": "¿Hay departamentos para rentar en Acapulco Diamante para grupos o familias?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Sí. El Departamento Esmeralda en Diamante Lakes tiene 2 recámaras y aloja hasta 9 personas, con cocina completa, lavadora y secadora — ideal para familias y grupos que visitan Acapulco Diamante." }
+        "acceptedAnswer": { "@type": "Answer", "text": "Sí. El Departamento Esmeralda en Diamante Lakes tiene 2 recámaras y aloja hasta 9 personas, con cocina equipada y lavadora — ideal para familias y grupos que visitan Acapulco Diamante." }
       },
       {
         "@type": "Question",
@@ -398,6 +401,7 @@ section { padding: 5rem 1.5rem; }
 .loc__card--wide { grid-column: span 4; }
 .loc__ico { font-size: 2rem; }
 .loc__card h3 { color: var(--emerald-dark); font-size: 1.05rem; }
+
 .loc__link { color: var(--emerald); font-weight: 600; font-size: 0.9rem; }
 
 /* ---------- Seguridad ---------- */
@@ -752,7 +756,6 @@ section { padding: 5rem 1.5rem; }
       <figure class="gallery__item gallery__item--more"><img src="assets/images/bedroom2-bunk-new.webp" alt="Recámara 2 con litera" loading="lazy" /></figure>
       <figure class="gallery__item gallery__item--more"><img src="assets/images/balcony-hammock-view.webp" alt="Balcón con hamaca y vista a la alberca" loading="lazy" /></figure>
       <figure class="gallery__item gallery__item--more"><img src="assets/images/bathroom-shower.webp" alt="Baño con regadera" loading="lazy" /></figure>
-      <figure class="gallery__item gallery__item--more"><img src="assets/images/entertainment-center.webp" alt="Centro de entretenimiento" loading="lazy" /></figure>
       <figure class="gallery__item gallery__item--more"><img src="assets/images/terrace-dining.webp" alt="Terraza con comedor exterior" loading="lazy" /></figure>
     </div>
     <div class="gallery__more-wrap">
@@ -770,12 +773,12 @@ section { padding: 5rem 1.5rem; }
     <ul class="includes" aria-label="Qué incluye">
       <li>📶 <span data-es="Wi-Fi" data-en="Wi-Fi"></span></li>
       <li>❄️ <span data-es="Aire acondicionado" data-en="Air conditioning"></span></li>
-      <li>🍳 <span data-es="Cocina equipada" data-en="Full kitchen"></span></li>
-      <li>📺 <span data-es="Smart TV · Netflix" data-en="Smart TV · Netflix"></span></li>
-      <li>🧺 <span data-es="Lavadora y secadora" data-en="Washer & dryer"></span></li>
+      <li>🍳 <span data-es="Cocina equipada" data-en="Fully equipped kitchen"></span></li>
+      <li>📺 <span data-es="Smart TV · Netflix y canales de TV" data-en="Smart TV · Netflix & cable channels"></span></li>
+      <li>🧺 <span data-es="Lavadora" data-en="Washer"></span></li>
       <li>🏊 <span data-es="Alberca y jacuzzi" data-en="Pool & jacuzzi"></span></li>
-      <li>🌴 <span data-es="Terraza con vista" data-en="Terrace with a view"></span></li>
-      <li>🅿️ <span data-es="Estacionamiento · 2 lugares" data-en="Parking · 2 spots"></span></li>
+      <li>🌴 <span data-es="Terraza propia con vista" data-en="Private terrace with a view"></span></li>
+      <li>🅿️ <span data-es="Estacionamiento · 1 lugar" data-en="Parking · 1 spot"></span></li>
     </ul>
 
     <div class="rooms">
@@ -808,21 +811,23 @@ section { padding: 5rem 1.5rem; }
         <div class="room__tag" data-es="Áreas comunes" data-en="Common areas"></div>
         <h3 data-es="Sala, comedor y cocina" data-en="Living room, dining & kitchen"></h3>
         <ul class="checks">
-          <li data-es="Sala con TV, Netflix y sofá" data-en="Living room with TV, Netflix and sofa"></li>
-          <li data-es="Aire acondicionado y ventilador" data-en="Air conditioning and fan"></li>
-          <li data-es="Comedor para 6 personas" data-en="Dining table for 6"></li>
-          <li data-es="Terraza con mesa y ventilador" data-en="Terrace with table and fan"></li>
-          <li data-es="Cocina completa: estufa, microondas, refri" data-en="Full kitchen: stove, microwave, fridge"></li>
+          <li data-es="Sala con sofá y Smart TV: Netflix y canales de televisión" data-en="Living room with sofa and Smart TV: Netflix and cable channels"></li>
+          <li data-es="Aire acondicionado en sala y comedor" data-en="Air conditioning in the living and dining areas"></li>
+          <li data-es="Cocina equipada: estufa, microondas, refri" data-en="Fully equipped kitchen: stove, microwave, fridge"></li>
           <li data-es="Vajilla, sartenes, tostador y más" data-en="Dishware, pans, toaster and more"></li>
-          <li data-es="Cuarto de servicio con lavadora y secadora" data-en="Service room with washer and dryer"></li>
+          <li data-es="Cafetera, azúcar, sal y aceite siempre" data-en="Coffee maker, sugar, salt and oil always stocked"></li>
+          <li data-es="Terraza propia con mesa y ventiladores" data-en="Private terrace with table and fans"></li>
+          <li data-es="Cuarto de servicio con lavadora" data-en="Service room with washer"></li>
+          <li data-es="Plancha de vapor y secadora de pelo" data-en="Steam iron and hair dryer"></li>
+          <li data-es="Toallas suficientes de baño y de alberca" data-en="Plenty of bath and pool towels"></li>
           <li data-es="Aire acondicionado en cada recámara" data-en="Air conditioning in every bedroom"></li>
           <li data-es="Wi-Fi de alta velocidad" data-en="High-speed Wi-Fi"></li>
-          <li data-es="Estacionamiento para 2 autos" data-en="Parking for 2 cars"></li>
+          <li data-es="Estacionamiento para 1 auto" data-en="Parking for 1 car"></li>
         </ul>
       </article>
     </div>
 
-    <div class="capacity-note" data-es="<strong>Capacidad:</strong> el comedor es para 6 personas, pero por la distribución de las recámaras <strong>caben hasta 9 huéspedes</strong>." data-en="<strong>Capacity:</strong> the dining table seats 6, but thanks to the bedroom layout the apartment <strong>sleeps up to 9 guests</strong>."></div>
+    <div class="capacity-note" data-es="<strong>Capacidad:</strong> hasta <strong>9 huéspedes</strong>." data-en="<strong>Capacity:</strong> up to <strong>9 guests</strong>."></div>
   </section>
 
   <!-- ============ AMENIDADES ============ -->
@@ -844,17 +849,23 @@ section { padding: 5rem 1.5rem; }
       <h2 data-es="En tu departamento" data-en="In your apartment"></h2>
     </div>
     <div class="amen__grid amen__grid--sm">
-      <div class="amen__card"><span class="amen__ico">❄️</span><h3 data-es="Aire acondicionado" data-en="Air conditioning"></h3></div>
-      <div class="amen__card"><span class="amen__ico">📺</span><h3 data-es="TV + Netflix" data-en="TV + Netflix"></h3></div>
-      <div class="amen__card"><span class="amen__ico">🍳</span><h3 data-es="Cocina completa" data-en="Full kitchen"></h3></div>
-      <div class="amen__card"><span class="amen__ico">🧺</span><h3 data-es="Lavadora y secadora" data-en="Washer & dryer"></h3></div>
+      <div class="amen__card"><span class="amen__ico">❄️</span><h3 data-es="Aire acondicionado en cada cuarto y área" data-en="Air conditioning in every room and area"></h3></div>
+      <div class="amen__card"><span class="amen__ico">📺</span><h3 data-es="Smart TV: Netflix y canales de televisión" data-en="Smart TV: Netflix and cable channels"></h3></div>
+      <div class="amen__card"><span class="amen__ico">🍳</span><h3 data-es="Cocina equipada" data-en="Fully equipped kitchen"></h3></div>
+      <div class="amen__card"><span class="amen__ico">☕</span><h3 data-es="Cafetera, azúcar, sal y aceite" data-en="Coffee maker, sugar, salt & oil"></h3></div>
+      <div class="amen__card"><span class="amen__ico">🧺</span><h3 data-es="Lavadora" data-en="Washer"></h3></div>
+      <div class="amen__card"><span class="amen__ico">👔</span><h3 data-es="Plancha de vapor" data-en="Steam iron"></h3></div>
+      <div class="amen__card"><span class="amen__ico">💇</span><h3 data-es="Secadora de pelo" data-en="Hair dryer"></h3></div>
+      <div class="amen__card"><span class="amen__ico">🛁</span><h3 data-es="Toallas de baño y de alberca" data-en="Bath & pool towels"></h3></div>
       <div class="amen__card"><span class="amen__ico">💼</span><h3 data-es="Escritorio de trabajo" data-en="Work desk"></h3></div>
-      <div class="amen__card"><span class="amen__ico">🌀</span><h3 data-es="Ventilador" data-en="Fan"></h3></div>
+      <div class="amen__card"><span class="amen__ico">🌀</span><h3 data-es="Ventiladores en terraza" data-en="Fans on the terrace"></h3></div>
     </div>
   </section>
 
   <!-- ============ UBICACIÓN ============ -->
   <section class="loc" id="ubicacion">
+
+
     <div class="section__head">
       <h2 data-es="Ubicación" data-en="Location"></h2>
       <p>Revolcadero, Puerto Marqués · 39890 Acapulco de Juárez, Gro.</p>
@@ -884,13 +895,52 @@ section { padding: 5rem 1.5rem; }
         <span class="loc__ico">🎤</span><h3>Arena GNP Seguros</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
-      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Walmart+Diamante+Acapulco">
-        <span class="loc__ico">🛒</span><h3 data-es="Walmart · 5 min" data-en="Walmart · 5 min"></h3>
-        <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
-      </a>
       <a class="loc__card loc__card--wide" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&origin=Ciudad+de+Mexico&destination=Condominio+Diamante+Lakes+Acapulco">
         <span class="loc__ico">🚗</span><h3 data-es="Desde la Ciudad de México" data-en="Driving from Mexico City"></h3>
         <span class="loc__link" data-es="Ver ruta por la Autopista del Sol →" data-en="Get directions via the Autopista del Sol →"></span>
+      </a>
+    </div>
+
+    <h3 class="loc__subtitle" data-es="Caminando desde el depa" data-en="Walking distance from the apartment"></h3>
+    <div class="loc__grid">
+      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Burger+King+Acapulco+Diamante">
+        <span class="loc__ico">🍔</span>
+        <h3 data-es="Burger King · caminando" data-en="Burger King · walking distance"></h3>
+        <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
+      </a>
+      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Gasolinera+Acapulco+Diamante">
+        <span class="loc__ico">⛽</span>
+        <h3 data-es="Gasolinera · 3 min" data-en="Gas station · 3 min"></h3>
+        <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
+      </a>
+      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Taqueria+Acapulco+Diamante">
+        <span class="loc__ico">🌮</span>
+        <h3 data-es="Taquería · 5 min" data-en="Taco spot · 5 min"></h3>
+        <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
+      </a>
+      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Farmacia+Acapulco+Diamante">
+        <span class="loc__ico">💊</span>
+        <h3 data-es="Farmacia · 5 min" data-en="Pharmacy · 5 min"></h3>
+        <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
+      </a>
+    </div>
+
+    <h3 class="loc__subtitle" data-es="A 5 minutos en coche" data-en="A 5-minute drive away"></h3>
+    <div class="loc__grid">
+      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Walmart+Diamante+Acapulco">
+        <span class="loc__ico">🛒</span>
+        <h3 data-es="Walmart · 5 min" data-en="Walmart · 5 min"></h3>
+        <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
+      </a>
+      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Starbucks+Acapulco+Diamante">
+        <span class="loc__ico">☕</span>
+        <h3 data-es="Starbucks · 5 min" data-en="Starbucks · 5 min"></h3>
+        <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
+      </a>
+      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Home+Depot+Acapulco+Diamante">
+        <span class="loc__ico">🔨</span>
+        <h3 data-es="Home Depot · 5 min" data-en="Home Depot · 5 min"></h3>
+        <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
     </div>
   </section>
@@ -899,12 +949,13 @@ section { padding: 5rem 1.5rem; }
   <section class="safety" id="seguridad">
     <div class="section__head">
       <h2 data-es="Tu seguridad primero" data-en="Your safety first"></h2>
-      <p data-es="El departamento está equipado para que descanses tranquilo." data-en="The apartment is equipped so you can rest easy."></p>
+      <p data-es="El departamento está amueblado para sentirte como en tu casa. Descansarás seguro y tranquilo." data-en="The apartment is furnished so you feel right at home. You'll rest safe and easy."></p>
     </div>
     <div class="safety__grid">
+      <div class="safety__card"><span class="amen__ico">👮</span><h3 data-es="Vigilancia 24 hrs / 7 días a la semana" data-en="Security 24 hrs / 7 days a week"></h3></div>
       <div class="safety__card"><span class="amen__ico">📹</span><h3 data-es="Cámara de vigilancia exterior" data-en="Exterior security camera"></h3></div>
       <div class="safety__card"><span class="amen__ico">🛡️</span><h3 data-es="Fraccionamiento privado con seguridad" data-en="Gated community with security"></h3></div>
-      <div class="safety__card"><span class="amen__ico">🅿️</span><h3 data-es="Dos estacionamientos" data-en="Two parking spaces"></h3></div>
+      <div class="safety__card"><span class="amen__ico">🅿️</span><h3 data-es="Estacionamiento privado" data-en="Private parking space"></h3></div>
       <div class="safety__card"><span class="amen__ico">🚨</span><h3 data-es="Detector de monóxido de carbono" data-en="Carbon monoxide detector"></h3></div>
     </div>
   </section>
@@ -999,7 +1050,7 @@ section { padding: 5rem 1.5rem; }
       </div>
       <div class="faq__item">
         <h3 data-es="¿Departamentos para rentar en Acapulco Diamante para grupos?" data-en="Apartments to rent in Acapulco Diamante for groups?"></h3>
-        <p data-es="Sí. Esmeralda tiene 2 recámaras y aloja hasta 9 personas, con cocina completa, lavadora y secadora — ideal para familias y grupos." data-en="Yes. Esmeralda has 2 bedrooms and sleeps up to 9, with a full kitchen, washer and dryer — ideal for families and groups."></p>
+        <p data-es="Sí. Esmeralda tiene 2 recámaras y aloja hasta 9 personas, con cocina equipada y lavadora — ideal para familias y grupos." data-en="Yes. Esmeralda has 2 bedrooms and sleeps up to 9, with a fully equipped kitchen and washer — ideal for families and groups."></p>
       </div>
       <div class="faq__item">
         <h3 data-es="¿Qué tan cerca está la playa Revolcadero y otros lugares?" data-en="How close are Revolcadero beach and other spots?"></h3>
