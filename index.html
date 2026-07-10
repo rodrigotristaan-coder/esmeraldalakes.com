@@ -522,14 +522,19 @@ section { padding: 5rem 1.5rem; }
 .cal__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
 .cal__dow { text-align: center; font-size: 0.7rem; font-weight: 700; color: var(--muted); padding: 0.2rem 0; }
 .cal__day {
-  aspect-ratio: 1; border: 0; background: #fff; border-radius: 50%; cursor: pointer;
-  font: 600 0.85rem "Inter", sans-serif; color: var(--ink); display: flex; align-items: center; justify-content: center;
+  aspect-ratio: 1; border: 0; background: #fff; border-radius: 14px; cursor: pointer;
+  font: 600 0.85rem "Inter", sans-serif; color: var(--ink);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  padding: 0; line-height: 1.1;
 }
+.cal__rate { font-style: normal; font-weight: 600; font-size: 0.52rem; color: var(--muted); letter-spacing: -0.01em; }
+.cal__day--in .cal__rate, .cal__day--out .cal__rate { color: rgba(255,255,255,0.85); }
+.cal__day--range .cal__rate { color: var(--emerald-dark); }
 .cal__day:hover:not(:disabled) { background: #d8f5e8; }
 .cal__day--empty { background: transparent; cursor: default; }
 .cal__day:disabled { color: #c2cdc8; background: #eef2f0; cursor: not-allowed; text-decoration: line-through; }
 .cal__day--in, .cal__day--out { background: var(--emerald) !important; color: #fff !important; }
-.cal__day--range { background: #bff0db !important; color: var(--emerald-dark) !important; border-radius: 50%; }
+.cal__day--range { background: #bff0db !important; color: var(--emerald-dark) !important; }
 .cal__legend { display: flex; gap: 1rem; margin-top: 0.6rem; font-size: 0.72rem; color: var(--muted); flex-wrap: wrap; }
 .cal__legend span { display: inline-flex; align-items: center; gap: 0.3rem; }
 .cal__dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
@@ -537,7 +542,19 @@ section { padding: 5rem 1.5rem; }
 .cal__dot--busy { background: #eef2f0; }
 .cal__dot--sel { background: var(--emerald); }
 .cal__summary { margin-top: 0.6rem; font-size: 0.9rem; color: var(--emerald-dark); font-weight: 600; min-height: 1.2em; }
-.book__price { margin-top: 0.25rem; font-size: 1rem; color: var(--emerald-dark); font-weight: 700; }
+.book__price { margin-top: 0.25rem; }
+/* Desglose del estimado (noches × tarifa) */
+.book__quote {
+  border: 1px solid #d4e2dc; border-radius: 18px; background: rgba(255,255,255,0.75);
+  padding: 0.75rem 1rem 0.7rem; font-size: 0.92rem; color: var(--ink);
+}
+.quote__row { display: flex; justify-content: space-between; gap: 1rem; padding: 0.18rem 0; }
+.quote__row em { font-style: normal; color: var(--muted); font-size: 0.85em; }
+.quote__row--total {
+  margin-top: 0.35rem; padding-top: 0.5rem; border-top: 1px solid #d4e2dc;
+  font-weight: 700; color: var(--emerald-dark);
+}
+.quote__note { margin-top: 0.35rem; font-size: 0.78rem; color: var(--muted); }
 
 .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .book__submit { width: 100%; margin-top: 0.6rem; }
@@ -1117,7 +1134,7 @@ section { padding: 5rem 1.5rem; }
           <p class="book__hint" data-es="👉 Toca tu día de llegada y luego el de salida en el calendario." data-en="👉 Tap your check-in day, then your check-out day on the calendar."></p>
           <div id="calendar" class="cal" aria-label="Calendario de disponibilidad"></div>
           <p class="cal__summary" id="cal-summary"></p>
-          <p class="book__price" id="book-price"></p>
+          <div class="book__price" id="book-price"></div>
           <input type="hidden" id="bf-checkin" name="checkin" />
           <input type="hidden" id="bf-checkout" name="checkout" />
         </div>

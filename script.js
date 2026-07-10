@@ -159,18 +159,30 @@ function isHighSeason(mmdd) {
 function isEventDay(ds) {
   return PRICING.eventRanges.some(([a, b]) => ds >= a && ds <= b);
 }
+// Tarifa de una noche concreta + etiqueta de por qué (para el desglose)
+function dailyRate(ds) {
+  const dow = new Date(ds + "T00:00:00").getDay();
+  let rate, kind;
+  if (isHighSeason(ds.slice(5))) { rate = PRICING.rateHigh; kind = "high"; }
+  else if (dow === 5 || dow === 6) { rate = PRICING.rateWeekend; kind = "weekend"; }
+  else { rate = PRICING.rateBase; kind = "base"; }
+  if (isEventDay(ds)) { rate = Math.round(rate * (1 + PRICING.eventSurcharge)); kind = "event"; }
+  return { rate, kind };
+}
 function estimatePrice(ci, co) {
   let total = 0, nights = 0;
+  const byKind = {}; // kind → { rate, count } (para el desglose)
   const cur = new Date(ci + "T00:00:00"), end = new Date(co + "T00:00:00");
   while (cur < end && nights < 365) {
     const ds = ymd(cur.getFullYear(), cur.getMonth(), cur.getDate());
-    const dow = cur.getDay();
-    let rate = isHighSeason(ds.slice(5)) ? PRICING.rateHigh : (dow === 5 || dow === 6 ? PRICING.rateWeekend : PRICING.rateBase);
-    if (isEventDay(ds)) rate = Math.round(rate * (1 + PRICING.eventSurcharge));
+    const { rate, kind } = dailyRate(ds);
+    const key = kind + rate;
+    byKind[key] = byKind[key] || { kind, rate, count: 0 };
+    byKind[key].count++;
     total += rate; nights++;
     cur.setDate(cur.getDate() + 1);
   }
-  return { total, nights };
+  return { total, nights, lines: Object.values(byKind).sort((a, b) => a.rate - b.rate) };
 }
 const TC_USD = 17.2; // tipo de cambio para mostrar precios en USD (versión EN)
 const money = (n) => {
@@ -178,6 +190,11 @@ const money = (n) => {
   return lang === "en"
     ? "$" + Math.round(n / TC_USD).toLocaleString("en-US") + " USD"
     : "$" + n.toLocaleString("es-MX") + " MXN";
+};
+// Versión compacta para las celdas del calendario ("$2,000" / "$116")
+const moneyShort = (n) => {
+  const lang = document.body.dataset.lang || "es";
+  return lang === "en" ? "$" + Math.round(n / TC_USD) : "$" + n.toLocaleString("es-MX");
 };
 
 const CAL = {
@@ -243,7 +260,9 @@ function renderCalendar() {
     if (ds === CAL.checkin) cls += " cal__day--in";
     else if (ds === CAL.checkout) cls += " cal__day--out";
     else if (CAL.checkin && CAL.checkout && ds > CAL.checkin && ds < CAL.checkout) cls += " cal__day--range";
-    html += `<button type="button" class="${cls}" data-ds="${ds}" ${past || busy ? "disabled" : ""}>${d}</button>`;
+    // Precio de la noche visible en cada día disponible
+    const price = past || busy ? "" : `<i class="cal__rate">${moneyShort(dailyRate(ds).rate)}</i>`;
+    html += `<button type="button" class="${cls}" data-ds="${ds}" ${past || busy ? "disabled" : ""}><span>${d}</span>${price}</button>`;
   }
   html += `</div><div class="cal__legend">
     <span><i class="cal__dot cal__dot--free"></i>${t.legendFree}</span>
@@ -261,9 +280,17 @@ function renderCalendar() {
       const nights = Math.round((new Date(CAL.checkout) - new Date(CAL.checkin)) / 86400000);
       summary.textContent = `${CAL.checkin} → ${CAL.checkout} · ${t.nightWord(nights)}`;
       if (priceEl) {
-        const { total } = estimatePrice(CAL.checkin, CAL.checkout);
-        priceEl.textContent = (lang === "en" ? "Estimate: " : "Estimado: ") + money(total) +
-          (lang === "en" ? " · final price confirmed by host" : " · precio final por confirmar");
+        const { total, lines } = estimatePrice(CAL.checkin, CAL.checkout);
+        const KIND = {
+          es: { base: "entre semana", weekend: "vie y sáb", high: "temporada alta", event: "evento Arena GNP" },
+          en: { base: "weeknight", weekend: "Fri & Sat", high: "high season", event: "Arena GNP event" },
+        }[lang === "en" ? "en" : "es"];
+        const rows = lines.map((l) =>
+          `<div class="quote__row"><span>${l.count} × ${moneyShort(l.rate)} <em>(${KIND[l.kind]})</em></span><span>${moneyShort(l.rate * l.count)}</span></div>`
+        ).join("");
+        priceEl.innerHTML = `<div class="book__quote">${rows}
+          <div class="quote__row quote__row--total"><span>${lang === "en" ? "Estimated total" : "Total estimado"}</span><span>${money(total)}</span></div>
+          <div class="quote__note">${lang === "en" ? "Final price confirmed by the host." : "Precio final por confirmar con el anfitrión."}</div></div>`;
       }
     } else {
       summary.textContent = CAL.checkin ? `${CAL.checkin} → …` : t.summaryEmpty;
