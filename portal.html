@@ -55,7 +55,7 @@
     .refrow .btn{margin:0;width:auto;padding:.6rem 1rem;white-space:nowrap;font-size:.85rem}
     .resv{margin-top:.3rem}
     .resv h3{font-family:"Fraunces",serif;font-size:1.15rem;margin-bottom:.6rem}
-    .resv__item{display:flex;justify-content:space-between;align-items:center;padding:.7rem .2rem;border-bottom:1px solid rgba(255,255,255,.12);font-size:.92rem}
+    .resv__item{display:flex;justify-content:space-between;align-items:center;gap:.6rem;flex-wrap:wrap;padding:.7rem .2rem;border-bottom:1px solid rgba(255,255,255,.14);font-size:.92rem}
     .resv__item:last-child{border-bottom:0}
     .resv__nights{opacity:.8;font-size:.82rem}
     .foot{display:flex;gap:.7rem;margin-top:1.4rem;justify-content:center;flex-wrap:wrap}
@@ -69,6 +69,16 @@
     .contact__line a{color:#eafff6;text-decoration:none;font-weight:600;border-bottom:1px solid rgba(255,255,255,.28);padding-bottom:1px}
     .contact__line a:hover{border-color:var(--aqua)}
     #view-noaccount .btn--ghost{display:block;text-align:center;text-decoration:none;margin-top:.2rem}
+    @media (max-width:420px){
+      body{padding:1.6rem .8rem}
+      .card{padding:1.5rem 1.15rem;border-radius:24px}
+      .brand{margin-bottom:1.2rem}
+      .stats{gap:.7rem}
+      .refcode{font-size:1.55rem}
+      .refrow{flex-wrap:wrap}
+      .refrow input{min-width:0;flex:1 1 100%}
+      .refrow .btn{flex:1 1 auto}
+    }
   </style>
 </head>
 <body>
