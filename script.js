@@ -143,6 +143,8 @@ const PRICING = {
   rateBase: 2000,      // entre semana, temporada baja (precio "desde")
   rateWeekend: 2700,   // viernes y sábado (+35%)
   rateHigh: 3700,      // temporada alta (+85%)
+  rateSpecial: 5000,   // fechas especiales: Navidad y Año Nuevo (MM-DD, cada año)
+  specialDates: ["12-24", "12-25", "12-31", "01-01"],
   eventSurcharge: 0.30, // +30% en fechas de eventos de la Arena GNP
   // Temporada alta (MM-DD). El primero cruza fin de año.
   highRanges: [["12-15", "01-06"], ["03-25", "04-15"], ["07-01", "08-18"]],
@@ -161,9 +163,12 @@ function isEventDay(ds) {
 }
 // Tarifa de una noche concreta + etiqueta de por qué (para el desglose)
 function dailyRate(ds) {
+  const mmdd = ds.slice(5);
+  // Fechas especiales (Navidad, Año Nuevo): tarifa fija tope, sin recargos encima
+  if (PRICING.specialDates.includes(mmdd)) return { rate: PRICING.rateSpecial, kind: "special" };
   const dow = new Date(ds + "T00:00:00").getDay();
   let rate, kind;
-  if (isHighSeason(ds.slice(5))) { rate = PRICING.rateHigh; kind = "high"; }
+  if (isHighSeason(mmdd)) { rate = PRICING.rateHigh; kind = "high"; }
   else if (dow === 5 || dow === 6) { rate = PRICING.rateWeekend; kind = "weekend"; }
   else { rate = PRICING.rateBase; kind = "base"; }
   if (isEventDay(ds)) { rate = Math.round(rate * (1 + PRICING.eventSurcharge)); kind = "event"; }
@@ -282,8 +287,8 @@ function renderCalendar() {
       if (priceEl) {
         const { total, lines } = estimatePrice(CAL.checkin, CAL.checkout);
         const KIND = {
-          es: { base: "entre semana", weekend: "vie y sáb", high: "temporada alta", event: "evento Arena GNP" },
-          en: { base: "weeknight", weekend: "Fri & Sat", high: "high season", event: "Arena GNP event" },
+          es: { base: "entre semana", weekend: "vie y sáb", high: "temporada alta", event: "evento Arena GNP", special: "fecha especial" },
+          en: { base: "weeknight", weekend: "Fri & Sat", high: "high season", event: "Arena GNP event", special: "holiday" },
         }[lang === "en" ? "en" : "es"];
         const rows = lines.map((l) =>
           `<div class="quote__row"><span>${l.count} × ${moneyShort(l.rate)} <em>(${KIND[l.kind]})</em></span><span>${moneyShort(l.rate * l.count)}</span></div>`
