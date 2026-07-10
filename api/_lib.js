@@ -251,6 +251,7 @@ async function upsertCustomerFromBooking({ email, name, checkin, checkout, night
 
   // Crédito por referido: solo en la PRIMERA reserva confirmada del cliente, y si el código es de otro.
   const wasFirstStay = c.reservations.length === 0;
+  let notifyReferrer = null;
   if (wasFirstStay && refCode) {
     const refOwner = ownerOfRefCode(customers, refCode);
     if (refOwner && refOwner !== key) {
@@ -259,6 +260,7 @@ async function upsertCustomerFromBooking({ email, name, checkin, checkout, night
       customers[refOwner].credits.push({
         type: "referral", from: key, nights: 1, at: new Date().toISOString(),
       });
+      notifyReferrer = refOwner;
     }
   }
 
@@ -267,6 +269,21 @@ async function upsertCustomerFromBooking({ email, name, checkin, checkout, night
   });
 
   await writeCustomers(customers);
+
+  // Aviso al referidor de su noche gratis (n8n → Outlook), después de persistir.
+  const hookUrl = process.env.N8N_REFERRAL_WEBHOOK;
+  if (notifyReferrer && hookUrl) {
+    const r = customers[notifyReferrer];
+    await fetch(hookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: r.email, name: r.name || "", friendName: c.name || "",
+        freeNights: r.freeNights, refCode: r.refCode,
+      }),
+    }).catch((e) => console.error("n8n referral notify:", e.message));
+  }
+
   return { ok: true, isNew, email: key, refCode: c.refCode };
 }
 
