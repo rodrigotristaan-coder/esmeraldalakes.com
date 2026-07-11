@@ -526,7 +526,15 @@ function wireReviewForm() {
 
 // ---------- Arranque ----------
 document.addEventListener("DOMContentLoaded", () => {
-  applyLang(detectLang());
+  const lang0 = detectLang();
+  // Si el usuario prefiere EN y esta página tiene versión /en/ propia, redirigimos
+  // para que URL y contenido siempre coincidan. Solo desde la página genérica
+  // (sin data-page-lang); /en/ nunca auto-redirige (elección explícita).
+  if (lang0 === "en" && !document.body.dataset.pageLang) {
+    const dest = langUrl("en");
+    if (dest) { location.replace(dest); return; }
+  }
+  applyLang(lang0);
 
   document.querySelectorAll(".lang__btn").forEach((b) => {
     b.addEventListener("click", () => {
