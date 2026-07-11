@@ -517,8 +517,15 @@ section { padding: 5rem 1.5rem; }
 }
 .book__inner {
   max-width: var(--max); margin: 0 auto;
-  display: grid; grid-template-columns: 1fr 1.1fr; gap: 3rem; align-items: center;
+  display: grid; grid-template-columns: 1fr 1.1fr; gap: 3rem; align-items: start;
 }
+.book__calwrap {
+  background: rgba(255,255,255,0.88); color: var(--ink); border-radius: var(--radius);
+  -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border); box-shadow: var(--shadow);
+  padding: 1.5rem; margin-top: 1.8rem;
+}
+.book__step { font-weight: 700; color: var(--emerald-dark); font-size: 1.05rem; margin-bottom: 0.6rem; font-family: "Fraunces", serif; }
 .book__intro h2 { font-size: clamp(2rem, 5vw, 2.8rem); }
 .book__intro p { margin-top: 0.8rem; opacity: 0.95; font-size: 1.1rem; }
 .book__perks { list-style: none; margin-top: 1.4rem; }
@@ -848,6 +855,30 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
     </div>
   </section>
 
+  <!-- ============ SEGURIDAD ============ -->
+  <section class="safety" id="seguridad">
+    <div class="section__head">
+      <h2 data-es="Tu seguridad primero" data-en="Your safety first"></h2>
+      <p data-es="El departamento está amueblado para sentirte como en tu casa. Descansarás seguro y tranquilo." data-en="The apartment is furnished so you feel right at home. You'll rest safe and easy."></p>
+    </div>
+    <figure class="safety__photo">
+      <img src="assets/images/caseta-entrance.webp" alt="Caseta de acceso del Condominio Diamante Lakes con vigilancia" loading="lazy" />
+      <figcaption data-es="Caseta de acceso de Diamante Lakes — vigilancia en la entrada, 24/7" data-en="Diamante Lakes gatehouse — guarded entrance, 24/7"></figcaption>
+    </figure>
+    <details class="acc">
+      <summary><span data-es="🛡️ Todo lo que cuida tu estancia" data-en="🛡️ Everything keeping your stay safe"></span></summary>
+      <div class="acc__body">
+        <div class="safety__grid">
+          <div class="safety__card"><span class="amen__ico">👮</span><h3 data-es="Vigilancia 24 hrs / 7 días a la semana" data-en="Security 24 hrs / 7 days a week"></h3></div>
+          <div class="safety__card"><span class="amen__ico">📹</span><h3 data-es="Cámara de vigilancia exterior" data-en="Exterior security camera"></h3></div>
+          <div class="safety__card"><span class="amen__ico">🛡️</span><h3 data-es="Fraccionamiento privado con seguridad" data-en="Gated community with security"></h3></div>
+          <div class="safety__card"><span class="amen__ico">🅿️</span><h3 data-es="Estacionamiento privado" data-en="Private parking space"></h3></div>
+          <div class="safety__card"><span class="amen__ico">🚨</span><h3 data-es="Detector de monóxido de carbono" data-en="Carbon monoxide detector"></h3></div>
+        </div>
+      </div>
+    </details>
+  </section>
+
   <!-- ============ GALERÍA ============ -->
   <section class="gallery" id="galeria">
     <div class="section__head">
@@ -855,8 +886,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       <p data-es="Conoce cada rincón del departamento y del condominio." data-en="Get to know every corner of the apartment and the condo."></p>
     </div>
     <div class="gallery__grid is-collapsed" id="gallery-grid">
-      <figure class="gallery__item gallery__item--lg"><img src="assets/images/caseta-entrance.webp" alt="Caseta de acceso del condominio Diamante Lakes" loading="lazy" /></figure>
-      <figure class="gallery__item"><img src="assets/images/balcony-pool-view.webp" alt="Vista a la alberca desde la terraza" loading="lazy" /></figure>
+      <figure class="gallery__item gallery__item--lg"><img src="assets/images/balcony-pool-view.webp" alt="Vista a la alberca desde la terraza" loading="lazy" /></figure>
       <figure class="gallery__item"><img src="assets/images/living-dining.webp" alt="Sala y comedor" loading="lazy" /></figure>
       <figure class="gallery__item"><img src="assets/images/kitchen-bar.webp" alt="Cocina con barra" loading="lazy" /></figure>
       <figure class="gallery__item"><img src="assets/images/pool-night-jacuzzi.webp" alt="Alberca iluminada de noche y jacuzzi" loading="lazy" /></figure>
@@ -1095,30 +1125,6 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
     </details>
   </section>
 
-  <!-- ============ SEGURIDAD ============ -->
-  <section class="safety" id="seguridad">
-    <div class="section__head">
-      <h2 data-es="Tu seguridad primero" data-en="Your safety first"></h2>
-      <p data-es="El departamento está amueblado para sentirte como en tu casa. Descansarás seguro y tranquilo." data-en="The apartment is furnished so you feel right at home. You'll rest safe and easy."></p>
-    </div>
-    <figure class="safety__photo">
-      <img src="assets/images/caseta-entrance.webp" alt="Caseta de acceso del Condominio Diamante Lakes con vigilancia" loading="lazy" />
-      <figcaption data-es="Caseta de acceso de Diamante Lakes — vigilancia en la entrada, 24/7" data-en="Diamante Lakes gatehouse — guarded entrance, 24/7"></figcaption>
-    </figure>
-    <details class="acc">
-      <summary><span data-es="🛡️ Todo lo que cuida tu estancia" data-en="🛡️ Everything keeping your stay safe"></span></summary>
-      <div class="acc__body">
-        <div class="safety__grid">
-          <div class="safety__card"><span class="amen__ico">👮</span><h3 data-es="Vigilancia 24 hrs / 7 días a la semana" data-en="Security 24 hrs / 7 days a week"></h3></div>
-          <div class="safety__card"><span class="amen__ico">📹</span><h3 data-es="Cámara de vigilancia exterior" data-en="Exterior security camera"></h3></div>
-          <div class="safety__card"><span class="amen__ico">🛡️</span><h3 data-es="Fraccionamiento privado con seguridad" data-en="Gated community with security"></h3></div>
-          <div class="safety__card"><span class="amen__ico">🅿️</span><h3 data-es="Estacionamiento privado" data-en="Private parking space"></h3></div>
-          <div class="safety__card"><span class="amen__ico">🚨</span><h3 data-es="Detector de monóxido de carbono" data-en="Carbon monoxide detector"></h3></div>
-        </div>
-      </div>
-    </details>
-  </section>
-
   <!-- ============ RESEÑAS ============ -->
   <section class="reviews" id="resenas">
     <div class="section__head">
@@ -1201,9 +1207,17 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
           <li data-es="✓ Respuesta en menos de 24 h" data-en="✓ Reply within 24 hours"></li>
           <li data-es="✓ Hasta 9 huéspedes" data-en="✓ Sleeps up to 9 guests"></li>
         </ul>
+        <div class="book__calwrap">
+          <p class="book__step" data-es="1 · Elige tus fechas" data-en="1 · Pick your dates"></p>
+          <p class="book__hint" data-es="👉 Toca tu día de llegada y luego el de salida." data-en="👉 Tap your check-in day, then your check-out day."></p>
+          <div id="calendar" class="cal" aria-label="Calendario de disponibilidad"></div>
+          <p class="cal__summary" id="cal-summary"></p>
+          <div class="book__price" id="book-price"></div>
+        </div>
       </div>
 
       <form class="book__form" id="booking-form" novalidate>
+        <p class="book__step" data-es="2 · Tus datos" data-en="2 · Your details"></p>
         <div class="field">
           <label for="bf-name" data-es="Nombre completo" data-en="Full name"></label>
           <input id="bf-name" name="name" type="text" required />
@@ -1218,15 +1232,8 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
             <input id="bf-phone" name="phone" type="tel" />
           </div>
         </div>
-        <div class="field">
-          <label data-es="Elige tus fechas" data-en="Pick your dates"></label>
-          <p class="book__hint" data-es="👉 Toca tu día de llegada y luego el de salida en el calendario." data-en="👉 Tap your check-in day, then your check-out day on the calendar."></p>
-          <div id="calendar" class="cal" aria-label="Calendario de disponibilidad"></div>
-          <p class="cal__summary" id="cal-summary"></p>
-          <div class="book__price" id="book-price"></div>
-          <input type="hidden" id="bf-checkin" name="checkin" />
-          <input type="hidden" id="bf-checkout" name="checkout" />
-        </div>
+        <input type="hidden" id="bf-checkin" name="checkin" />
+        <input type="hidden" id="bf-checkout" name="checkout" />
         <div class="field-row">
           <div class="field field--sm">
             <label for="bf-guests" data-es="Huéspedes" data-en="Guests"></label>
