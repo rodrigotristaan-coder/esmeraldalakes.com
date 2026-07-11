@@ -1,6 +1,6 @@
 // Portal: paso 2 del magic-link. Recibe {email, code}; si el código es válido,
 // emite la cookie de sesión firmada (HttpOnly) y devuelve los datos del cliente.
-const { normEmail, isEmail, verifyCode, readCustomers, sessionCookie } = require("./_lib");
+const { normEmail, isEmail, verifyCode, readCustomers, sessionCookie, isAdminEmail } = require("./_lib");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
@@ -14,6 +14,12 @@ module.exports = async (req, res) => {
   try {
     const v = await verifyCode(email, code);
     if (!v.ok) return res.status(401).json({ ok: false, error: v.reason || "bad" });
+
+    // Correo admin → sesión con rol admin y directo al panel (no al portal de cliente).
+    if (isAdminEmail(email)) {
+      res.setHeader("Set-Cookie", sessionCookie(email, "admin"));
+      return res.status(200).json({ ok: true, admin: true });
+    }
 
     const customers = await readCustomers();
     const c = customers[email];

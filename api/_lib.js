@@ -353,11 +353,16 @@ async function verifyCode(email, code) {
   return { ok: true };
 }
 
-// --- Sesión: cookie firmada HttpOnly ---
-function makeSession(email) {
+// --- Admin por magic-link: correos con acceso al panel (/admin.html) ---
+const ADMIN_EMAILS = () =>
+  String(process.env.ADMIN_EMAILS || "hola@satorimkt.com").split(",").map((s) => normEmail(s)).filter(Boolean);
+const isAdminEmail = (email) => ADMIN_EMAILS().includes(normEmail(email));
+
+// --- Sesión: cookie firmada HttpOnly (payload: email|exp|rol) ---
+function makeSession(email, role) {
   const key = normEmail(email);
   const exp = Date.now() + SESSION_TTL;
-  const payload = Buffer.from(key + "|" + exp).toString("base64url");
+  const payload = Buffer.from(key + "|" + exp + "|" + (role || "")).toString("base64url");
   return payload + "." + psign(payload);
 }
 function readSession(cookieHeader) {
@@ -365,12 +370,12 @@ function readSession(cookieHeader) {
   if (!m) return null;
   const [payload, sig] = decodeURIComponent(m[1]).split(".");
   if (!payload || !sig || !safeEqual(sig, psign(payload))) return null;
-  const [email, exp] = Buffer.from(payload, "base64url").toString("utf8").split("|");
+  const [email, exp, role] = Buffer.from(payload, "base64url").toString("utf8").split("|");
   if (!email || Number(exp) < Date.now()) return null;
-  return { email };
+  return { email, admin: role === "admin" && isAdminEmail(email) };
 }
-function sessionCookie(email) {
-  const v = makeSession(email);
+function sessionCookie(email, role) {
+  const v = makeSession(email, role);
   return `esm_portal=${v}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${Math.floor(SESSION_TTL / 1000)}`;
 }
 const clearSessionCookie = () => "esm_portal=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0";
@@ -379,5 +384,5 @@ module.exports = {
   sign, safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, rangeOverlaps, sendEmail, readReviews, writeReviews,
   // portal
   normEmail, isEmail, readCustomers, writeCustomers, upsertCustomerFromBooking, ownerOfRefCode, seedCustomer,
-  issueCode, verifyCode, sessionCookie, clearSessionCookie, readSession,
+  issueCode, verifyCode, sessionCookie, clearSessionCookie, readSession, isAdminEmail,
 };

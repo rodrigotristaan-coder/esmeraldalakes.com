@@ -117,7 +117,10 @@
     btn.disabled = true; setStatus(codeStatus, tr("checking"));
     try {
       var res = await api("/api/portal-verify", { email: currentEmail, code: code });
-      if (res.status === 200 && res.json.ok) { await loadDash(); return; }
+      if (res.status === 200 && res.json.ok) {
+        if (res.json.admin) { window.location.href = "/admin.html"; return; } // admin → panel
+        await loadDash(); return;
+      }
       setStatus(codeStatus, res.json.error === "noaccount" ? tr("noAccount") : tr("badCode"), "err");
     } catch (e2) { setStatus(codeStatus, tr("fail"), "err"); }
     finally { btn.disabled = false; }
@@ -178,6 +181,7 @@
     if (r.status !== 200) { show("email"); apply(lang); return false; }
     var d = await r.json();
     if (!d.ok) { show("email"); apply(lang); return false; }
+    if (d.admin) { window.location.href = "/admin.html"; return true; } // sesión admin → panel
     renderDash(d);
     return true;
   }

@@ -9,6 +9,8 @@ module.exports = async (req, res) => {
 
   const sess = readSession(req.headers.cookie);
   if (!sess) return res.status(401).json({ ok: false, error: "auth" });
+  // Sesión admin: no hay dashboard de cliente; el front redirige a /admin.html.
+  if (sess.admin) return res.status(200).json({ ok: true, admin: true });
 
   try {
     const customers = await readCustomers();

@@ -197,8 +197,13 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("addblock").addEventListener("click", addBlock);
   $("c-seed").addEventListener("click", seedCustomer);
-  $("logout").addEventListener("click", () => {
-    localStorage.removeItem(KEY_STORE); KEY = ""; showLogin(); $("key").value = "";
+  $("logout").addEventListener("click", async () => {
+    localStorage.removeItem(KEY_STORE); KEY = ""; $("key").value = "";
+    // También cierra la sesión magic-link (cookie), si existe.
+    try { await fetch("/api/portal-logout", { method: "POST", credentials: "same-origin" }); } catch (e) {}
+    showLogin();
   });
-  if (KEY) load(); else showLogin();
+  // Intenta cargar siempre: autentica con contraseña guardada o con la
+  // cookie de sesión admin (magic link vía /portal).
+  load();
 });

@@ -1,15 +1,18 @@
 // Panel de administración (protegido con ADMIN_KEY): ver, liberar y bloquear fechas.
-const { safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail } = require("./_lib");
+const { safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail, readSession } = require("./_lib");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
   const q = req.query || {};
   const key = q.key || req.headers["x-admin-key"];
 
-  // Acepta ADMIN_KEY o PORTAL_SECRET (ambos son secretos server-only).
+  // Acepta: (a) ADMIN_KEY o PORTAL_SECRET (secretos server-only), o
+  // (b) sesión magic-link con rol admin (cookie firmada del portal).
   const adminKey = process.env.ADMIN_KEY || "";
   const portalKey = process.env.PORTAL_SECRET || "";
-  const authed = !!key && ((adminKey && safeEqual(key, adminKey)) || (portalKey && safeEqual(key, portalKey)));
+  const keyAuthed = !!key && ((adminKey && safeEqual(key, adminKey)) || (portalKey && safeEqual(key, portalKey)));
+  const sess = readSession(req.headers.cookie);
+  const authed = keyAuthed || !!(sess && sess.admin);
   if (!authed) {
     return res.status(401).json({ ok: false, error: "no autorizado" });
   }
