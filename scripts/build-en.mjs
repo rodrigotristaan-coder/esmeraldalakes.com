@@ -133,6 +133,8 @@ html = html
   .replaceAll('srcset="assets/', 'srcset="/assets/')
   .replaceAll(', assets/', ', /assets/')
   .replaceAll('url(assets/', 'url(/assets/')
+  .replaceAll('url("assets/', 'url("/assets/')
+  .replaceAll("url('assets/", "url('/assets/")
   .replaceAll('src="script.js"', 'src="/script.js"')
   .replaceAll('href="blog.html"', 'href="/blog.html"')
   .replaceAll('href="gracias.html"', 'href="/gracias.html"');

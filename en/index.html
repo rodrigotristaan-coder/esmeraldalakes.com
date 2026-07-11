@@ -250,7 +250,7 @@ p, li, a, h1, h2, h3, h4, span { overflow-wrap: break-word; }
 .hero { overflow: visible; padding: 5.6rem 0.9rem 0.9rem; }
 .v1__stage {
   position: relative; min-height: calc(94vh - 6rem);
-  background-image: linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.28) 100%), url("assets/images/balcony-pool-view.webp");
+  background-image: linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.28) 100%), url("/assets/images/balcony-pool-view.webp");
   background-size: cover; background-position: center;
   border-radius: var(--radius-lg); box-shadow: var(--shadow);
   display: flex; align-items: center; justify-content: center;
@@ -306,7 +306,7 @@ p, li, a, h1, h2, h3, h4, span { overflow-wrap: break-word; }
   .v3__pool {
     width: 100%; aspect-ratio: 4 / 3;
     border-radius: var(--radius-lg); box-shadow: var(--shadow);
-    background: url("assets/images/balcony-pool-view-sm.webp") center/cover no-repeat;
+    background: url("/assets/images/balcony-pool-view-sm.webp") center/cover no-repeat;
   }
   .v3__caseta {
     position: absolute; right: -0.2rem; bottom: 0.4rem; width: 58%;
@@ -448,7 +448,7 @@ section { padding: 5rem 1.5rem; }
 
 /* ---------- Ubicación ---------- */
 .loc { background: transparent; }
-.map { max-width: var(--max); margin: 0 auto; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--glass-border); }
+.map { max-width: var(--max); margin: 0 auto 2rem; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--glass-border); }
 .map iframe { width: 100%; height: 420px; border: 0; display: block; }
 .loc__subtitle { max-width: var(--max); margin: 3rem auto 1.5rem; text-align: center; color: var(--emerald-dark); font-size: 1.5rem; }
 .loc__grid { max-width: var(--max); margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
@@ -584,18 +584,22 @@ section { padding: 5rem 1.5rem; }
 }
 .faq__item h3 { font-size: 1.12rem; color: var(--emerald-dark); margin-bottom: 0; display: inline; }
 .faq__item p { color: var(--muted); margin-top: 0.55rem; }
-.faq__item summary { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.faq__item summary { cursor: pointer; user-select: none; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.faq__item summary:hover h3 { color: var(--emerald); }
 .faq__item summary::-webkit-details-marker { display: none; }
-.faq__item summary::after { content: "+"; color: var(--gold); font-size: 1.35rem; font-weight: 400; flex: none; line-height: 1; }
-.faq__item[open] summary::after { content: "−"; }
+.faq__item summary::after { content: "+"; color: var(--gold); font-size: 1.35rem; font-weight: 400; flex: none; line-height: 1; width: 1.5rem; height: 1.5rem; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(166,124,0,0.4); border-radius: 50%; transition: transform .2s ease; }
+.faq__item[open] summary::after { content: "−"; transform: rotate(180deg); }
 
 /* ---------- Acordeones glass (despliegue progresivo) ---------- */
-details.acc { border-radius: var(--radius); max-width: var(--max); margin: 0 auto 1rem; box-shadow: 0 8px 22px -16px rgba(10,89,68,0.5); }
-details.acc > summary { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.15rem 1.6rem; font-weight: 700; font-size: 1.08rem; color: var(--emerald-dark); }
+details.acc { border-radius: var(--radius); max-width: var(--max); margin: 0 auto 1.1rem; box-shadow: 0 8px 22px -16px rgba(10,89,68,0.5); transition: box-shadow .2s ease; }
+details.acc[open] { box-shadow: var(--shadow); }
+details.acc > summary { cursor: pointer; user-select: none; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.2rem 1.6rem; font-weight: 700; font-size: 1.08rem; color: var(--emerald-dark); border-radius: var(--radius); transition: color .15s ease; }
+details.acc > summary:hover { color: var(--emerald); }
 details.acc > summary::-webkit-details-marker { display: none; }
-details.acc > summary::after { content: "+"; color: var(--gold); font-size: 1.5rem; font-weight: 400; flex: none; line-height: 1; }
-details.acc[open] > summary::after { content: "−"; }
-details.acc > .acc__body { padding: 0 1.6rem 1.4rem; }
+details.acc > summary::after { content: "+"; color: var(--gold); font-size: 1.5rem; font-weight: 400; flex: none; line-height: 1; width: 1.6rem; height: 1.6rem; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(166,124,0,0.4); border-radius: 50%; transition: transform .2s ease, background .2s ease; }
+details.acc > summary:hover::after { background: rgba(166,124,0,0.1); }
+details.acc[open] > summary::after { content: "−"; transform: rotate(180deg); }
+details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
 .acc__body ul.recs { list-style: none; margin: 0.2rem 0 0.6rem; }
 .acc__body ul.recs li { margin: 0.45rem 0; color: var(--muted); }
 .acc__body ul.recs li strong, .acc__body p strong { color: var(--ink); }
@@ -821,76 +825,6 @@ details.acc > .acc__body { padding: 0 1.6rem 1.4rem; }
     </div>
   </section>
 
-  <!-- ============ RESEÑAS ============ -->
-  <section class="reviews" id="resenas">
-    <div class="section__head">
-      <h2 data-es="Reseñas" data-en="Reviews">Reviews</h2>
-      <p data-es="Lo que se vive en Esmeralda." data-en="What it's like to stay at Esmeralda.">What it's like to stay at Esmeralda.</p>
-    </div>
-    <div class="reviews__grid" id="reviews-list">
-      <figure class="review-card review-card--host">
-        <figcaption class="review-card__who">
-          <img class="review-card__avatar" src="/assets/images/host-rodrigo.webp" alt="Rodrigo Tristán" width="52" height="52" loading="lazy" />
-          <span class="review-card__meta">
-            <span class="review-card__name">Rodrigo Tristán</span>
-            <span class="review-card__role" data-es="Socio-propietario" data-en="Co-owner">Co-owner</span>
-          </span>
-          <span class="review-card__stars" aria-label="5 de 5 estrellas">★★★★★</span>
-        </figcaption>
-        <blockquote class="review-card__quote" data-es="“Amo este depa con todo mi corazón. Ha sido el escenario de muchas de las mejores memorias de mi vida, y hoy tengo el gusto de abrirlo a viajeros de todo el mundo. Estoy comprometido al 100% con dar el mejor servicio: siempre estoy disponible para conocer y platicar con mis huéspedes.”" data-en="“I love this place with all my heart. It has been the backdrop to many of the best memories of my life, and today I'm delighted to open it to travelers from all over the world. I'm 100% committed to giving the best service — I'm always happy to meet and talk with my guests.”">“I love this place with all my heart. It has been the backdrop to many of the best memories of my life, and today I'm delighted to open it to travelers from all over the world. I'm 100% committed to giving the best service — I'm always happy to meet and talk with my guests.”</blockquote>
-      </figure>
-      <figure class="review-card" data-review-name="Paulina González">
-        <figcaption class="review-card__who">
-          <span class="review-card__avatar" aria-hidden="true">P</span>
-          <span class="review-card__meta">
-            <span class="review-card__name">Paulina González</span>
-            <span class="review-card__role" data-es="Huésped" data-en="Guest">Guest</span>
-          </span>
-          <span class="review-card__stars" aria-label="5 de 5 estrellas">★★★★★</span>
-        </figcaption>
-        <blockquote class="review-card__quote">“Está súper limpio y cómodo! La ubicación es excelente, frente al estadio GNP y solo a 5 minutos caminando de la playa. Definitivamente me quedaré aquí de nuevo, es un gran lugar para disfrutar de las áreas comunes, las albercas están increíbles!”</blockquote>
-        <time class="review-card__date" datetime="2026-06-22" data-es="junio de 2026" data-en="June 2026">June 2026</time>
-      </figure>
-    </div>
-
-    <div class="review-cta">
-      <button type="button" id="review-toggle" class="btn" data-es="✍️ Dejar una reseña" data-en="✍️ Leave a review">✍️ Leave a review</button>
-    </div>
-
-    <div class="review-form-wrap" id="review-form-wrap" hidden>
-      <h3 data-es="Deja tu reseña" data-en="Leave a review">Leave a review</h3>
-      <p class="review-form__note" data-es="Se publica tras una breve revisión del anfitrión." data-en="Published after a quick review by the host.">Published after a quick review by the host.</p>
-      <form id="review-form" class="review-form" novalidate>
-        <div class="rv-field">
-          <label for="rv-name" data-es="Tu nombre" data-en="Your name">Your name</label>
-          <input id="rv-name" name="name" type="text" maxlength="60" required />
-        </div>
-        <div class="rv-field">
-          <label data-es="Calificación" data-en="Rating">Rating</label>
-          <div class="stars-input" id="rv-stars" role="group" aria-label="Calificación">
-            <button type="button" data-v="1" aria-label="1 estrella">★</button>
-            <button type="button" data-v="2" aria-label="2 estrellas">★</button>
-            <button type="button" data-v="3" aria-label="3 estrellas">★</button>
-            <button type="button" data-v="4" aria-label="4 estrellas">★</button>
-            <button type="button" data-v="5" aria-label="5 estrellas">★</button>
-          </div>
-          <input type="hidden" id="rv-rating" name="rating" value="5" />
-        </div>
-        <div class="rv-field">
-          <label for="rv-text" data-es="Tu reseña" data-en="Your review">Your review</label>
-          <textarea id="rv-text" name="text" rows="4" maxlength="800" required></textarea>
-        </div>
-        <div class="rv-field">
-          <label for="rv-photo" data-es="Foto (opcional)" data-en="Photo (optional)">Photo (optional)</label>
-          <input id="rv-photo" name="photo" type="file" accept="image/*" />
-        </div>
-        <input type="text" name="company" id="rv-company" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
-        <button type="submit" class="btn btn--lg" data-es="Enviar reseña" data-en="Submit review">Submit review</button>
-        <p class="review-form__status" id="review-status" role="status"></p>
-      </form>
-    </div>
-  </section>
-
   <!-- ============ GALERÍA ============ -->
   <section class="gallery" id="galeria">
     <div class="section__head">
@@ -1045,7 +979,7 @@ details.acc > .acc__body { padding: 0 1.6rem 1.4rem; }
         loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
 
-    <details class="acc" open>
+    <details class="acc">
       <summary><span data-es="📍 Cómo llegar a los puntos clave" data-en="📍 How to get to the key spots">📍 How to get to the key spots</span></summary>
       <div class="acc__body">
     <div class="loc__grid">
@@ -1148,12 +1082,87 @@ details.acc > .acc__body { padding: 0 1.6rem 1.4rem; }
       <img src="/assets/images/caseta-entrance.webp" alt="Caseta de acceso del Condominio Diamante Lakes con vigilancia" loading="lazy" />
       <figcaption data-es="Caseta de acceso de Diamante Lakes — vigilancia en la entrada, 24/7" data-en="Diamante Lakes gatehouse — guarded entrance, 24/7">Diamante Lakes gatehouse — guarded entrance, 24/7</figcaption>
     </figure>
-    <div class="safety__grid">
-      <div class="safety__card"><span class="amen__ico">👮</span><h3 data-es="Vigilancia 24 hrs / 7 días a la semana" data-en="Security 24 hrs / 7 days a week">Security 24 hrs / 7 days a week</h3></div>
-      <div class="safety__card"><span class="amen__ico">📹</span><h3 data-es="Cámara de vigilancia exterior" data-en="Exterior security camera">Exterior security camera</h3></div>
-      <div class="safety__card"><span class="amen__ico">🛡️</span><h3 data-es="Fraccionamiento privado con seguridad" data-en="Gated community with security">Gated community with security</h3></div>
-      <div class="safety__card"><span class="amen__ico">🅿️</span><h3 data-es="Estacionamiento privado" data-en="Private parking space">Private parking space</h3></div>
-      <div class="safety__card"><span class="amen__ico">🚨</span><h3 data-es="Detector de monóxido de carbono" data-en="Carbon monoxide detector">Carbon monoxide detector</h3></div>
+    <details class="acc">
+      <summary><span data-es="🛡️ Todo lo que cuida tu estancia" data-en="🛡️ Everything keeping your stay safe">🛡️ Everything keeping your stay safe</span></summary>
+      <div class="acc__body">
+        <div class="safety__grid">
+          <div class="safety__card"><span class="amen__ico">👮</span><h3 data-es="Vigilancia 24 hrs / 7 días a la semana" data-en="Security 24 hrs / 7 days a week">Security 24 hrs / 7 days a week</h3></div>
+          <div class="safety__card"><span class="amen__ico">📹</span><h3 data-es="Cámara de vigilancia exterior" data-en="Exterior security camera">Exterior security camera</h3></div>
+          <div class="safety__card"><span class="amen__ico">🛡️</span><h3 data-es="Fraccionamiento privado con seguridad" data-en="Gated community with security">Gated community with security</h3></div>
+          <div class="safety__card"><span class="amen__ico">🅿️</span><h3 data-es="Estacionamiento privado" data-en="Private parking space">Private parking space</h3></div>
+          <div class="safety__card"><span class="amen__ico">🚨</span><h3 data-es="Detector de monóxido de carbono" data-en="Carbon monoxide detector">Carbon monoxide detector</h3></div>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ RESEÑAS ============ -->
+  <section class="reviews" id="resenas">
+    <div class="section__head">
+      <h2 data-es="Reseñas" data-en="Reviews">Reviews</h2>
+      <p data-es="Lo que se vive en Esmeralda." data-en="What it's like to stay at Esmeralda.">What it's like to stay at Esmeralda.</p>
+    </div>
+    <div class="reviews__grid" id="reviews-list">
+      <figure class="review-card review-card--host">
+        <figcaption class="review-card__who">
+          <img class="review-card__avatar" src="/assets/images/host-rodrigo.webp" alt="Rodrigo Tristán" width="52" height="52" loading="lazy" />
+          <span class="review-card__meta">
+            <span class="review-card__name">Rodrigo Tristán</span>
+            <span class="review-card__role" data-es="Socio-propietario" data-en="Co-owner">Co-owner</span>
+          </span>
+          <span class="review-card__stars" aria-label="5 de 5 estrellas">★★★★★</span>
+        </figcaption>
+        <blockquote class="review-card__quote" data-es="“Amo este depa con todo mi corazón. Ha sido el escenario de muchas de las mejores memorias de mi vida, y hoy tengo el gusto de abrirlo a viajeros de todo el mundo. Estoy comprometido al 100% con dar el mejor servicio: siempre estoy disponible para conocer y platicar con mis huéspedes.”" data-en="“I love this place with all my heart. It has been the backdrop to many of the best memories of my life, and today I'm delighted to open it to travelers from all over the world. I'm 100% committed to giving the best service — I'm always happy to meet and talk with my guests.”">“I love this place with all my heart. It has been the backdrop to many of the best memories of my life, and today I'm delighted to open it to travelers from all over the world. I'm 100% committed to giving the best service — I'm always happy to meet and talk with my guests.”</blockquote>
+      </figure>
+      <figure class="review-card" data-review-name="Paulina González">
+        <figcaption class="review-card__who">
+          <span class="review-card__avatar" aria-hidden="true">P</span>
+          <span class="review-card__meta">
+            <span class="review-card__name">Paulina González</span>
+            <span class="review-card__role" data-es="Huésped" data-en="Guest">Guest</span>
+          </span>
+          <span class="review-card__stars" aria-label="5 de 5 estrellas">★★★★★</span>
+        </figcaption>
+        <blockquote class="review-card__quote">“Está súper limpio y cómodo! La ubicación es excelente, frente al estadio GNP y solo a 5 minutos caminando de la playa. Definitivamente me quedaré aquí de nuevo, es un gran lugar para disfrutar de las áreas comunes, las albercas están increíbles!”</blockquote>
+        <time class="review-card__date" datetime="2026-06-22" data-es="junio de 2026" data-en="June 2026">June 2026</time>
+      </figure>
+    </div>
+
+    <div class="review-cta">
+      <button type="button" id="review-toggle" class="btn" data-es="✍️ Dejar una reseña" data-en="✍️ Leave a review">✍️ Leave a review</button>
+    </div>
+
+    <div class="review-form-wrap" id="review-form-wrap" hidden>
+      <h3 data-es="Deja tu reseña" data-en="Leave a review">Leave a review</h3>
+      <p class="review-form__note" data-es="Se publica tras una breve revisión del anfitrión." data-en="Published after a quick review by the host.">Published after a quick review by the host.</p>
+      <form id="review-form" class="review-form" novalidate>
+        <div class="rv-field">
+          <label for="rv-name" data-es="Tu nombre" data-en="Your name">Your name</label>
+          <input id="rv-name" name="name" type="text" maxlength="60" required />
+        </div>
+        <div class="rv-field">
+          <label data-es="Calificación" data-en="Rating">Rating</label>
+          <div class="stars-input" id="rv-stars" role="group" aria-label="Calificación">
+            <button type="button" data-v="1" aria-label="1 estrella">★</button>
+            <button type="button" data-v="2" aria-label="2 estrellas">★</button>
+            <button type="button" data-v="3" aria-label="3 estrellas">★</button>
+            <button type="button" data-v="4" aria-label="4 estrellas">★</button>
+            <button type="button" data-v="5" aria-label="5 estrellas">★</button>
+          </div>
+          <input type="hidden" id="rv-rating" name="rating" value="5" />
+        </div>
+        <div class="rv-field">
+          <label for="rv-text" data-es="Tu reseña" data-en="Your review">Your review</label>
+          <textarea id="rv-text" name="text" rows="4" maxlength="800" required></textarea>
+        </div>
+        <div class="rv-field">
+          <label for="rv-photo" data-es="Foto (opcional)" data-en="Photo (optional)">Photo (optional)</label>
+          <input id="rv-photo" name="photo" type="file" accept="image/*" />
+        </div>
+        <input type="text" name="company" id="rv-company" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
+        <button type="submit" class="btn btn--lg" data-es="Enviar reseña" data-en="Submit review">Submit review</button>
+        <p class="review-form__status" id="review-status" role="status"></p>
+      </form>
     </div>
   </section>
 
