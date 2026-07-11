@@ -343,7 +343,8 @@ section { padding: 5rem 1.5rem; }
 .section__head h2 { font-size: clamp(2rem, 5vw, 2.8rem); color: var(--emerald-dark); }
 .section__head p { color: var(--muted); margin-top: 0.6rem; font-size: 1.05rem; }
 .reviews { background: transparent; }
-.reviews__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.4rem; max-width: var(--max); margin: 0 auto; }
+.reviews__grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.4rem; max-width: var(--max); margin: 0 auto; }
+.reviews__grid .review-card { flex: 1 1 300px; max-width: 430px; }
 
 /* Receta de vidrio (Apple-style): panel translúcido, borde luminoso, esquinas generosas */
 .review-card, .review-form-wrap, .room, .amen__card, .loc__card, .safety__card,
