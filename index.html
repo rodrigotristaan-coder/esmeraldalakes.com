@@ -57,6 +57,9 @@
     "numberOfRooms": 2,
     "occupancy": { "@type": "QuantitativeValue", "maxValue": 9, "unitText": "huéspedes" },
     "petsAllowed": false,
+    "smokingAllowed": false,
+    "checkinTime": "12:00",
+    "checkoutTime": "11:00",
     "amenityFeature": [
       { "@type": "LocationFeatureSpecification", "name": "Alberca", "value": true },
       { "@type": "LocationFeatureSpecification", "name": "Jacuzzi", "value": true },
@@ -68,10 +71,12 @@
       { "@type": "LocationFeatureSpecification", "name": "Plancha de vapor", "value": true },
       { "@type": "LocationFeatureSpecification", "name": "Secadora de pelo", "value": true },
       { "@type": "LocationFeatureSpecification", "name": "Estacionamiento", "value": true },
-      { "@type": "LocationFeatureSpecification", "name": "WiFi", "value": true }
+      { "@type": "LocationFeatureSpecification", "name": "WiFi", "value": true },
+      { "@type": "LocationFeatureSpecification", "name": "Purificador de agua", "value": true },
+      { "@type": "LocationFeatureSpecification", "name": "Smart TV con Netflix", "value": true }
     ],
     "nearbyAttraction": {
-      "@type": "PlaceOfWorship",
+      "@type": "EventVenue",
       "name": "Arena GNP Seguros Acapulco",
       "description": "Recinto sede de conciertos, espectáculos y del Abierto Mexicano de Tenis (ATP 500)."
     }
@@ -101,6 +106,26 @@
         "@type": "Question",
         "name": "¿Qué tan cerca está la playa Revolcadero?",
         "acceptedAnswer": { "@type": "Answer", "text": "El departamento está en Revolcadero, a corta distancia de la playa Revolcadero y de la zona de hoteles como el Princess Mundo Imperial, además de plazas como La Isla Acapulco." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿A qué hora son el check-in y el check-out?",
+        "acceptedAnswer": { "@type": "Answer", "text": "El check-in es a las 12:00 del día y el check-out a las 11:00. El acceso es con cerradura inteligente: el código se envía al correo y celular con los que reservaste, cerca de tu fecha de llegada." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Se aceptan mascotas en el departamento?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No se permiten mascotas. Casos especiales únicamente a solicitud y con autorización del propietario antes de reservar." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Se puede fumar en el departamento?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No se permite fumar dentro del departamento; en la terraza privada sí está permitido." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Cuál es el horario de la alberca y el jacuzzi?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Las áreas de alberca y jacuzzi del Condominio Diamante Lakes abren de 8:00 a 22:00 todos los días." }
       }
     ]
   }
@@ -341,7 +366,7 @@ section { padding: 5rem 1.5rem; }
 
 /* Receta de vidrio (Apple-style): panel translúcido, borde luminoso, esquinas generosas */
 .review-card, .review-form-wrap, .room, .amen__card, .loc__card, .safety__card,
-.faq__item, .capacity-note, .safety__photo figcaption {
+.faq__item, .capacity-note, .safety__photo figcaption, details.acc {
   background: var(--glass);
   -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border);
@@ -554,6 +579,7 @@ section { padding: 5rem 1.5rem; }
   margin-top: 0.35rem; padding-top: 0.5rem; border-top: 1px solid #d4e2dc;
   font-weight: 700; color: var(--emerald-dark);
 }
+.quote__row--disc { color: var(--emerald); font-weight: 600; }
 .quote__note { margin-top: 0.35rem; font-size: 0.78rem; color: var(--muted); }
 
 .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
@@ -575,8 +601,28 @@ section { padding: 5rem 1.5rem; }
   border-radius: var(--radius); padding: 1.4rem 1.7rem; margin-bottom: 0.9rem;
   box-shadow: 0 8px 22px -16px rgba(10,89,68,0.5);
 }
-.faq__item h3 { font-size: 1.12rem; color: var(--emerald-dark); margin-bottom: 0.5rem; }
-.faq__item p { color: var(--muted); }
+.faq__item h3 { font-size: 1.12rem; color: var(--emerald-dark); margin-bottom: 0; display: inline; }
+.faq__item p { color: var(--muted); margin-top: 0.55rem; }
+.faq__item summary { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.faq__item summary::-webkit-details-marker { display: none; }
+.faq__item summary::after { content: "+"; color: var(--gold); font-size: 1.35rem; font-weight: 400; flex: none; line-height: 1; }
+.faq__item[open] summary::after { content: "−"; }
+
+/* ---------- Acordeones glass (despliegue progresivo) ---------- */
+details.acc { border-radius: var(--radius); max-width: var(--max); margin: 0 auto 1rem; box-shadow: 0 8px 22px -16px rgba(10,89,68,0.5); }
+details.acc > summary { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.15rem 1.6rem; font-weight: 700; font-size: 1.08rem; color: var(--emerald-dark); }
+details.acc > summary::-webkit-details-marker { display: none; }
+details.acc > summary::after { content: "+"; color: var(--gold); font-size: 1.5rem; font-weight: 400; flex: none; line-height: 1; }
+details.acc[open] > summary::after { content: "−"; }
+details.acc > .acc__body { padding: 0 1.6rem 1.4rem; }
+.acc__body ul.recs { list-style: none; margin: 0.2rem 0 0.6rem; }
+.acc__body ul.recs li { margin: 0.45rem 0; color: var(--muted); }
+.acc__body ul.recs li strong, .acc__body p strong { color: var(--ink); }
+.acc__body > p { color: var(--muted); }
+.room__more > summary { cursor: pointer; list-style: none; color: var(--gold); font-weight: 700; font-size: 0.92rem; margin-top: 0.5rem; }
+.room__more > summary::-webkit-details-marker { display: none; }
+.room__more > summary::before { content: "+ "; }
+.room__more[open] > summary::before { content: "− "; }
 
 /* ---------- Footer ---------- */
 .footer {
@@ -906,6 +952,7 @@ section { padding: 5rem 1.5rem; }
       <li>🏊 <span data-es="Alberca y jacuzzi" data-en="Pool & jacuzzi"></span></li>
       <li>🌴 <span data-es="Terraza propia con vista" data-en="Private terrace with a view"></span></li>
       <li>🅿️ <span data-es="Estacionamiento · 1 lugar" data-en="Parking · 1 spot"></span></li>
+      <li>💧 <span data-es="Purificador de agua" data-en="Water purifier"></span></li>
     </ul>
 
     <div class="rooms">
@@ -913,54 +960,54 @@ section { padding: 5rem 1.5rem; }
         <img class="room__photo" src="assets/images/bedroom1-two-beds.webp" alt="Recámara principal con dos camas matrimoniales" loading="lazy" />
         <div class="room__tag" data-es="Recámara 1" data-en="Bedroom 1"></div>
         <h3 data-es="Suite principal con baño propio" data-en="Master suite with private bath"></h3>
-        <ul class="checks">
+        <details class="room__more"><summary data-es="Ver detalles" data-en="See details"></summary><ul class="checks">
           <li data-es="2 camas matrimoniales" data-en="2 queen beds"></li>
           <li data-es="Baño propio" data-en="Private bathroom"></li>
           <li data-es="Clóset y cajones" data-en="Closet and drawers"></li>
           <li data-es="Televisión" data-en="Television"></li>
           <li data-es="Aire acondicionado" data-en="Air conditioning"></li>
           <li data-es="Escritorio para trabajar" data-en="Work desk"></li>
-        </ul>
+        </ul></details>
       </article>
 
       <article class="room">
         <img class="room__photo" src="assets/images/bedroom2-red.webp" alt="Recámara 2 con cama matrimonial" loading="lazy" />
         <div class="room__tag" data-es="Recámara 2" data-en="Bedroom 2"></div>
         <h3 data-es="Recámara familiar" data-en="Family bedroom"></h3>
-        <ul class="checks">
+        <details class="room__more"><summary data-es="Ver detalles" data-en="See details"></summary><ul class="checks">
           <li data-es="Litera: individual arriba + matrimonial abajo" data-en="Bunk bed: single on top + queen below"></li>
           <li data-es="Cama matrimonial adicional" data-en="Additional queen bed"></li>
           <li data-es="Aire acondicionado" data-en="Air conditioning"></li>
           <li data-es="Espacios para guardar ropa" data-en="Storage space for clothes"></li>
           <li data-es="Ideal para grupos y niños" data-en="Ideal for groups and kids"></li>
-        </ul>
+        </ul></details>
       </article>
 
       <article class="room">
         <img class="room__photo" src="assets/images/living-dining.webp" alt="Sala y comedor" loading="lazy" />
         <div class="room__tag" data-es="Sala y comedor" data-en="Living & dining"></div>
         <h3 data-es="Para convivir y descansar" data-en="To hang out and unwind"></h3>
-        <ul class="checks">
+        <details class="room__more"><summary data-es="Ver detalles" data-en="See details"></summary><ul class="checks">
           <li data-es="Sala con sofá y Smart TV: Netflix y canales de televisión" data-en="Living room with sofa and Smart TV: Netflix and cable channels"></li>
           <li data-es="Aire acondicionado en sala y comedor" data-en="Air conditioning in the living and dining areas"></li>
           <li data-es="Terraza propia con mesa y ventiladores" data-en="Private terrace with table and fans"></li>
           <li data-es="Wi-Fi de alta velocidad" data-en="High-speed Wi-Fi"></li>
           <li data-es="Estacionamiento para 1 auto" data-en="Parking for 1 car"></li>
-        </ul>
+        </ul></details>
       </article>
 
       <article class="room">
         <img class="room__photo" src="assets/images/kitchen-bar.webp" alt="Cocina equipada con barra" loading="lazy" />
         <div class="room__tag" data-es="Cocina y servicio" data-en="Kitchen & laundry"></div>
         <h3 data-es="Cocina equipada con barra" data-en="Fully equipped kitchen with bar"></h3>
-        <ul class="checks">
+        <details class="room__more"><summary data-es="Ver detalles" data-en="See details"></summary><ul class="checks">
           <li data-es="Estufa, microondas y refri" data-en="Stove, microwave and fridge"></li>
           <li data-es="Vajilla, sartenes, tostador y más" data-en="Dishware, pans, toaster and more"></li>
           <li data-es="Cafetera, azúcar, sal y aceite siempre" data-en="Coffee maker, sugar, salt and oil always stocked"></li>
           <li data-es="Cuarto de servicio con lavadora" data-en="Service room with washer"></li>
           <li data-es="Plancha de vapor y secadora de pelo" data-en="Steam iron and hair dryer"></li>
           <li data-es="Toallas suficientes de baño y de alberca" data-en="Plenty of bath and pool towels"></li>
-        </ul>
+        </ul></details>
       </article>
     </div>
 
@@ -982,21 +1029,24 @@ section { padding: 5rem 1.5rem; }
       <div class="amen__card"><span class="amen__ico">⛱️</span><h3 data-es="Camastros y sillones" data-en="Loungers & sofas"></h3></div>
     </div>
 
-    <div class="section__head" style="margin-top:3.5rem">
-      <h2 data-es="En tu departamento" data-en="In your apartment"></h2>
-    </div>
-    <div class="amen__grid amen__grid--sm">
-      <div class="amen__card"><span class="amen__ico">❄️</span><h3 data-es="Aire acondicionado en cada cuarto y área" data-en="Air conditioning in every room and area"></h3></div>
-      <div class="amen__card"><span class="amen__ico">📺</span><h3 data-es="Smart TV: Netflix y canales de televisión" data-en="Smart TV: Netflix and cable channels"></h3></div>
-      <div class="amen__card"><span class="amen__ico">🍳</span><h3 data-es="Cocina equipada" data-en="Fully equipped kitchen"></h3></div>
-      <div class="amen__card"><span class="amen__ico">☕</span><h3 data-es="Cafetera, azúcar, sal y aceite" data-en="Coffee maker, sugar, salt & oil"></h3></div>
-      <div class="amen__card"><span class="amen__ico">🧺</span><h3 data-es="Lavadora" data-en="Washer"></h3></div>
-      <div class="amen__card"><span class="amen__ico">👔</span><h3 data-es="Plancha de vapor" data-en="Steam iron"></h3></div>
-      <div class="amen__card"><span class="amen__ico">💇</span><h3 data-es="Secadora de pelo" data-en="Hair dryer"></h3></div>
-      <div class="amen__card"><span class="amen__ico">🛁</span><h3 data-es="Toallas de baño y de alberca" data-en="Bath & pool towels"></h3></div>
-      <div class="amen__card"><span class="amen__ico">💼</span><h3 data-es="Escritorio de trabajo" data-en="Work desk"></h3></div>
-      <div class="amen__card"><span class="amen__ico">🌀</span><h3 data-es="Ventiladores en terraza" data-en="Fans on the terrace"></h3></div>
-    </div>
+    <details class="acc" style="margin-top:3rem">
+      <summary><span data-es="🛋️ En tu departamento — ver todo lo que incluye" data-en="🛋️ In your apartment — see everything included"></span></summary>
+      <div class="acc__body">
+        <div class="amen__grid amen__grid--sm">
+          <div class="amen__card"><span class="amen__ico">❄️</span><h3 data-es="Aire acondicionado en cada cuarto y área" data-en="Air conditioning in every room and area"></h3></div>
+          <div class="amen__card"><span class="amen__ico">📺</span><h3 data-es="Smart TV: Netflix y canales de televisión" data-en="Smart TV: Netflix and cable channels"></h3></div>
+          <div class="amen__card"><span class="amen__ico">🍳</span><h3 data-es="Cocina equipada" data-en="Fully equipped kitchen"></h3></div>
+          <div class="amen__card"><span class="amen__ico">☕</span><h3 data-es="Cafetera, azúcar, sal y aceite" data-en="Coffee maker, sugar, salt & oil"></h3></div>
+          <div class="amen__card"><span class="amen__ico">💧</span><h3 data-es="Purificador de agua" data-en="Water purifier"></h3></div>
+          <div class="amen__card"><span class="amen__ico">🧺</span><h3 data-es="Lavadora" data-en="Washer"></h3></div>
+          <div class="amen__card"><span class="amen__ico">👔</span><h3 data-es="Plancha de vapor" data-en="Steam iron"></h3></div>
+          <div class="amen__card"><span class="amen__ico">💇</span><h3 data-es="Secadora de pelo" data-en="Hair dryer"></h3></div>
+          <div class="amen__card"><span class="amen__ico">🛁</span><h3 data-es="Toallas de baño y de alberca" data-en="Bath & pool towels"></h3></div>
+          <div class="amen__card"><span class="amen__ico">💼</span><h3 data-es="Escritorio de trabajo" data-en="Work desk"></h3></div>
+          <div class="amen__card"><span class="amen__ico">🌀</span><h3 data-es="Ventiladores en terraza" data-en="Fans on the terrace"></h3></div>
+        </div>
+      </div>
+    </details>
   </section>
 
   <!-- ============ UBICACIÓN ============ -->
@@ -1014,7 +1064,9 @@ section { padding: 5rem 1.5rem; }
         loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
 
-    <h3 class="loc__subtitle" data-es="Cómo llegar a los puntos clave" data-en="How to get to the key spots"></h3>
+    <details class="acc" open>
+      <summary><span data-es="📍 Cómo llegar a los puntos clave" data-en="📍 How to get to the key spots"></span></summary>
+      <div class="acc__body">
     <div class="loc__grid">
       <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Playa+Revolcadero+Acapulco">
         <span class="loc__ico">🏖️</span><h3 data-es="Playa Revolcadero" data-en="Revolcadero Beach"></h3>
@@ -1037,8 +1089,12 @@ section { padding: 5rem 1.5rem; }
         <span class="loc__link" data-es="Ver ruta por la Autopista del Sol →" data-en="Get directions via the Autopista del Sol →"></span>
       </a>
     </div>
+      </div>
+    </details>
 
-    <h3 class="loc__subtitle" data-es="Caminando desde el depa" data-en="Walking distance from the apartment"></h3>
+    <details class="acc">
+      <summary><span data-es="🚶 Caminando desde el depa" data-en="🚶 Walking distance from the apartment"></span></summary>
+      <div class="acc__body">
     <div class="loc__grid">
       <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Burger+King+Acapulco+Diamante">
         <span class="loc__ico">🍔</span>
@@ -1061,8 +1117,12 @@ section { padding: 5rem 1.5rem; }
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
     </div>
+      </div>
+    </details>
 
-    <h3 class="loc__subtitle" data-es="A 5 minutos en coche" data-en="A 5-minute drive away"></h3>
+    <details class="acc">
+      <summary><span data-es="🚗 A 5 minutos en coche" data-en="🚗 A 5-minute drive away"></span></summary>
+      <div class="acc__body">
     <div class="loc__grid">
       <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Walmart+Diamante+Acapulco">
         <span class="loc__ico">🛒</span>
@@ -1080,6 +1140,21 @@ section { padding: 5rem 1.5rem; }
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
     </div>
+      </div>
+    </details>
+
+    <details class="acc">
+      <summary><span data-es="🌴 Recomendaciones del anfitrión: playas y restaurantes" data-en="🌴 Host picks: beaches & restaurants"></span></summary>
+      <div class="acc__body">
+        <ul class="recs">
+          <li>🏖️ <strong data-es="Playa Revolcadero" data-en="Revolcadero Beach"></strong> — <span data-es="la más cercana (5 min): amplia, de oleaje abierto, atardeceres y el ambiente de los grandes hoteles." data-en="the closest (5 min): wide, open surf, sunsets and the big-resort vibe."></span></li>
+          <li>⛵ <strong>Puerto Marqués</strong> — <span data-es="bahía de aguas tranquilas, ideal con niños, con restaurantes sobre la arena (10 min)." data-en="calm-water bay, perfect with kids, with restaurants right on the sand (10 min)."></span></li>
+          <li>🏄 <strong data-es="Playa Bonfil" data-en="Bonfil Beach"></strong> — <span data-es="ambiente local y olas para surfear (10–15 min)." data-en="local vibe and surfable waves (10–15 min)."></span></li>
+          <li>🐟 <strong>Barra Vieja</strong> — <span data-es="la más virgen: kilómetros de arena y el famoso pescado a la talla (20–25 min)." data-en="the most unspoiled: miles of sand and the famous pescado a la talla (20–25 min)."></span></li>
+        </ul>
+        <p data-es="<strong>Para comer:</strong> nuestro favorito es <strong>Paititi del Mar</strong> (mariscos gourmet en jardín, zona Diamante). Más elegantes: <strong>Saffron</strong> y <strong>Cello</strong> en Banyan Tree Cabo Marqués, <strong>Zibu</strong> en la Escénica y <strong>Tabachín</strong> en el Pierre Mundo Imperial, a un paso del depa." data-en="<strong>Where to eat:</strong> our favorite is <strong>Paititi del Mar</strong> (gourmet seafood in a garden setting, Diamante area). Fancier picks: <strong>Saffron</strong> and <strong>Cello</strong> at Banyan Tree Cabo Marqués, <strong>Zibu</strong> on the Escénica and <strong>Tabachín</strong> at Pierre Mundo Imperial, steps from the apartment."></p>
+      </div>
+    </details>
   </section>
 
   <!-- ============ SEGURIDAD ============ -->
@@ -1181,22 +1256,38 @@ section { padding: 5rem 1.5rem; }
       <p data-es="Todo sobre hospedarte en Acapulco Diamante, cerca de la Arena GNP." data-en="Everything about staying in Acapulco Diamante, near the Arena GNP."></p>
     </div>
     <div class="faq__list">
-      <div class="faq__item">
-        <h3 data-es="¿Dónde hospedarse cerca de la Arena GNP Seguros?" data-en="Where to stay near the Arena GNP Seguros?"></h3>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Dónde hospedarse cerca de la Arena GNP Seguros?" data-en="Where to stay near the Arena GNP Seguros?"></h3></summary>
         <p data-es="El Departamento Esmeralda en Diamante Lakes (Revolcadero, Acapulco Diamante) está a pocos minutos en auto de la Arena GNP Seguros, sede de conciertos y del Abierto Mexicano de Tenis. Aloja hasta 9 huéspedes." data-en="The Esmeralda apartment at Diamante Lakes (Revolcadero, Acapulco Diamante) is a few minutes’ drive from the Arena GNP Seguros, home of concerts and the Mexican Open tennis. Sleeps up to 9 guests."></p>
-      </div>
-      <div class="faq__item">
-        <h3 data-es="¿Dónde quedarse para un concierto o el tenis en la Arena GNP?" data-en="Where to stay for a concert or the tennis at the Arena GNP?"></h3>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Dónde quedarse para un concierto o el tenis en la Arena GNP?" data-en="Where to stay for a concert or the tennis at the Arena GNP?"></h3></summary>
         <p data-es="Esmeralda es ideal para eventos en la Arena GNP Seguros: queda muy cerca, así que regresas a descansar sin traslados largos ni tarifas elevadas. Reserva directa, sin intermediarios." data-en="Esmeralda is ideal for events at the Arena GNP Seguros: it’s very close, so you head home to rest without long transfers or surge pricing. Direct booking, no middlemen."></p>
-      </div>
-      <div class="faq__item">
-        <h3 data-es="¿Departamentos para rentar en Acapulco Diamante para grupos?" data-en="Apartments to rent in Acapulco Diamante for groups?"></h3>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Departamentos para rentar en Acapulco Diamante para grupos?" data-en="Apartments to rent in Acapulco Diamante for groups?"></h3></summary>
         <p data-es="Sí. Esmeralda tiene 2 recámaras y aloja hasta 9 personas, con cocina equipada y lavadora — ideal para familias y grupos." data-en="Yes. Esmeralda has 2 bedrooms and sleeps up to 9, with a fully equipped kitchen and washer — ideal for families and groups."></p>
-      </div>
-      <div class="faq__item">
-        <h3 data-es="¿Qué tan cerca está la playa Revolcadero y otros lugares?" data-en="How close are Revolcadero beach and other spots?"></h3>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Qué tan cerca está la playa Revolcadero y otros lugares?" data-en="How close are Revolcadero beach and other spots?"></h3></summary>
         <p data-es="Estás en Revolcadero, a corta distancia de la playa, del Hotel Princess Mundo Imperial y de plazas como La Isla Acapulco." data-en="You’re in Revolcadero, a short distance from the beach, the Princess Mundo Imperial hotel and malls like La Isla Acapulco."></p>
-      </div>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿A qué hora son el check-in y el check-out?" data-en="What time are check-in and check-out?"></h3></summary>
+        <p data-es="Check-in a las <strong>12:00</strong> y check-out a las <strong>11:00</strong>. El acceso es con cerradura inteligente: el código se envía al correo y celular con los que reservaste, cerca de tu fecha de llegada." data-en="Check-in at <strong>12:00 PM</strong> and check-out at <strong>11:00 AM</strong>. Entry is via smart lock: the code is sent to the email and phone used for your booking, close to your arrival date."></p>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Aceptan mascotas?" data-en="Are pets allowed?"></h3></summary>
+        <p data-es="No se permiten mascotas. Casos especiales, únicamente a solicitud y con autorización del propietario antes de reservar." data-en="Pets are not allowed. Special cases only upon request and with the owner's approval before booking."></p>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Se puede fumar?" data-en="Is smoking allowed?"></h3></summary>
+        <p data-es="Dentro del departamento no; en la <strong>terraza privada sí</strong> está permitido." data-en="Not inside the apartment; smoking <strong>is allowed on the private terrace</strong>."></p>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Cuál es el horario de la alberca y el jacuzzi?" data-en="What are the pool and jacuzzi hours?"></h3></summary>
+        <p data-es="Las áreas de alberca y jacuzzi abren de <strong>8:00 a 22:00</strong> todos los días. Hay toallas de alberca en el depa para tu estancia." data-en="The pool and jacuzzi areas are open <strong>8:00 AM – 10:00 PM</strong> daily. Pool towels are provided in the apartment."></p>
+      </details>
     </div>
   </section>
 

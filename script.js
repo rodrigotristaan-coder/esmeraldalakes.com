@@ -142,24 +142,50 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 const PRICING = {
   rateBase: 2000,      // entre semana, temporada baja (precio "desde")
   rateWeekend: 2700,   // viernes y sábado (+35%)
-  rateHigh: 3700,      // temporada alta (+85%)
+  rateMedia: 2400,     // puentes (temporada media): sube la noche entre semana, respeta vie/sáb
+  rateHigh: 4200,      // temporada alta (estudio de mercado 2026-07: comps de alta en $4,500–5,500)
   rateSpecial: 5000,   // fechas especiales: Navidad y Año Nuevo (MM-DD, cada año)
   specialDates: ["12-24", "12-25", "12-31", "01-01"],
-  eventSurcharge: 0.30, // +30% en fechas de eventos de la Arena GNP
-  // Temporada alta (MM-DD). El primero cruza fin de año.
-  highRanges: [["12-15", "01-06"], ["03-25", "04-15"], ["07-01", "08-18"]],
-  // Eventos Arena GNP (rangos YYYY-MM-DD) — conciertos + semana del Abierto de Tenis
-  eventRanges: [
-    ["2026-07-04", "2026-07-04"], ["2026-08-01", "2026-08-01"], ["2026-09-20", "2026-09-20"],
-    ["2026-10-02", "2026-10-02"], ["2026-10-31", "2026-10-31"], ["2026-11-14", "2026-11-14"],
-    ["2027-02-22", "2027-02-28"],
+  eventSurcharge: 0.40, // +40% en fechas de eventos de la Arena GNP (estudio 2026-07)
+  // Temporada alta (MM-DD). El primero cruza fin de año. Verano hasta el fin real de
+  // vacaciones SEP (23 ago); primavera desde el arranque de Semana Santa (19 mar).
+  highRanges: [["12-15", "01-06"], ["03-19", "04-15"], ["07-01", "08-23"]],
+  // Puentes oficiales (YYYY-MM-DD, noches incluidas)
+  mediaRanges: [
+    ["2026-11-13", "2026-11-15"],  // Revolución (sáb 14 – lun 16)
+    ["2027-01-29", "2027-02-01"],  // Constitución (lun 1 feb)
+    ["2027-03-12", "2027-03-15"],  // Benito Juárez (lun 15 mar)
   ],
+  // Eventos Arena GNP / Mundo Imperial (rangos YYYY-MM-DD)
+  eventRanges: [
+    ["2026-07-04", "2026-07-04"], ["2026-08-01", "2026-08-01"], ["2026-09-14", "2026-09-14"],
+    ["2026-09-20", "2026-09-20"], ["2026-10-02", "2026-10-02"], ["2026-10-31", "2026-10-31"],
+    ["2026-11-06", "2026-11-06"], ["2026-11-14", "2026-11-14"],
+    ["2026-11-23", "2026-11-29"],  // GNP México Major Premier Padel (semana completa)
+    ["2027-02-19", "2027-02-28"],  // Abierto Mexicano de Tenis (20–27 feb + día previo)
+  ],
+  // Precio dinámico por ocupación (estudio 2026-07). Solo sobre base/finde/puente.
+  dynamic: { floor: 1600, promoOff: 0.15, lastMinOff: 0.20, lastMinOffWknd: 0.10, surgeUp: 0.10 },
 };
 function isHighSeason(mmdd) {
   return PRICING.highRanges.some(([a, b]) => (a <= b ? mmdd >= a && mmdd <= b : mmdd >= a || mmdd <= b));
 }
 function isEventDay(ds) {
   return PRICING.eventRanges.some(([a, b]) => ds >= a && ds <= b);
+}
+function isMediaSeason(ds) {
+  return PRICING.mediaRanges.some(([a, b]) => ds >= a && ds <= b);
+}
+// % de noches ocupadas del mes de `ds`, según la disponibilidad ya cargada (CAL.blocked).
+function monthOccupancy(ds) {
+  const y = +ds.slice(0, 4), m = +ds.slice(5, 7);
+  const days = new Date(y, m, 0).getDate();
+  let busy = 0;
+  for (let d = 1; d <= days; d++) if (calBlocked(`${ds.slice(0, 7)}-${pad(d)}`)) busy++;
+  return busy / days;
+}
+function daysUntil(ds) {
+  return Math.round((new Date(ds + "T00:00:00") - new Date(todayStr() + "T00:00:00")) / 86400000);
 }
 // Tarifa de una noche concreta + etiqueta de por qué (para el desglose)
 function dailyRate(ds) {
@@ -171,7 +197,21 @@ function dailyRate(ds) {
   if (isHighSeason(mmdd)) { rate = PRICING.rateHigh; kind = "high"; }
   else if (dow === 5 || dow === 6) { rate = PRICING.rateWeekend; kind = "weekend"; }
   else { rate = PRICING.rateBase; kind = "base"; }
-  if (isEventDay(ds)) { rate = Math.round(rate * (1 + PRICING.eventSurcharge)); kind = "event"; }
+  // Puentes: sube la noche entre semana a tarifa media (nunca baja la de vie/sáb)
+  if (kind !== "high" && isMediaSeason(ds) && rate < PRICING.rateMedia) { rate = PRICING.rateMedia; kind = "media"; }
+  if (isEventDay(ds)) { rate = Math.round(rate * (1 + PRICING.eventSurcharge)); kind = "event"; return { rate, kind }; }
+  // Precio dinámico por ocupación — solo base/finde/puente (nunca alta/evento/especial)
+  if (kind === "base" || kind === "weekend" || kind === "media") {
+    const D = PRICING.dynamic, occ = monthOccupancy(ds), dU = daysUntil(ds);
+    if (occ >= 0.60 && dU <= 30) {
+      rate = Math.round(rate * (1 + D.surgeUp)); // Regla C: alta demanda, sin promos
+    } else {
+      let off = 0;
+      if (dU >= 0 && dU <= 21 && occ < 0.20) off = D.promoOff;                      // Regla A
+      if (dU >= 0 && dU <= 7) off = Math.max(off, (dow === 5 || dow === 6) ? D.lastMinOffWknd : D.lastMinOff); // Regla B
+      if (off > 0) { rate = Math.max(D.floor, Math.round(rate * (1 - off))); kind = "offer"; }
+    }
+  }
   return { rate, kind };
 }
 function estimatePrice(ci, co) {
@@ -187,7 +227,11 @@ function estimatePrice(ci, co) {
     total += rate; nights++;
     cur.setDate(cur.getDate() + 1);
   }
-  return { total, nights, lines: Object.values(byKind).sort((a, b) => a.rate - b.rate) };
+  // Descuento por estancia larga (estudio 2026-07): 7+ noches −12%, 28+ noches −30%
+  let discount = 0, discountKind = null;
+  if (nights >= 28) { discount = Math.round(total * 0.30); discountKind = "monthly"; }
+  else if (nights >= 7) { discount = Math.round(total * 0.12); discountKind = "weekly"; }
+  return { total: total - discount, subtotal: total, discount, discountKind, nights, lines: Object.values(byKind).sort((a, b) => a.rate - b.rate) };
 }
 const TC_USD = 17.2; // tipo de cambio para mostrar precios en USD (versión EN)
 const money = (n) => {
@@ -285,17 +329,24 @@ function renderCalendar() {
       const nights = Math.round((new Date(CAL.checkout) - new Date(CAL.checkin)) / 86400000);
       summary.textContent = `${CAL.checkin} → ${CAL.checkout} · ${t.nightWord(nights)}`;
       if (priceEl) {
-        const { total, lines } = estimatePrice(CAL.checkin, CAL.checkout);
+        const { total, subtotal, discount, discountKind, lines } = estimatePrice(CAL.checkin, CAL.checkout);
         const KIND = {
-          es: { base: "entre semana", weekend: "vie y sáb", high: "temporada alta", event: "evento Arena GNP", special: "fecha especial" },
-          en: { base: "weeknight", weekend: "Fri & Sat", high: "high season", event: "Arena GNP event", special: "holiday" },
+          es: { base: "entre semana", weekend: "vie y sáb", media: "puente", high: "temporada alta", event: "evento Arena GNP", special: "fecha especial", offer: "oferta" },
+          en: { base: "weeknight", weekend: "Fri & Sat", media: "long weekend", high: "high season", event: "Arena GNP event", special: "holiday", offer: "special offer" },
         }[lang === "en" ? "en" : "es"];
-        const rows = lines.map((l) =>
+        const DISC = {
+          es: { weekly: "Descuento 7+ noches (−12%)", monthly: "Descuento 28+ noches (−30%)" },
+          en: { weekly: "7+ night discount (−12%)", monthly: "28+ night discount (−30%)" },
+        }[lang === "en" ? "en" : "es"];
+        let rows = lines.map((l) =>
           `<div class="quote__row"><span>${l.count} × ${moneyShort(l.rate)} <em>(${KIND[l.kind]})</em></span><span>${moneyShort(l.rate * l.count)}</span></div>`
         ).join("");
+        if (discount > 0) {
+          rows += `<div class="quote__row quote__row--disc"><span>${DISC[discountKind]}</span><span>−${moneyShort(discount)}</span></div>`;
+        }
         priceEl.innerHTML = `<div class="book__quote">${rows}
           <div class="quote__row quote__row--total"><span>${lang === "en" ? "Estimated total" : "Total estimado"}</span><span>${money(total)}</span></div>
-          <div class="quote__note">${lang === "en" ? "Final price confirmed by the host." : "Precio final por confirmar con el anfitrión."}</div></div>`;
+          <div class="quote__note">${lang === "en" ? "Final price confirmed by the host. Direct booking — no platform fees." : "Precio final por confirmar con el anfitrión. Reserva directa, sin comisiones de plataforma."}</div></div>`;
       }
     } else {
       summary.textContent = CAL.checkin ? `${CAL.checkin} → …` : t.summaryEmpty;
