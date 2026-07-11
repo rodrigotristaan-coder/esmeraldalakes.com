@@ -17,9 +17,22 @@ const CONFIG = {
 const STORAGE_KEY = "esmeralda_lang";
 
 function detectLang() {
+  // Página con idioma fijo (p. ej. /en/ indexable): body[data-page-lang] manda.
+  const fixed = document.body.dataset.pageLang;
+  if (fixed === "es" || fixed === "en") return fixed;
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved === "es" || saved === "en") return saved;
   return (navigator.language || "es").toLowerCase().startsWith("en") ? "en" : "es";
+}
+
+// Si existe una URL propia para el idioma pedido (hreflang), navegamos a ella
+// en lugar de solo cambiar textos — así el usuario queda en la versión indexable.
+function langUrl(lang) {
+  const sel = `link[rel="alternate"][hreflang^="${lang}"]`;
+  const alt = document.querySelector(sel);
+  if (!alt) return null;
+  const url = new URL(alt.href, location.href);
+  return url.pathname === location.pathname ? null : url.pathname;
 }
 
 function applyLang(lang) {
@@ -121,7 +134,18 @@ async function submitBooking(e) {
     if (!res.ok) throw new Error("bad status " + res.status);
     status.className = "book__status book__status--ok";
     status.textContent = tr("ok");
-    if (window.gtag) gtag("event", "generate_lead", { event_category: "booking", currency: "MXN" });
+    if (window.gtag) {
+      // Valor estimado de la reserva + idioma/página, para segmentar campañas EN y medir ROAS.
+      let leadValue = 0;
+      try { if (CAL.checkin && CAL.checkout) leadValue = estimatePrice(CAL.checkin, CAL.checkout).total; } catch (_) {}
+      gtag("event", "generate_lead", {
+        event_category: "booking",
+        currency: "MXN",
+        value: leadValue,
+        language: document.body.dataset.lang || "es",
+        page_variant: document.body.dataset.pageLang === "en" ? "en-indexed" : "es-default",
+      });
+    }
     form.reset();
     // Redirige a la página de gracias (deja ~700ms para que el evento de conversión se envíe).
     setTimeout(function () { window.location.href = "/gracias.html"; }, 700);
@@ -505,7 +529,12 @@ document.addEventListener("DOMContentLoaded", () => {
   applyLang(detectLang());
 
   document.querySelectorAll(".lang__btn").forEach((b) => {
-    b.addEventListener("click", () => { applyLang(b.dataset.lang); renderCalendar(); });
+    b.addEventListener("click", () => {
+      const target = b.dataset.lang;
+      const dest = langUrl(target);
+      if (dest) { localStorage.setItem(STORAGE_KEY, target); location.href = dest; return; }
+      applyLang(target); renderCalendar();
+    });
   });
 
   const yearEl = document.getElementById("year");
