@@ -149,6 +149,37 @@
   function renderDash(d) {
     window.__dash = d;
     document.getElementById("d-hello").textContent = tr("hello") + (d.name ? ", " + d.name.split(" ")[0] : "") + " 🌴";
+
+    // Próxima estancia (la reserva futura más cercana)
+    var today = new Date().toISOString().slice(0, 10);
+    var next = (d.reservations || [])
+      .filter(function (r) { return (r.checkin || "") >= today; })
+      .sort(function (a, z) { return (a.checkin || "").localeCompare(z.checkin || ""); })[0];
+    var nx = document.getElementById("d-next");
+    if (nx) {
+      if (next) {
+        var n0 = next.nights || 0;
+        var nl = n0 ? " · " + (n0 === 1 ? tr("oneNight") : n0 + " " + tr("nightsUnit")) : "";
+        document.getElementById("d-next-dates").textContent = fmtDate(next.checkin) + " → " + fmtDate(next.checkout) + nl;
+        nx.classList.remove("hidden");
+      } else {
+        nx.classList.add("hidden");
+      }
+    }
+
+    // Botón "usar mis noches gratis" por WhatsApp (solo si tiene noches)
+    var un = document.getElementById("d-usenights");
+    if (un) {
+      var hasNights = (d.freeNights || 0) > 0;
+      un.classList.toggle("hidden", !hasNights);
+      if (hasNights) {
+        var m = lang === "en"
+          ? "Hi! I'd like to book Esmeralda again and use my " + d.freeNights + " free night(s). My account: " + (d.email || "")
+          : "¡Hola! Quiero reservar Esmeralda de nuevo y usar mis " + d.freeNights + " noche(s) gratis. Mi cuenta: " + (d.email || "");
+        un.href = "https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent(m);
+      }
+    }
+
     document.getElementById("d-nights").textContent = d.freeNights || 0;
     document.getElementById("d-refs").textContent = d.referrals || 0;
     document.getElementById("d-code").textContent = d.refCode || "—";

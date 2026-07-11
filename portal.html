@@ -60,6 +60,11 @@
     .resv__nights{opacity:.8;font-size:.82rem}
     .foot{display:flex;gap:.7rem;margin-top:1.4rem;justify-content:center;flex-wrap:wrap}
     .foot a,.foot button{font-size:.9rem}
+    /* Próxima estancia + guía */
+    .nextstay{background:rgba(6,214,126,.13);border:1px solid rgba(6,214,126,.4);border-radius:20px;padding:1rem 1.1rem;margin-bottom:1.1rem;display:flex;align-items:center;justify-content:space-between;gap:.8rem;flex-wrap:wrap}
+    .nextstay__label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700;color:var(--gold-soft);margin:0 0 .15rem}
+    .nextstay__dates{font-weight:700;margin:0;font-size:1.05rem}
+    .guidebox{background:rgba(6,44,34,.45);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:1rem 1.1rem;margin-bottom:1.3rem;display:flex;align-items:center;justify-content:space-between;gap:.8rem;flex-wrap:wrap}
     .loader{text-align:center;padding:2rem 0;opacity:.85}
     /* Sin cuenta */
     .contact{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.22);border-radius:22px;padding:1.4rem 1.2rem 1.2rem;margin:0 0 1rem;text-align:center;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
@@ -138,6 +143,13 @@
       <div class="hello">
         <h1 id="d-hello"></h1>
       </div>
+      <div id="d-next" class="nextstay hidden">
+        <div>
+          <p class="nextstay__label" data-es="Tu próxima estancia" data-en="Your next stay"></p>
+          <p class="nextstay__dates" id="d-next-dates"></p>
+        </div>
+        <a class="btn" href="/guia" data-es="📖 Prepárate: guía del huésped" data-en="📖 Get ready: guest guide" style="text-decoration:none;width:auto;padding:.6rem 1.1rem;margin:0"></a>
+      </div>
       <div class="stats">
         <div class="stat stat--gold">
           <span class="stat__num" id="d-nights">0</span>
@@ -148,7 +160,8 @@
           <span class="stat__lbl" data-es="Amigos que reservaron" data-en="Friends who booked"></span>
         </div>
       </div>
-      <p class="muted" style="margin:-0.4rem 0 1.1rem" data-es="🌙 Para usar tus noches gratis, solo dínoslo al reservar por WhatsApp y las descontamos de tu estancia." data-en="🌙 To use your free nights, just mention them when booking via WhatsApp and we'll deduct them from your stay."></p>
+      <p class="muted" style="margin:-0.4rem 0 .7rem" data-es="🌙 Para usar tus noches gratis, solo dínoslo al reservar por WhatsApp y las descontamos de tu estancia." data-en="🌙 To use your free nights, just mention them when booking via WhatsApp and we'll deduct them from your stay."></p>
+      <p style="text-align:center;margin:0 0 1.1rem"><a id="d-usenights" class="btn hidden" href="#" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block;width:auto;padding:.6rem 1.2rem;margin:0" data-es="🌙 Usar mis noches gratis (WhatsApp)" data-en="🌙 Use my free nights (WhatsApp)"></a></p>
 
       <div class="refbox">
         <p style="font-size:.85rem;opacity:.9;margin-bottom:.4rem" data-es="Tu código de recomendación" data-en="Your referral code"></p>
@@ -157,6 +170,17 @@
         <div class="refrow">
           <input id="d-link" type="text" readonly />
           <button type="button" class="btn" id="copy-link" data-es="Copiar" data-en="Copy"></button>
+        </div>
+      </div>
+
+      <div class="guidebox">
+        <div style="flex:1;min-width:200px">
+          <p style="font-weight:700;margin:0 0 .15rem" data-es="📖 Guía del huésped" data-en="📖 Guest guide"></p>
+          <p style="margin:0;font-size:.85rem;opacity:.85" data-es="Cómo llegar, acceso, WiFi, alberca, reglas y recomendaciones." data-en="Directions, access, WiFi, pool, rules and tips."></p>
+        </div>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+          <a class="btn" href="/guia" data-es="Abrir guía" data-en="Open guide" style="text-decoration:none;width:auto;padding:.6rem 1.1rem;margin:0"></a>
+          <a class="btn btn--ghost" href="/#reservar" data-es="Reservar otra vez" data-en="Book again" style="text-decoration:none;width:auto;padding:.6rem 1.1rem;margin:0"></a>
         </div>
       </div>
 
@@ -173,6 +197,6 @@
   </div>
 
   <!-- ?v= por el caché inmutable de /assets: súbelo cada vez que cambie portal.js -->
-  <script src="/assets/portal.js?v=20260711"></script>
+  <script src="/assets/portal.js?v=20260711b"></script>
 </body>
 </html>
