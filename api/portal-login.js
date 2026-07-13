@@ -31,7 +31,7 @@ module.exports = async (req, res) => {
       await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: issued.code, name: admin ? "Admin" : (customers[email].name || ""), lang }),
+        body: JSON.stringify({ email, code: issued.code, name: admin ? "Admin" : (customers[email].name || ""), lang, secret: process.env.ESM_N8N_SECRET || "" }),
       }).catch((e) => console.error("n8n portal code:", e.message));
     } else {
       console.error("N8N_PORTAL_CODE_WEBHOOK no configurado");

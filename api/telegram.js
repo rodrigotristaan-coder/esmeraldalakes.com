@@ -54,7 +54,7 @@ module.exports = async (req, res) => {
       if (email && process.env.N8N_POSTPAGO_WEBHOOK) {
         await fetch(process.env.N8N_POSTPAGO_WEBHOOK, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, name, checkin: ci, checkout: co, nights, guests, lang: lang || "es" }),
+          body: JSON.stringify({ email, name, checkin: ci, checkout: co, nights, guests, lang: lang || "es", secret: process.env.ESM_N8N_SECRET || "" }),
         });
         mailNote = " · 📧 correo + 📅 calendario";
       }

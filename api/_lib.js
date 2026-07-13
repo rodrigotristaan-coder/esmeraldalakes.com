@@ -280,6 +280,7 @@ async function upsertCustomerFromBooking({ email, name, checkin, checkout, night
       body: JSON.stringify({
         email: r.email, name: r.name || "", friendName: c.name || "",
         freeNights: r.freeNights, refCode: r.refCode,
+        secret: process.env.ESM_N8N_SECRET || "",
       }),
     }).catch((e) => console.error("n8n referral notify:", e.message));
   }

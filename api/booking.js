@@ -98,6 +98,7 @@ async function notifyN8n(b, nights) {
     name: b.name, email: b.email, phone: b.phone || "",
     checkin: b.checkin, checkout: b.checkout, nights,
     guests: b.guests, message: b.message || "", country: b.country || "", lang: b.lang || "es",
+    secret: process.env.ESM_N8N_SECRET || "",
   };
   try {
     await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
