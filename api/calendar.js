@@ -13,6 +13,8 @@ const { readBlocks, getAllBlocks, readCustomers, safeEqual } = require("./_lib")
 const icsDate = (s) => s.replace(/-/g, "");
 const icsEsc = (s = "") => String(s).replace(/\\/g, "\\\\").replace(/[,;]/g, (c) => "\\" + c).replace(/\n/g, "\\n");
 
+const TZID = "America/Mexico_City"; // UTC-6 fijo (México sin horario de verano desde 2022)
+
 function calendarLines(name, events) {
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const lines = [
@@ -26,13 +28,26 @@ function calendarLines(name, events) {
     "X-PUBLISHED-TTL:PT1H",
     "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
   ];
+  if (events.some((ev) => ev.dtstart)) {
+    lines.push(
+      "BEGIN:VTIMEZONE",
+      `TZID:${TZID}`,
+      "BEGIN:STANDARD",
+      "DTSTART:19700101T000000",
+      "TZOFFSETFROM:-0600",
+      "TZOFFSETTO:-0600",
+      "TZNAME:CST",
+      "END:STANDARD",
+      "END:VTIMEZONE"
+    );
+  }
   for (const ev of events) {
     lines.push(
       "BEGIN:VEVENT",
       `UID:${ev.uid}`,
       `DTSTAMP:${stamp}`,
-      `DTSTART;VALUE=DATE:${icsDate(ev.start)}`,
-      `DTEND;VALUE=DATE:${icsDate(ev.end)}`,
+      ev.dtstart ? `DTSTART;TZID=${TZID}:${ev.dtstart}` : `DTSTART;VALUE=DATE:${icsDate(ev.start)}`,
+      ev.dtstart ? `DTEND;TZID=${TZID}:${ev.dtend}` : `DTEND;VALUE=DATE:${icsDate(ev.end)}`,
       `SUMMARY:${icsEsc(ev.summary)}`,
       ev.description ? `DESCRIPTION:${icsEsc(ev.description)}` : null,
       "END:VEVENT"
@@ -77,24 +92,43 @@ module.exports = async (req, res) => {
 
     const [blocks, customers] = await Promise.all([getAllBlocks(), readCustomers()]);
     const names = guestNameMap(customers);
-    const events = blocks
+    const events = [];
+    blocks
       .sort((a, b) => (a.start < b.start ? -1 : 1))
-      .map((b, i) => {
+      .forEach((b, i) => {
         const nights = Math.round((new Date(b.end) - new Date(b.start)) / 86400000);
         const direct = b.source !== "airbnb";
         const name = direct ? (b.name || names[`${b.start}|${b.end}`] || "Reserva directa") : "Airbnb";
-        return {
+        const detail =
+          (direct ? "Reserva directa" : "Reserva de Airbnb") +
+          ` · ${nights} noche${nights === 1 ? "" : "s"}` +
+          (b.guests ? ` · ${b.guests} huéspedes` : "") +
+          " · esmeraldalakes.com";
+        // Evento all-day que cubre la estancia
+        events.push({
           uid: `${direct ? "d" : "a"}${i}-${b.start}@esmeralda-full`,
           start: b.start,
           end: b.end,
           summary: (direct ? "🏠 " : "🅰️ ") + name,
-          description:
-            (direct ? "Reserva directa" : "Reserva de Airbnb") +
-            ` · ${nights} noche${nights === 1 ? "" : "s"}` +
-            ` · check-in ${b.start} 12:00 · check-out ${b.end} 11:00` +
-            (b.guests ? ` · ${b.guests} huéspedes` : "") +
-            " · esmeraldalakes.com",
-        };
+          description: detail + ` · check-in ${b.start} 12:00 · check-out ${b.end} 11:00`,
+        });
+        // Check-in 12:00 y check-out 11:00 como eventos con hora (para recordatorios)
+        events.push(
+          {
+            uid: `ci${i}-${b.start}@esmeralda-full`,
+            dtstart: `${icsDate(b.start)}T120000`,
+            dtend: `${icsDate(b.start)}T130000`,
+            summary: `🔑 Check-in · ${name}`,
+            description: detail,
+          },
+          {
+            uid: `co${i}-${b.end}@esmeralda-full`,
+            dtstart: `${icsDate(b.end)}T110000`,
+            dtend: `${icsDate(b.end)}T120000`,
+            summary: `🧳 Check-out · ${name}`,
+            description: detail,
+          }
+        );
       });
     res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=1800");
     return res.status(200).send(calendarLines("Esmeralda · Reservas", events).join("\r\n"));
