@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
       body: JSON.stringify({
         url,
         secret_token: process.env.TELEGRAM_WEBHOOK_SECRET,
-        allowed_updates: ["callback_query"],
+        allowed_updates: ["callback_query", "message"],
       }),
     });
     const j = await r.json();

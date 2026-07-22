@@ -2,6 +2,7 @@
   "rewrites": [
     { "source": "/calendar.ics", "destination": "/api/calendar" },
     { "source": "/reservas.ics", "destination": "/api/calendar?full=1" },
+    { "source": "/calendario", "destination": "/api/calendar?view=html" },
     { "source": "/guia", "destination": "/guia.html" },
     { "source": "/portal", "destination": "/portal.html" },
     { "source": "/privacidad", "destination": "/privacidad.html" },

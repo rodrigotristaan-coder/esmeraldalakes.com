@@ -1,6 +1,6 @@
-// Imagen del calendario de reservas (PNG) para Telegram: próximos 2 meses con
-// diseño Esmeralda (gradiente esmeralda + tarjetas de vidrio) y lista de huéspedes.
-// Archivos con guion bajo NO son rutas en Vercel.
+// Imagen del calendario de reservas (PNG) para Telegram: próximos 12 meses
+// (configurable 2-12) con diseño Esmeralda (gradiente + tarjetas de vidrio) y
+// lista de huéspedes. Archivos con guion bajo NO son rutas en Vercel.
 const fs = require("fs");
 const path = require("path");
 const { getAllBlocks, readCustomers } = require("./_lib");
@@ -45,16 +45,18 @@ function guestNameMap(customers) {
   return map;
 }
 
-function buildSvg(blocks, customers) {
+function buildSvg(blocks, customers, opts = {}) {
+  const monthsCount = Math.min(12, Math.max(2, Number(opts.months) || 12));
   const now = todayAcapulco();
   const Y = now.getUTCFullYear(), M = now.getUTCMonth();
   const todayDs = ymd(Y, M, now.getUTCDate());
-  const months = [[Y, M], [M === 11 ? Y + 1 : Y, (M + 1) % 12]];
+  const months = [];
+  for (let k = 0; k < monthsCount; k++) months.push([Y + Math.floor((M + k) / 12), (M + k) % 12]);
   const windowStart = ymd(Y, M, 1);
-  const lastY = months[1][0], lastM = months[1][1];
+  const [lastY, lastM] = months[months.length - 1];
   const windowEnd = ymd(lastM === 11 ? lastY + 1 : lastY, (lastM + 1) % 12, 1);
 
-  // Reservas que tocan la ventana de 2 meses, ordenadas
+  // Reservas que tocan la ventana, ordenadas
   const names = guestNameMap(customers);
   const inWindow = blocks
     .filter((b) => b.start < windowEnd && b.end > windowStart)
@@ -66,21 +68,28 @@ function buildSvg(blocks, customers) {
     return { name, direct, start: b.start, end: b.end, nights };
   });
 
+  // Tarjeta de mes en tamaño base (la misma geometría del diseño original de 2
+  // meses); con más meses se dibuja igual y se escala con <g transform>.
+  const CARD_W = 646, PAD = 34;
+  const CELL_W = Math.floor((CARD_W - PAD * 2) / 7); // 82
+  const CELL_H = 66, CELL_GAP = 6;
+  const GRID_W = CELL_W * 7;
+  const CARD_H = 60 /*mes*/ + 36 /*dows*/ + 6 * (CELL_H + CELL_GAP) + PAD + 10;
+
   const W = 1440, MARGIN = 56, GAP = 36;
-  const cardW = (W - MARGIN * 2 - GAP) / 2; // 646
-  const pad = 34;
-  const cellW = Math.floor((cardW - pad * 2) / 7); // 82
-  const cellH = 66, cellGap = 6;
-  const gridW = cellW * 7;
+  const cols = monthsCount <= 4 ? 2 : 3;
+  const gridRows = Math.ceil(monthsCount / cols);
+  const cardW = (W - MARGIN * 2 - GAP * (cols - 1)) / cols;
+  const sc = cardW / CARD_W; // 1.0 con 2 columnas; ~0.65 con 3
+  const cardH = CARD_H * sc;
   const cardTop = 168;
-  const cardH = 60 /*mes*/ + 36 /*dows*/ + 6 * (cellH + cellGap) + pad + 10;
-  const legY = cardTop + cardH + 44; // leyenda con aire, sin pisar el borde de la tarjeta
+  const legY = cardTop + gridRows * (cardH + GAP) - GAP + 44; // leyenda con aire, sin pisar tarjetas
   const listTop = legY + 40;
-  const MAX_ROWS = 9;
+  const MAX_ROWS = monthsCount > 4 ? 14 : 9;
   const shown = rows.slice(0, MAX_ROWS);
   const extra = rows.length - shown.length;
   const listH = (shown.length ? shown.length : 1) * 46 + (extra > 0 ? 40 : 0) + 66;
-  const H = listTop + listH + 64;
+  const H = Math.round(listTop + listH + 64);
 
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <defs>
@@ -95,13 +104,13 @@ function buildSvg(blocks, customers) {
   <text x="${W - MARGIN}" y="74" text-anchor="end" font-family="Inter" font-size="22" fill="#ffffff" opacity="0.75">esmeraldalakes.com</text>
   <text x="${W - MARGIN}" y="126" text-anchor="end" font-family="Inter" font-size="22" fill="#ffffff" opacity="0.75">al ${fmtCorto(todayDs)} ${Y}</text>`;
 
-  months.forEach(([my, mm], i) => {
-    const x0 = MARGIN + i * (cardW + GAP);
-    s += `<rect x="${x0}" y="${cardTop}" width="${cardW}" height="${cardH}" rx="40" fill="#ffffff" fill-opacity="0.09" stroke="#ffffff" stroke-opacity="0.28"/>`;
-    s += `<text x="${x0 + cardW / 2}" y="${cardTop + 52}" text-anchor="middle" font-family="Fraunces" font-weight="700" font-size="30" fill="#ffffff">${MESES[mm]} ${my}</text>`;
-    const gx = x0 + (cardW - gridW) / 2;
+  // Dibuja un mes en (0,0) a tamaño base; se posiciona/escala con <g transform>
+  const monthCard = (my, mm) => {
+    let c = `<rect x="0" y="0" width="${CARD_W}" height="${CARD_H}" rx="40" fill="#ffffff" fill-opacity="0.09" stroke="#ffffff" stroke-opacity="0.28"/>`;
+    c += `<text x="${CARD_W / 2}" y="52" text-anchor="middle" font-family="Fraunces" font-weight="700" font-size="30" fill="#ffffff">${MESES[mm]} ${my}</text>`;
+    const gx = (CARD_W - GRID_W) / 2;
     DOWS.forEach((d, k) => {
-      s += `<text x="${gx + k * cellW + cellW / 2}" y="${cardTop + 88}" text-anchor="middle" font-family="Inter" font-weight="600" font-size="18" fill="#ffffff" opacity="0.65">${d}</text>`;
+      c += `<text x="${gx + k * CELL_W + CELL_W / 2}" y="88" text-anchor="middle" font-family="Inter" font-weight="600" font-size="18" fill="#ffffff" opacity="0.65">${d}</text>`;
     });
     const first = new Date(Date.UTC(my, mm, 1));
     const startDow = (first.getUTCDay() + 6) % 7; // lunes = 0
@@ -109,17 +118,24 @@ function buildSvg(blocks, customers) {
     for (let d = 1; d <= daysInMonth; d++) {
       const idx = startDow + d - 1;
       const row = Math.floor(idx / 7), col = idx % 7;
-      const cx = gx + col * cellW, cy = cardTop + 104 + row * (cellH + cellGap);
+      const cx = gx + col * CELL_W, cy = 104 + row * (CELL_H + CELL_GAP);
       const ds = ymd(my, mm, d);
       const src = sourceFor(ds, blocks);
       const isPast = ds < todayDs;
       let fill = "#ffffff", fillOp = "0.06", txt = "#eaf6f0", txtOp = isPast ? "0.35" : "0.92", weight = 400;
       if (src === "directo") { fill = "#06d67e"; fillOp = isPast ? "0.35" : "1"; txt = "#062c22"; txtOp = "1"; weight = 600; }
       else if (src === "airbnb") { fill = "#f5b301"; fillOp = isPast ? "0.35" : "1"; txt = "#3a2c00"; txtOp = "1"; weight = 600; }
-      s += `<rect x="${cx + 3}" y="${cy}" width="${cellW - 6}" height="${cellH}" rx="16" fill="${fill}" fill-opacity="${fillOp}"/>`;
-      if (ds === todayDs) s += `<rect x="${cx + 3}" y="${cy}" width="${cellW - 6}" height="${cellH}" rx="16" fill="none" stroke="#ffffff" stroke-width="3"/>`;
-      s += `<text x="${cx + cellW / 2}" y="${cy + cellH / 2 + 8}" text-anchor="middle" font-family="Inter" font-weight="${weight}" font-size="22" fill="${txt}" fill-opacity="${txtOp}">${d}</text>`;
+      c += `<rect x="${cx + 3}" y="${cy}" width="${CELL_W - 6}" height="${CELL_H}" rx="16" fill="${fill}" fill-opacity="${fillOp}"/>`;
+      if (ds === todayDs) c += `<rect x="${cx + 3}" y="${cy}" width="${CELL_W - 6}" height="${CELL_H}" rx="16" fill="none" stroke="#ffffff" stroke-width="3"/>`;
+      c += `<text x="${cx + CELL_W / 2}" y="${cy + CELL_H / 2 + 8}" text-anchor="middle" font-family="Inter" font-weight="${weight}" font-size="22" fill="${txt}" fill-opacity="${txtOp}">${d}</text>`;
     }
+    return c;
+  };
+
+  months.forEach(([my, mm], i) => {
+    const x0 = MARGIN + (i % cols) * (cardW + GAP);
+    const y0 = cardTop + Math.floor(i / cols) * (cardH + GAP);
+    s += `<g transform="translate(${x0.toFixed(2)} ${y0.toFixed(2)}) scale(${sc.toFixed(4)})">${monthCard(my, mm)}</g>`;
   });
 
   // Leyenda
@@ -136,7 +152,7 @@ function buildSvg(blocks, customers) {
   ly += 18;
   if (!shown.length) {
     ly += 30;
-    s += `<text x="${MARGIN}" y="${ly}" font-family="Inter" font-size="22" fill="#ffffff" opacity="0.8">Sin reservas en estos 2 meses — calendario libre</text>`;
+    s += `<text x="${MARGIN}" y="${ly}" font-family="Inter" font-size="22" fill="#ffffff" opacity="0.8">Sin reservas en estos ${monthsCount} meses — calendario libre</text>`;
   }
   for (const r of shown) {
     ly += 46;
@@ -173,10 +189,10 @@ function materializeFonts() {
   });
 }
 
-async function renderCalendarPng() {
+async function renderCalendarPng(opts = {}) {
   const { Resvg } = require("@resvg/resvg-js");
   const [blocks, customers] = await Promise.all([getAllBlocks(), readCustomers()]);
-  const svg = buildSvg(blocks, customers);
+  const svg = buildSvg(blocks, customers, opts);
   const resvg = new Resvg(svg, {
     background: "#0a5944",
     font: {
@@ -208,4 +224,4 @@ async function sendCalendarPhoto(caption) {
   }
 }
 
-module.exports = { renderCalendarPng, sendCalendarPhoto, buildSvg };
+module.exports = { renderCalendarPng, sendCalendarPhoto, buildSvg, sourceFor, guestNameMap, todayAcapulco, ymd, fmtCorto, MESES, DOWS };

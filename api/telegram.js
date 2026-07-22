@@ -17,6 +17,16 @@ module.exports = async (req, res) => {
     return res.status(401).json({ ok: false });
   }
 
+  // Comando /calendario (solo del anfitrión): manda la foto del calendario al día
+  const msg = (req.body || {}).message;
+  if (msg && msg.text) {
+    const isOwner = String(msg.chat && msg.chat.id) === String(process.env.OWNER_CHAT_ID);
+    if (isOwner && /^\/calendari?o?\b/i.test(msg.text.trim())) {
+      await sendCalendarPhoto("📅 Calendario al día de hoy");
+    }
+    return res.status(200).json({ ok: true });
+  }
+
   const cq = (req.body || {}).callback_query;
   if (!cq) return res.status(200).json({ ok: true });
 
