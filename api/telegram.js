@@ -1,6 +1,7 @@
 // Webhook de Telegram: maneja los botones de confirmación de reserva (doble toque).
 // Solo actúa sobre el grupo/chat configurado y verifica el secreto del webhook.
 const { addBlock, upsertCustomerFromBooking } = require("./_lib");
+const { sendCalendarPhoto } = require("./_calimg");
 
 async function tg(method, body) {
   return fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/${method}`, {
@@ -49,7 +50,7 @@ module.exports = async (req, res) => {
       const guests = (text.match(/Hu[eé]spedes:\s*(\d+)/i) || [])[1] || "";
       const nights = (text.match(/\((\d+)\s*noches?\)/i) || [])[1] || "";
       const refcode = (text.match(/C[oó]digo ref:\s*(ESM-[A-Z0-9]+)/i) || [])[1] || "";
-      await addBlock(ci, co);
+      await addBlock(ci, co, { name, guests });
       let mailNote = "";
       if (email && process.env.N8N_POSTPAGO_WEBHOOK) {
         await fetch(process.env.N8N_POSTPAGO_WEBHOOK, {
@@ -71,6 +72,8 @@ module.exports = async (req, res) => {
         reply_markup: { inline_keyboard: [[{ text: `✅ Pago recibido · ${ci} → ${co} bloqueado${mailNote}${portalNote}`, callback_data: "done" }]] },
       });
       await answer("¡Pago registrado, fechas bloqueadas y confirmación enviada! 🌴");
+      // Pantallazo del calendario ya con la reserva bloqueada (best-effort)
+      await sendCalendarPhoto(`📅 Así queda el calendario con la reserva de ${name || "el huésped"} (${ci} → ${co})`);
     } else if (action === "no") {
       await tg("editMessageReplyMarkup", {
         chat_id: chatId, message_id: msgId,

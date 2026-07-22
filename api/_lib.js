@@ -49,10 +49,13 @@ async function writeBlocks(arr) {
   });
 }
 
-async function addBlock(start, end) {
+async function addBlock(start, end, extra) {
   const arr = await readBlocks();
   if (!arr.some((b) => b.start === start && b.end === end)) {
-    arr.push({ start, end, source: "directo" });
+    const block = { start, end, source: "directo" };
+    if (extra && extra.name) block.name = String(extra.name).slice(0, 80);
+    if (extra && extra.guests) block.guests = Number(extra.guests) || undefined;
+    arr.push(block);
     await writeBlocks(arr);
   }
   return arr;

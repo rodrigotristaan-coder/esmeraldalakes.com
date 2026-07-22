@@ -81,6 +81,10 @@ module.exports = async (req, res) => {
     // Bitácora en Excel (OneDrive) + correo a anfitriones y acuse al huésped, vía n8n→M365 (best-effort)
     await notifyN8n(b, nights);
 
+    // Pantallazo del calendario actual (la solicitud aún NO bloquea fechas)
+    const { sendCalendarPhoto } = require("./_calimg");
+    await sendCalendarPhoto(`📅 Calendario al llegar la solicitud de ${esc(b.name)} (${b.checkin} → ${b.checkout}, aún sin bloquear)`);
+
     return res.status(200).json({ ok: true, conflict });
   } catch (err) {
     console.error("Error Telegram:", err.message);

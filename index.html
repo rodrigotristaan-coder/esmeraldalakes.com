@@ -292,6 +292,12 @@ p, li, a, h1, h2, h3, h4, span { overflow-wrap: break-word; }
 .hero .hero__stats { justify-content: center; gap: 1.9rem; margin-top: 1.6rem; }
 .hero .hero__stats strong { font-size: 2rem; }
 .hero .hero__cta { justify-content: center; margin-top: 1.8rem; }
+/* Próximas fechas libres (pills en el hero, las llena script.js) */
+.hero__avail { margin-top: 1.7rem; }
+.hero__avail-label { font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.85; margin-bottom: 0.55rem; }
+.hero__avail-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+.hero__avail-pills a { display: inline-block; padding: 0.42rem 0.95rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.45); background: rgba(255,255,255,0.12); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); color: #fff; text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: background .18s ease, color .18s ease; }
+.hero__avail-pills a:hover { background: var(--aqua); color: #062c22; border-color: var(--aqua); }
 .pip {
   position: absolute; right: -7.5rem; bottom: -4.5rem; width: 220px;
   border-radius: 24px; overflow: hidden; border: 1px solid rgba(255,255,255,0.55);
@@ -325,6 +331,9 @@ p, li, a, h1, h2, h3, h4, span { overflow-wrap: break-word; }
   .v3__intro .hero__cta { margin-top: 1.6rem; gap: 0.7rem; }
   .v3__intro .btn--ghost { color: var(--emerald-dark); }
   .v3__intro .btn--ghost:hover { background: rgba(15,122,95,0.08); }
+  .v3__intro .hero__avail-label { color: var(--muted); }
+  .v3__intro .hero__avail-pills a { border-color: rgba(10,89,68,0.35); background: var(--glass); color: var(--emerald-dark); }
+  .v3__intro .hero__avail-pills a:hover { background: var(--aqua); border-color: var(--aqua); color: #062c22; }
   .v3__collage { position: relative; margin-top: 2.2rem; padding-bottom: 2.6rem; }
   .v3__pool {
     width: 100%; aspect-ratio: 4 / 3;
@@ -833,6 +842,10 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
           <a href="#galeria" class="btn btn--ghost" data-es="Fotos" data-en="Photos"></a>
           <a href="#resenas" class="btn btn--ghost btn--star" data-es="<span class='btn__star'>★</span> Reseñas" data-en="<span class='btn__star'>★</span> Reviews"></a>
         </div>
+        <div class="hero__avail js-hero-avail" hidden>
+          <p class="hero__avail-label" data-es="✨ Próximas fechas libres" data-en="✨ Next available dates"></p>
+          <div class="hero__avail-pills"></div>
+        </div>
         <figure class="pip">
           <img src="assets/images/caseta-entrance-sm.webp" alt="Caseta de acceso del condominio Diamante Lakes" />
           <figcaption data-es="Acceso privado · vigilancia 24/7" data-en="Private gated access · 24/7"></figcaption>
@@ -856,6 +869,10 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
           <a href="#reservar" class="btn" data-es="Reservar" data-en="Book"></a>
           <a href="#galeria" class="btn btn--ghost" data-es="Fotos" data-en="Photos"></a>
           <a href="#resenas" class="btn btn--ghost btn--star" data-es="<span class='btn__star'>★</span> Reseñas" data-en="<span class='btn__star'>★</span> Reviews"></a>
+        </div>
+        <div class="hero__avail js-hero-avail" hidden>
+          <p class="hero__avail-label" data-es="✨ Próximas fechas libres" data-en="✨ Next available dates"></p>
+          <div class="hero__avail-pills"></div>
         </div>
       </div>
       <div class="v3__collage">

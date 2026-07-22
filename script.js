@@ -394,9 +394,66 @@ function wireCalendar() {
   // Carga las fechas ocupadas (Airbnb + manuales). Si falla, el calendario sigue usable.
   fetch(CONFIG.availabilityEndpoint)
     .then((r) => r.json())
-    .then((d) => { CAL.blocked = Array.isArray(d.blocked) ? d.blocked : []; renderCalendar(); })
+    .then((d) => { CAL.blocked = Array.isArray(d.blocked) ? d.blocked : []; CAL.loaded = true; renderCalendar(); renderHeroAvail(); })
     .catch(() => {});
   renderCalendar();
+}
+
+// ---------- Próximas fechas libres en el hero (siguientes 3 meses) ----------
+const HERO_MES = {
+  es: ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"],
+  en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+};
+
+// Corridas de noches libres consecutivas empezando mañana, hasta +92 días.
+function heroFreeRanges() {
+  const MIN = 2; // estancia mínima
+  const base = new Date(todayStr() + "T00:00:00");
+  const ranges = [];
+  let runStart = null, runNights = 0;
+  for (let i = 1; i <= 92; i++) {
+    const d = new Date(base); d.setDate(base.getDate() + i);
+    const ds = ymd(d.getFullYear(), d.getMonth(), d.getDate());
+    if (!calBlocked(ds)) {
+      if (!runStart) { runStart = ds; runNights = 0; }
+      runNights++;
+    } else if (runStart) {
+      if (runNights >= MIN) ranges.push({ checkin: runStart, checkout: ds, nights: runNights });
+      runStart = null;
+    }
+  }
+  if (runStart && runNights >= MIN) {
+    const d = new Date(base); d.setDate(base.getDate() + 93);
+    ranges.push({ checkin: runStart, checkout: ymd(d.getFullYear(), d.getMonth(), d.getDate()), nights: runNights });
+  }
+  return ranges;
+}
+
+// "24–30 jul" / "28 jul – 2 ago" (EN: "Jul 24–30" / "Jul 28 – Aug 2")
+function fmtRange(a, b, lang) {
+  const M = HERO_MES[lang === "en" ? "en" : "es"];
+  const [ , am, ad ] = a.split("-").map(Number);
+  const [ , bm, bd ] = b.split("-").map(Number);
+  if (lang === "en") {
+    return am === bm ? `${M[am - 1]} ${ad}–${bd}` : `${M[am - 1]} ${ad} – ${M[bm - 1]} ${bd}`;
+  }
+  return am === bm ? `${ad}–${bd} ${M[am - 1]}` : `${ad} ${M[am - 1]} – ${bd} ${M[bm - 1]}`;
+}
+
+function renderHeroAvail() {
+  const wraps = document.querySelectorAll(".js-hero-avail");
+  if (!wraps.length || !CAL.loaded) return;
+  const lang = document.body.dataset.lang || "es";
+  const ranges = heroFreeRanges().slice(0, 3);
+  wraps.forEach((w) => {
+    const pills = w.querySelector(".hero__avail-pills");
+    if (!pills) return;
+    if (!ranges.length) { w.hidden = true; return; }
+    pills.innerHTML = ranges
+      .map((r) => `<a href="#reservar">${fmtRange(r.checkin, r.checkout, lang)}</a>`)
+      .join("");
+    w.hidden = false;
+  });
 }
 
 // ---------- Reseñas ----------
@@ -541,7 +598,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const target = b.dataset.lang;
       const dest = langUrl(target);
       if (dest) { localStorage.setItem(STORAGE_KEY, target); location.href = dest; return; }
-      applyLang(target); renderCalendar();
+      applyLang(target); renderCalendar(); renderHeroAvail();
     });
   });
 

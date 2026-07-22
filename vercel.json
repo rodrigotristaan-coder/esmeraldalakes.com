@@ -1,6 +1,7 @@
 {
   "rewrites": [
     { "source": "/calendar.ics", "destination": "/api/calendar" },
+    { "source": "/reservas.ics", "destination": "/api/calendar?full=1" },
     { "source": "/guia", "destination": "/guia.html" },
     { "source": "/portal", "destination": "/portal.html" },
     { "source": "/privacidad", "destination": "/privacidad.html" },
