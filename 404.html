@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Página no encontrada · Esmeralda · Diamante Lakes</title>
+  <meta name="robots" content="noindex, follow" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+  <meta name="theme-color" content="#0a5944" />
+  <style>
+    @font-face{font-family:'Fraunces';font-style:normal;font-weight:700;font-display:swap;src:url(/assets/fonts/fraunces-700-latin.woff2) format('woff2');}
+    @font-face{font-family:'Inter';font-style:normal;font-weight:400;font-display:swap;src:url(/assets/fonts/inter-400-latin.woff2) format('woff2');}
+    @font-face{font-family:'Inter';font-style:normal;font-weight:600;font-display:swap;src:url(/assets/fonts/inter-600-latin.woff2) format('woff2');}
+    :root{--emerald-dark:#0a5944;--aqua:#06d67e;--white:#fff}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:"Inter",system-ui,sans-serif;color:var(--white);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2.5rem 1.2rem;background:linear-gradient(160deg,rgba(6,44,34,.88) 0%,rgba(10,89,68,.8) 55%,rgba(15,122,95,.72) 100%),url(/assets/images/balcony-pool-view.webp) center/cover no-repeat fixed var(--emerald-dark)}
+    @media (max-width:768px){body{background:linear-gradient(160deg,rgba(6,44,34,.88) 0%,rgba(10,89,68,.8) 55%,rgba(15,122,95,.72) 100%),url(/assets/images/balcony-pool-view-sm.webp) center/cover no-repeat var(--emerald-dark)}}
+    .lang{position:fixed;top:1rem;right:1.2rem;display:inline-flex;border:1px solid rgba(255,255,255,.5);border-radius:999px;overflow:hidden}
+    .lang button{background:transparent;border:0;color:#fff;font:600 .8rem "Inter",sans-serif;padding:.35rem .7rem;cursor:pointer;letter-spacing:.04em}
+    .lang button.on{background:var(--aqua);color:#062c22}
+    .card{max-width:600px;width:100%;text-align:center;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);border-radius:40px;padding:2.6rem 1.8rem;-webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4);box-shadow:0 30px 60px -30px rgba(0,0,0,.5)}
+    .gem{color:var(--aqua)}
+    .brand{font-family:"Fraunces",serif;font-weight:700;font-size:1.2rem;margin-bottom:2rem;opacity:.92}
+    .code{font-family:"Fraunces",serif;font-size:clamp(3.4rem,12vw,5rem);line-height:1;color:var(--aqua);margin-bottom:.6rem}
+    h1{font-family:"Fraunces",serif;font-size:clamp(1.6rem,5.5vw,2.3rem);margin-bottom:.6rem}
+    .sub{font-size:1.05rem;opacity:.95;line-height:1.6;margin:0 auto 2.2rem;max-width:440px}
+    .menu{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:center}
+    .menu a{display:inline-block;padding:.6rem 1.15rem;border-radius:999px;text-decoration:none;font-weight:600;font-size:.95rem;border:2px solid rgba(255,255,255,.45);color:#fff;transition:background .18s ease}
+    .menu a:hover{background:rgba(255,255,255,.14)}
+    .menu a.primary{background:var(--aqua);color:#062c22;border-color:var(--aqua)}
+  </style>
+</head>
+<body>
+  <div class="lang">
+    <button type="button" data-lang="es">ES</button>
+    <button type="button" data-lang="en">EN</button>
+  </div>
+
+  <main class="card">
+    <p class="brand"><span class="gem">◆</span> Esmeralda</p>
+    <p class="code" aria-hidden="true">404</p>
+    <h1 data-es="Esta página se fue a la alberca 🏖️" data-en="This page went for a swim 🏖️"></h1>
+    <p class="sub" data-es="No encontramos lo que buscabas, pero el depa sigue aquí, con la alberca lista." data-en="We couldn't find what you were looking for — but the apartment is still here, pool ready."></p>
+    <nav class="menu" aria-label="Menú">
+      <a class="primary" href="/" data-es="Ir al inicio" data-en="Go home"></a>
+      <a href="/#reservar" data-es="Reservar" data-en="Book"></a>
+      <a href="/#galeria" data-es="Fotos" data-en="Photos"></a>
+      <a href="/blog.html" data-es="Blog" data-en="Blog"></a>
+    </nav>
+  </main>
+
+  <script src="/assets/gracias.js"></script>
+</body>
+</html>

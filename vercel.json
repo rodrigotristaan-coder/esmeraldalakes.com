@@ -2,7 +2,9 @@
   "rewrites": [
     { "source": "/calendar.ics", "destination": "/api/calendar" },
     { "source": "/guia", "destination": "/guia.html" },
-    { "source": "/portal", "destination": "/portal.html" }
+    { "source": "/portal", "destination": "/portal.html" },
+    { "source": "/privacidad", "destination": "/privacidad.html" },
+    { "source": "/privacy", "destination": "/privacidad.html" }
   ],
   "headers": [
     {

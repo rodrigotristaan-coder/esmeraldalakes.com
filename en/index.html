@@ -29,14 +29,14 @@
   <meta property="og:title" content="Acapulco Vacation Rental · Esmeralda at Diamante Lakes" />
   <meta property="og:description" content="Your 2-bedroom home base in Acapulco Diamante: lakeside resort, pool, jacuzzi & water slide, sleeps 9, minutes from Arena GNP. Book direct — no platform fees." />
   <meta property="og:type" content="website" />
-  <meta property="og:image" content="https://esmeraldalakes.com/assets/images/pool-aerial.jpg" />
+  <meta property="og:image" content="https://esmeraldalakes.com/assets/images/og-esmeralda.jpg" />
   <meta property="og:url" content="https://esmeraldalakes.com/en/" />
   <meta property="og:site_name" content="Esmeralda · Diamante Lakes" />
   <meta property="og:locale" content="en_US" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Acapulco Vacation Rental · Esmeralda at Diamante Lakes — Book Direct" />
   <meta name="twitter:description" content="2-bedroom condo in Acapulco Diamante, sleeps 9. Pool, jacuzzi, water slide, minutes from Arena GNP. Book direct & save vs Airbnb." />
-  <meta name="twitter:image" content="https://esmeraldalakes.com/assets/images/pool-aerial.jpg" />
+  <meta name="twitter:image" content="https://esmeraldalakes.com/assets/images/og-esmeralda.jpg" />
   <meta property="og:locale:alternate" content="es_MX" />
   <meta name="twitter:card" content="summary_large_image" />
 
@@ -48,7 +48,7 @@
     "inLanguage": ["en", "es"],
     "name": "Departamento Esmeralda — Condominio Diamante Lakes",
     "url": "https://esmeraldalakes.com/",
-    "image": "https://esmeraldalakes.com/assets/images/pool-aerial.jpg",
+    "image": "https://esmeraldalakes.com/assets/images/og-esmeralda.jpg",
     "description": "Vacation rental apartment for up to 9 guests at Diamante Lakes condominium, Revolcadero, Acapulco Diamante. 2 bedrooms, lakeside resort with pool, jacuzzi, water slide and swim-up bar. Minutes from Arena GNP Seguros, home of major concerts and the Mexican Open (ATP 500). Book direct with the host — no platform fees.",
     "address": {
       "@type": "PostalAddress",
@@ -348,7 +348,7 @@ section { padding: 5rem 1.5rem; }
 
 /* Receta de vidrio (Apple-style): panel translúcido, borde luminoso, esquinas generosas */
 .review-card, .review-form-wrap, .room, .amen__card, .loc__card, .safety__card,
-.faq__item, .capacity-note, .safety__photo figcaption, details.acc {
+.faq__item, .capacity-note, .safety__photo figcaption, details.acc, .how__card {
   background: var(--glass);
   -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border);
@@ -579,6 +579,7 @@ section { padding: 5rem 1.5rem; }
 .book__hint { font-size: 0.85rem; color: var(--emerald-dark); margin-bottom: 0.5rem; }
 .consent { display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.8rem; color: var(--muted); margin: 0.6rem 0 0.2rem; }
 .consent input { margin-top: 0.2rem; flex-shrink: 0; }
+.consent a { color: var(--emerald-dark); }
 .book__wa { display: block; text-align: center; margin-top: 0.9rem; color: #0a5944; font-weight: 700; text-decoration: none; }
 .book__wa:hover { text-decoration: underline; }
 .book__note { margin-top: 0.8rem; font-size: 0.82rem; color: var(--muted); text-align: center; }
@@ -612,6 +613,15 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
 .acc__body ul.recs li { margin: 0.45rem 0; color: var(--muted); }
 .acc__body ul.recs li strong, .acc__body p strong { color: var(--ink); }
 .acc__body > p { color: var(--muted); }
+
+/* ---------- Cómo funciona tu reserva ---------- */
+.how { background: transparent; }
+.how__steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; max-width: var(--max); margin: 0 auto; }
+.how__card { border-radius: var(--radius); padding: 1.5rem 1.3rem; box-shadow: var(--shadow); }
+.how__num { width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--aqua); color: #062c22; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-size: 1.05rem; margin-bottom: 0.8rem; }
+.how__card h3 { color: var(--emerald-dark); font-size: 1.05rem; margin-bottom: 0.45rem; }
+.how__card p { color: var(--muted); font-size: 0.95rem; line-height: 1.55; }
+.how__policies { max-width: 820px; margin: 2rem auto 0; }
 .room__more > summary { cursor: pointer; list-style: none; color: var(--gold); font-weight: 700; font-size: 0.92rem; margin-top: 0.5rem; }
 .room__more > summary::-webkit-details-marker { display: none; }
 .room__more > summary::before { content: "+ "; }
@@ -720,6 +730,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
   .loc__grid { grid-template-columns: repeat(2, 1fr); }
   .loc__card--wide { grid-column: span 2; }
   .book__inner { grid-template-columns: 1fr; gap: 2rem; }
+  .how__steps { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 540px) {
   section { padding: 3.5rem 1.2rem; }
@@ -733,6 +744,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
   .event-row--head { display: none; }
   .field-row { grid-template-columns: 1fr; }
   .book__form { padding: 1.4rem; }
+  .how__steps { grid-template-columns: 1fr; }
 }
 
 /* Tablets */
@@ -1173,6 +1185,56 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
     </div>
   </section>
 
+  <!-- ============ CÓMO FUNCIONA TU RESERVA ============ -->
+  <section class="how" id="como-reservar">
+    <div class="section__head">
+      <h2 data-es="¿Cómo funciona tu reserva?" data-en="How does booking work?">How does booking work?</h2>
+      <p data-es="Reservas directo con el anfitrión, sin plataformas de por medio. Así de simple:" data-en="You book directly with the host — no platforms in between. It's this simple:">You book directly with the host — no platforms in between. It's this simple:</p>
+    </div>
+    <div class="how__steps">
+      <div class="how__card">
+        <span class="how__num">1</span>
+        <h3 data-es="Solicita tus fechas" data-en="Request your dates">Request your dates</h3>
+        <p data-es="Elige tus fechas en el calendario y envía el formulario. En este paso no pagas nada." data-en="Pick your dates on the calendar and send the form. You don't pay anything at this step.">Pick your dates on the calendar and send the form. You don't pay anything at this step.</p>
+      </div>
+      <div class="how__card">
+        <span class="how__num">2</span>
+        <h3 data-es="Te confirmamos" data-en="We confirm">We confirm</h3>
+        <p data-es="En menos de 24 h te contactamos por WhatsApp o correo para confirmar disponibilidad y el total de tu estancia." data-en="Within 24 hours we contact you by WhatsApp or email to confirm availability and your total.">Within 24 hours we contact you by WhatsApp or email to confirm availability and your total.</p>
+      </div>
+      <div class="how__card">
+        <span class="how__num">3</span>
+        <h3 data-es="Aparta con tu pago" data-en="Secure it with payment">Secure it with payment</h3>
+        <p data-es="Pagas por transferencia bancaria y tu reserva queda confirmada. Te llega un correo de confirmación." data-en="You pay by bank transfer and your booking is confirmed. A confirmation email is sent to you.">You pay by bank transfer and your booking is confirmed. A confirmation email is sent to you.</p>
+      </div>
+      <div class="how__card">
+        <span class="how__num">4</span>
+        <h3 data-es="Llega y disfruta" data-en="Arrive and enjoy">Arrive and enjoy</h3>
+        <p data-es="Antes de tu llegada recibes la guía del huésped y el código de la cerradura inteligente. Check-in a las 12:00." data-en="Before arrival you get the guest guide and the smart-lock code. Check-in at 12:00 PM.">Before arrival you get the guest guide and the smart-lock code. Check-in at 12:00 PM.</p>
+      </div>
+    </div>
+    <div class="how__policies">
+      <details class="acc">
+        <summary data-es="💳 Formas de pago" data-en="💳 Payment methods">💳 Payment methods</summary>
+        <div class="acc__body">
+          <p data-es="El pago es por <strong>transferencia bancaria (SPEI)</strong> en pesos mexicanos; te compartimos los datos de la cuenta al confirmar tu disponibilidad. Si nos visitas desde el extranjero, te proponemos una opción de pago internacional al confirmar. <strong>Nunca te pediremos datos de tarjeta en este sitio</strong> ni pagos por enlaces de terceros." data-en="Payment is by <strong>bank transfer (SPEI)</strong> in Mexican pesos; we share the account details once availability is confirmed. Visiting from abroad? We'll offer an international payment option when we confirm. <strong>We will never ask for card details on this site</strong> or payments through third-party links.">Payment is by <strong>bank transfer (SPEI)</strong> in Mexican pesos; we share the account details once availability is confirmed. Visiting from abroad? We'll offer an international payment option when we confirm. <strong>We will never ask for card details on this site</strong> or payments through third-party links.</p>
+        </div>
+      </details>
+      <details class="acc">
+        <summary data-es="📅 Cambios y cancelaciones" data-en="📅 Changes and cancellations">📅 Changes and cancellations</summary>
+        <div class="acc__body">
+          <ul class="recs">
+            <li data-es="<strong>Cancelación con 7 días o más de anticipación:</strong> reembolso del 100%." data-en="<strong>Cancel 7+ days before check-in:</strong> 100% refund."><strong>Cancel 7+ days before check-in:</strong> 100% refund.</li>
+            <li data-es="<strong>Menos de 7 días:</strong> reembolso del 50%." data-en="<strong>Less than 7 days:</strong> 50% refund."><strong>Less than 7 days:</strong> 50% refund.</li>
+            <li data-es="<strong>Menos de 48 h o no presentarse:</strong> sin reembolso." data-en="<strong>Less than 48 hours or no-show:</strong> no refund."><strong>Less than 48 hours or no-show:</strong> no refund.</li>
+            <li data-es="<strong>Cambio de fechas:</strong> una vez sin costo, sujeto a disponibilidad (aplica diferencia de tarifa)." data-en="<strong>Date changes:</strong> once at no cost, subject to availability (rate difference applies)."><strong>Date changes:</strong> once at no cost, subject to availability (rate difference applies).</li>
+          </ul>
+          <p data-es="En fechas de eventos y temporadas especiales pueden aplicar condiciones distintas; siempre te las confirmamos <strong>antes</strong> de tu pago. ¿Dudas? Escríbenos por WhatsApp." data-en="Event dates and special seasons may carry different terms; we always confirm them <strong>before</strong> you pay. Questions? Message us on WhatsApp.">Event dates and special seasons may carry different terms; we always confirm them <strong>before</strong> you pay. Questions? Message us on WhatsApp.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
   <!-- ============ RESERVAR (formulario) ============ -->
   <section class="book" id="reservar">
     <div class="book__inner">
@@ -1235,7 +1297,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
         </div>
         <label class="consent">
           <input type="checkbox" id="bf-consent" />
-          <span data-es="Acepto que mis datos se usen para gestionar mi solicitud de reserva." data-en="I agree that my data may be used to manage my booking request.">I agree that my data may be used to manage my booking request.</span>
+          <span data-es="Acepto el <a href='/privacidad' target='_blank' rel='noopener'>Aviso de Privacidad</a> y que mis datos se usen para gestionar mi solicitud de reserva." data-en="I accept the <a href='/privacidad' target='_blank' rel='noopener'>Privacy Notice</a> and agree that my data may be used to manage my booking request.">I accept the <a href='/privacidad' target='_blank' rel='noopener'>Privacy Notice</a> and agree that my data may be used to manage my booking request.</span>
         </label>
         <!-- Honeypot + trampa de tiempo anti-bots -->
         <input type="text" name="company" id="bf-company" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
@@ -1305,6 +1367,8 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
         <a href="#ubicacion" data-es="Ubicación" data-en="Location">Location</a>
         <a href="/blog.html" data-es="Blog" data-en="Blog">Blog</a>
         <a href="#reservar" data-es="Reservar" data-en="Book">Book</a>
+        <a href="#como-reservar" data-es="Cancelación y pagos" data-en="Cancellation &amp; payment">Cancellation &amp; payment</a>
+        <a href="/privacidad" data-es="Aviso de Privacidad" data-en="Privacy Notice">Privacy Notice</a>
         <a href="/admin.html" data-es="Administración" data-en="Admin">Admin</a>
       </div>
     </div>
