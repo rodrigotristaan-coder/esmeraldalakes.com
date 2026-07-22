@@ -66,6 +66,15 @@ module.exports = async (req, res) => {
       res.setHeader("Content-Type", "text/plain");
       return res.status(401).send("No autorizado");
     }
+    // ?png=1 → la imagen del calendario (la misma que llega por Telegram), bajo demanda
+    if (q.png === "1" || q.png === "true") {
+      const { renderCalendarPng } = require("./_calimg");
+      const png = await renderCalendarPng();
+      res.setHeader("Content-Type", "image/png");
+      res.setHeader("Cache-Control", "no-store");
+      return res.status(200).send(png);
+    }
+
     const [blocks, customers] = await Promise.all([getAllBlocks(), readCustomers()]);
     const names = guestNameMap(customers);
     const events = blocks
