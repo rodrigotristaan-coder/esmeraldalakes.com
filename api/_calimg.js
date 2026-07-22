@@ -74,7 +74,8 @@ function buildSvg(blocks, customers) {
   const gridW = cellW * 7;
   const cardTop = 168;
   const cardH = 60 /*mes*/ + 36 /*dows*/ + 6 * (cellH + cellGap) + pad + 10;
-  const listTop = cardTop + cardH + 46;
+  const legY = cardTop + cardH + 44; // leyenda con aire, sin pisar el borde de la tarjeta
+  const listTop = legY + 40;
   const MAX_ROWS = 9;
   const shown = rows.slice(0, MAX_ROWS);
   const extra = rows.length - shown.length;
@@ -122,7 +123,6 @@ function buildSvg(blocks, customers) {
   });
 
   // Leyenda
-  const legY = cardTop + cardH + 6;
   s += `<circle cx="${MARGIN + 10}" cy="${legY}" r="10" fill="#06d67e"/>
   <text x="${MARGIN + 30}" y="${legY + 7}" font-family="Inter" font-size="20" fill="#ffffff" opacity="0.9">Reserva directa</text>
   <circle cx="${MARGIN + 230}" cy="${legY}" r="10" fill="#f5b301"/>
@@ -141,9 +141,11 @@ function buildSvg(blocks, customers) {
   for (const r of shown) {
     ly += 46;
     const color = r.direct ? "#06d67e" : "#f5b301";
+    // Nombre truncado para que nunca invada la columna de fechas
+    const shortName = r.name.length > 30 ? r.name.slice(0, 29).trimEnd() + "..." : r.name;
     s += `<circle cx="${MARGIN + 10}" cy="${ly - 7}" r="9" fill="${color}"/>
-    <text x="${MARGIN + 32}" y="${ly}" font-family="Inter" font-weight="600" font-size="23" fill="#ffffff">${esc(r.name)}</text>
-    <text x="${MARGIN + 470}" y="${ly}" font-family="Inter" font-size="23" fill="#ffffff" opacity="0.85">${fmtCorto(r.start)} - ${fmtCorto(r.end)} · ${r.nights} noche${r.nights === 1 ? "" : "s"}</text>`;
+    <text x="${MARGIN + 32}" y="${ly}" font-family="Inter" font-weight="600" font-size="23" fill="#ffffff">${esc(shortName)}</text>
+    <text x="${MARGIN + 500}" y="${ly}" font-family="Inter" font-size="23" fill="#ffffff" opacity="0.85">${fmtCorto(r.start)} - ${fmtCorto(r.end)} · ${r.nights} noche${r.nights === 1 ? "" : "s"}</text>`;
   }
   if (extra > 0) {
     ly += 42;
