@@ -136,7 +136,7 @@ function buildSvg(blocks, customers) {
   ly += 18;
   if (!shown.length) {
     ly += 30;
-    s += `<text x="${MARGIN}" y="${ly}" font-family="Inter" font-size="22" fill="#ffffff" opacity="0.8">Sin reservas en estos 2 meses — calendario libre 🌴</text>`;
+    s += `<text x="${MARGIN}" y="${ly}" font-family="Inter" font-size="22" fill="#ffffff" opacity="0.8">Sin reservas en estos 2 meses — calendario libre</text>`;
   }
   for (const r of shown) {
     ly += 46;
@@ -154,19 +154,31 @@ function buildSvg(blocks, customers) {
   return s;
 }
 
+// Copia los TTF del bundle a /tmp y devuelve sus rutas (fontFiles de resvg).
+// Los readFileSync con literales aseguran que Vercel (nft) incluya los TTF.
+function materializeFonts() {
+  const dir = "/tmp/esm-fonts";
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const bufs = {
+    "inter-400.ttf": fs.readFileSync(path.join(__dirname, "_fonts", "inter-400.ttf")),
+    "inter-600.ttf": fs.readFileSync(path.join(__dirname, "_fonts", "inter-600.ttf")),
+    "fraunces-700.ttf": fs.readFileSync(path.join(__dirname, "_fonts", "fraunces-700.ttf")),
+  };
+  return Object.entries(bufs).map(([name, buf]) => {
+    const dst = path.join(dir, name);
+    if (!fs.existsSync(dst)) fs.writeFileSync(dst, buf);
+    return dst;
+  });
+}
+
 async function renderCalendarPng() {
   const { Resvg } = require("@resvg/resvg-js");
   const [blocks, customers] = await Promise.all([getAllBlocks(), readCustomers()]);
   const svg = buildSvg(blocks, customers);
-  // fs.readFileSync con __dirname para que Vercel (nft) incluya los TTF en el bundle
   const resvg = new Resvg(svg, {
     background: "#0a5944",
     font: {
-      fontBuffers: [
-        fs.readFileSync(path.join(__dirname, "_fonts", "inter-400.ttf")),
-        fs.readFileSync(path.join(__dirname, "_fonts", "inter-600.ttf")),
-        fs.readFileSync(path.join(__dirname, "_fonts", "fraunces-700.ttf")),
-      ],
+      fontFiles: materializeFonts(),
       loadSystemFonts: false,
       defaultFontFamily: "Inter",
     },
