@@ -167,7 +167,9 @@ const PRICING = {
   rateBase: 2000,      // entre semana, temporada baja (precio "desde")
   rateWeekend: 2700,   // viernes y sábado (+35%)
   rateMedia: 2400,     // puentes (temporada media): sube la noche entre semana, respeta vie/sáb
-  rateHigh: 4200,      // temporada alta (estudio de mercado 2026-07: comps de alta en $4,500–5,500)
+  rateHigh: 4200,      // alta pico: Navidad/Año Nuevo y Semana Santa (comps de alta en $4,500–5,500)
+  rateHighSummer: 2900, // verano (ajuste 2026-07-22: comps del edificio en $1,200–2,550; $4,200 espantaba al directo vs Airbnb)
+  summerRange: ["07-01", "08-23"], // MM-DD dentro de highRanges que cobra rateHighSummer
   rateSpecial: 5000,   // fechas especiales: Navidad y Año Nuevo (MM-DD, cada año)
   specialDates: ["12-24", "12-25", "12-31", "01-01"],
   eventSurcharge: 0.40, // +40% en fechas de eventos de la Arena GNP (estudio 2026-07)
@@ -218,7 +220,11 @@ function dailyRate(ds) {
   if (PRICING.specialDates.includes(mmdd)) return { rate: PRICING.rateSpecial, kind: "special" };
   const dow = new Date(ds + "T00:00:00").getDay();
   let rate, kind;
-  if (isHighSeason(mmdd)) { rate = PRICING.rateHigh; kind = "high"; }
+  if (isHighSeason(mmdd)) {
+    const [sa, sb] = PRICING.summerRange;
+    rate = mmdd >= sa && mmdd <= sb ? PRICING.rateHighSummer : PRICING.rateHigh;
+    kind = "high";
+  }
   else if (dow === 5 || dow === 6) { rate = PRICING.rateWeekend; kind = "weekend"; }
   else { rate = PRICING.rateBase; kind = "base"; }
   // Puentes: sube la noche entre semana a tarifa media (nunca baja la de vie/sáb)
