@@ -22,12 +22,25 @@
     .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     #msg { margin: 10px 0; font-weight: 600; }
     .hidden { display: none; }
+    select { padding: 8px 10px; border: 1px solid #cdd; border-radius: 8px; font: inherit; background: #fff; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 10px 0 4px; }
+    .stat { background: #fff; border: 1px solid #e0e8e4; border-radius: 12px; padding: 12px 14px; }
+    .stat b { display: block; font-size: 1.25rem; margin-top: 2px; }
+    .stat .lbl { color: #5e6e68; font-size: .78rem; text-transform: uppercase; letter-spacing: .4px; }
+    .pos { color: #0a7a4f; } .neg { color: #b23b3b; }
+    table.fin { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e0e8e4; border-radius: 10px; overflow: hidden; margin: 10px 0; font-size: .92rem; }
+    table.fin th, table.fin td { padding: 8px 12px; text-align: right; border-bottom: 1px solid #eef3f0; }
+    table.fin th:first-child, table.fin td:first-child { text-align: left; }
+    table.fin th { background: #f0f5f2; color: #0a5944; font-size: .8rem; text-transform: uppercase; letter-spacing: .4px; }
+    table.fin tr:last-child td { border-bottom: 0; }
+    .tag { display: inline-block; font-size: .72rem; font-weight: 700; border-radius: 999px; padding: 2px 9px; margin-right: 6px; }
+    .tag.in { background: #d9f5e8; color: #0a7a4f; } .tag.out { background: #fbe3e3; color: #b23b3b; }
   </style>
 </head>
 <body>
   <a href="/" class="back">← Volver a la landing</a>
-  <h1>🛠 Panel Esmeralda — Reservas</h1>
-  <p class="muted">Privado. Aquí ves y gestionas las fechas bloqueadas (web + Airbnb).</p>
+  <h1>🛠 Panel Esmeralda — Administración</h1>
+  <p class="muted">Privado. Reservas, finanzas, clientes y reseñas del depa.</p>
 
   <div id="login">
     <div class="row">
@@ -39,6 +52,25 @@
 
   <div id="app" class="hidden">
     <p id="msg"></p>
+
+    <h2>📊 Resumen del negocio</h2>
+    <div id="stats" class="stats"></div>
+
+    <h2>💰 Finanzas — ingresos y gastos</h2>
+    <p class="muted">Registra lo que entra (reservas) y lo que sale (luz, limpieza, cuota…) para saber la utilidad real. En cada reserva directa de abajo hay un botón "💵 Ingreso" que precarga el concepto.</p>
+    <div class="row">
+      <select id="f-type">
+        <option value="in">➕ Ingreso</option>
+        <option value="out">➖ Gasto</option>
+      </select>
+      <input id="f-date" type="date" />
+      <input id="f-concept" type="text" placeholder="Concepto (ej. Reserva María / Luz CFE)" style="min-width:230px" />
+      <select id="f-cat"></select>
+      <input id="f-amount" type="number" min="0" step="0.01" placeholder="$ MXN" style="width:120px" />
+      <button id="f-add">Agregar</button>
+    </div>
+    <div id="f-summary"></div>
+    <div id="f-movs"></div>
 
     <h2>➕ Bloquear fechas manualmente</h2>
     <div class="row">

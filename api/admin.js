@@ -1,5 +1,6 @@
-// Panel de administración (protegido con ADMIN_KEY): ver, liberar y bloquear fechas.
-const { safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail, readSession } = require("./_lib");
+// Panel de administración (protegido con ADMIN_KEY): fechas, reseñas, clientes y finanzas.
+const crypto = require("crypto");
+const { safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail, readSession, readFinance, writeFinance } = require("./_lib");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
@@ -68,6 +69,33 @@ module.exports = async (req, res) => {
       await writeCustomers(customers);
       return res.status(200).json({ ok: true, freeNights: c.freeNights });
     }
+    // --- Finanzas (ingresos y gastos) ---
+    if (action === "finance-list") {
+      const movs = (await readFinance()).sort((a, b) => (b.date + b.at).localeCompare(a.date + a.at));
+      return res.status(200).json({ ok: true, movs });
+    }
+    if (action === "finance-add") {
+      const type = q.type === "out" ? "out" : q.type === "in" ? "in" : null;
+      const amount = Math.round(Number(q.amount) * 100) / 100;
+      const concept = String(q.concept || "").trim().slice(0, 120);
+      const category = String(q.category || "").trim().slice(0, 40) || (type === "in" ? "Otro ingreso" : "Otro gasto");
+      if (!type || !validDate(q.date) || !concept || !(amount > 0) || amount > 5000000) {
+        return res.status(422).json({ ok: false, error: "datos" });
+      }
+      const movs = await readFinance();
+      const mov = { id: crypto.randomBytes(5).toString("hex"), type, date: q.date, concept, category, amount, at: new Date().toISOString() };
+      movs.push(mov);
+      await writeFinance(movs);
+      return res.status(200).json({ ok: true, mov });
+    }
+    if (action === "finance-del") {
+      const movs = await readFinance();
+      const next = movs.filter((m) => m.id !== q.id);
+      if (next.length === movs.length) return res.status(404).json({ ok: false, error: "movimiento" });
+      await writeFinance(next);
+      return res.status(200).json({ ok: true });
+    }
+
     if (action === "customer-seed") {
       const sample = q.sci && q.sco
         ? { checkin: q.sci, checkout: q.sco, nights: Number(q.snights) || null, guests: Number(q.sguests) || null }

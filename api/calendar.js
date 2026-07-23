@@ -79,7 +79,7 @@ function htmlEsc(s = "") {
 }
 
 function buildHtml(blocks, customers, feedKey) {
-  const { sourceFor, guestNameMap: nameMap, todayAcapulco, ymd, fmtCorto, MESES, DOWS } = require("./_calimg");
+  const { sourceFor, occupancy, prevDs, guestNameMap: nameMap, todayAcapulco, ymd, fmtCorto, MESES, DOWS } = require("./_calimg");
   const now = todayAcapulco();
   const Y = now.getUTCFullYear(), M = now.getUTCMonth();
   const todayDs = ymd(Y, M, now.getUTCDate());
@@ -87,6 +87,7 @@ function buildHtml(blocks, customers, feedKey) {
   for (let k = 0; k < 12; k++) months.push([Y + Math.floor((M + k) / 12), (M + k) % 12]);
   const [lastY, lastM] = months[11];
   const windowEnd = ymd(lastM === 11 ? lastY + 1 : lastY, (lastM + 1) % 12, 1);
+  const occ = occupancy(todayDs, windowEnd, blocks);
 
   const names = nameMap(customers);
   const rows = blocks
@@ -99,24 +100,36 @@ function buildHtml(blocks, customers, feedKey) {
       return { name, direct, start: b.start, end: b.end, nights };
     });
 
+  // Mitades: izquierda = mañana (sale, noche anterior) · derecha = noche (entra/duerme)
+  const CCOL = { directo: "var(--verde)", airbnb: "var(--ambar)" };
+  const FREE = "rgba(255,255,255,.06)";
   let cards = "";
   for (const [my, mm] of months) {
     const first = new Date(Date.UTC(my, mm, 1));
     const startDow = (first.getUTCDay() + 6) % 7; // lunes = 0
     const daysInMonth = new Date(Date.UTC(my, mm + 1, 0)).getUTCDate();
+    const mOcc = occupancy(ymd(my, mm, 1), ymd(mm === 11 ? my + 1 : my, (mm + 1) % 12, 1), blocks);
     let cells = DOWS.map((d) => `<span class="dow">${d}</span>`).join("");
     for (let i = 0; i < startDow; i++) cells += `<span></span>`;
     for (let d = 1; d <= daysInMonth; d++) {
       const ds = ymd(my, mm, d);
-      const src = sourceFor(ds, blocks);
-      const cls = ["day", src === "directo" ? "dir" : src === "airbnb" ? "abb" : "", ds < todayDs ? "past" : "", ds === todayDs ? "today" : ""].filter(Boolean).join(" ");
-      cells += `<span class="${cls}">${d}</span>`;
+      const eSrc = sourceFor(ds, blocks);
+      const mSrc = sourceFor(prevDs(ds), blocks);
+      const classes = ["day", ds < todayDs ? "past" : "", ds === todayDs ? "today" : ""];
+      let style = "";
+      if (eSrc && mSrc === eSrc) {
+        classes.push(eSrc === "directo" ? "dir" : "abb"); // estancia continua → llena
+      } else if (mSrc || eSrc) {
+        classes.push("half");
+        style = ` style="background:linear-gradient(90deg, ${mSrc ? CCOL[mSrc] : FREE} 0 50%, ${eSrc ? CCOL[eSrc] : FREE} 50% 100%)"`;
+      }
+      cells += `<span class="${classes.filter(Boolean).join(" ")}"${style}>${d}</span>`;
     }
-    cards += `<section class="card"><h2>${MESES[mm]} ${my}</h2><div class="grid">${cells}</div></section>`;
+    cards += `<section class="card"><h2>${MESES[mm]} ${my} <span class="pct">${mOcc.pct}%</span></h2><div class="grid">${cells}</div></section>`;
   }
 
   const list = rows.length
-    ? rows.map((r) => `<li><span class="dot ${r.direct ? "dir" : "abb"}"></span><strong>${htmlEsc(r.name)}</strong><span class="fechas">${fmtCorto(r.start)} - ${fmtCorto(r.end)} · ${r.nights} noche${r.nights === 1 ? "" : "s"}</span></li>`).join("")
+    ? rows.map((r) => `<li><span class="dot ${r.direct ? "dir" : "abb"}"></span><strong>${htmlEsc(r.name)}</strong><span class="fechas">🔑 entra ${fmtCorto(r.start)} · 🧳 sale ${fmtCorto(r.end)} · ${r.nights} noche${r.nights === 1 ? "" : "s"}</span></li>`).join("")
     : `<li class="vacio">Sin reservas en estos 12 meses — calendario libre</li>`;
 
   const pngHref = `/reservas.ics?key=${encodeURIComponent(feedKey)}&png=1`;
@@ -137,7 +150,7 @@ function buildHtml(blocks, customers, feedKey) {
   h1 { font-family: Georgia, "Fraunces", serif; font-size: clamp(26px, 4vw, 40px); width: 100%; }
   .meta { opacity: .75; font-size: 14px; }
   .meta a { color: #fff; }
-  .leyenda { display: flex; gap: 22px; align-items: center; margin: 0 0 22px; font-size: 14px; opacity: .95; }
+  .leyenda { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: center; margin: 0 0 22px; font-size: 14px; opacity: .95; }
   .dot { display: inline-block; width: 13px; height: 13px; border-radius: 50%; margin-right: 7px; vertical-align: -1px; }
   .dot.dir { background: var(--verde); } .dot.abb { background: var(--ambar); }
   .dot.hoy { background: none; border: 2px solid #fff; border-radius: 5px; }
@@ -150,8 +163,16 @@ function buildHtml(blocks, customers, feedKey) {
     border-radius: 9px; background: rgba(255,255,255,.06); color: #eaf6f0; }
   .day.dir { background: var(--verde); color: #062c22; font-weight: 600; }
   .day.abb { background: var(--ambar); color: #3a2c00; font-weight: 600; }
+  .day.half { color: #fff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
   .day.past { opacity: .35; }
   .day.today { outline: 2.5px solid #fff; outline-offset: -2.5px; }
+  .pct { font-family: -apple-system, "Inter", sans-serif; font-size: 13px; opacity: .7; font-weight: 400; margin-left: 6px; }
+  .chip-occ { display: inline-block; background: var(--glass); border: 1px solid var(--borde); border-radius: 999px;
+    padding: 6px 16px; color: var(--verde); font-weight: 600; font-size: 15px; }
+  .mini { display: inline-block; width: 22px; height: 14px; border-radius: 5px; background: rgba(255,255,255,.12);
+    position: relative; overflow: hidden; margin-right: 7px; vertical-align: -2px; }
+  .mini::after { content: ""; position: absolute; top: 0; bottom: 0; width: 50%; background: var(--verde); border-radius: 4px; }
+  .mini.ci::after { right: 0; } .mini.co::after { left: 0; }
   .huespedes { margin-top: 34px; }
   .huespedes h2 { font-family: Georgia, "Fraunces", serif; font-size: 24px; margin-bottom: 14px; }
   .huespedes ul { list-style: none; display: flex; flex-direction: column; gap: 10px; max-width: 720px; }
@@ -165,11 +186,14 @@ function buildHtml(blocks, customers, feedKey) {
   <span class="marca">◆ ESMERALDA</span>
   <span class="meta">esmeraldalakes.com · al ${fmtCorto(todayDs)} ${Y} · se actualiza solo</span>
   <h1>Calendario de reservas</h1>
+  <span class="chip-occ">Ocupación anual: ${occ.pct}% · ${occ.sold} noche${occ.sold === 1 ? "" : "s"} vendida${occ.sold === 1 ? "" : "s"} de ${occ.total}</span>
 </header>
 <div class="leyenda">
   <span><span class="dot dir"></span>Reserva directa</span>
   <span><span class="dot abb"></span>Airbnb</span>
   <span><span class="dot hoy"></span>Hoy</span>
+  <span><span class="mini ci"></span>Entra (check-in)</span>
+  <span><span class="mini co"></span>Sale (check-out)</span>
   <span class="meta"><a href="${pngHref}">Descargar imagen</a></span>
 </div>
 <div class="meses">${cards}</div>

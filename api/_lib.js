@@ -8,6 +8,7 @@ const FILE = "blocks.json";
 const REVIEWS = "reviews.json";
 const CUSTOMERS = "customers.json";
 const CODES = "portal-codes.json";
+const FINANCE = "finance.json";
 
 function sign(value) {
   return crypto
@@ -201,6 +202,14 @@ async function writeJsonObj(name, obj) {
 const readCustomers = () => readJsonObj(CUSTOMERS);
 const writeCustomers = (o) => writeJsonObj(CUSTOMERS, o);
 
+// --- Finanzas (ingresos y gastos del depa, Vercel Blob) ---
+// Movimiento: { id, type: "in"|"out", date: "YYYY-MM-DD", concept, category, amount, at }
+async function readFinance() {
+  const o = await readJsonObj(FINANCE);
+  return Array.isArray(o.movs) ? o.movs : [];
+}
+const writeFinance = (movs) => writeJsonObj(FINANCE, { movs });
+
 // Código de referido tipo ESM-XXXX (alfabeto sin caracteres ambiguos)
 const REF_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 function genRefCode(existing) {
@@ -389,4 +398,6 @@ module.exports = {
   // portal
   normEmail, isEmail, readCustomers, writeCustomers, upsertCustomerFromBooking, ownerOfRefCode, seedCustomer,
   issueCode, verifyCode, sessionCookie, clearSessionCookie, readSession, isAdminEmail,
+  // finanzas
+  readFinance, writeFinance,
 };
