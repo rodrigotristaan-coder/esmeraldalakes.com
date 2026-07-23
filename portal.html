@@ -18,6 +18,8 @@
     body{font-family:"Inter",system-ui,sans-serif;color:var(--white);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2.5rem 1.2rem;background:linear-gradient(160deg,rgba(6,44,34,.88) 0%,rgba(10,89,68,.8) 55%,rgba(15,122,95,.72) 100%),url(/assets/images/caseta-entrance.webp) center/cover no-repeat fixed var(--emerald-dark)}
     @media (max-width:768px){body{background:linear-gradient(160deg,rgba(6,44,34,.88) 0%,rgba(10,89,68,.8) 55%,rgba(15,122,95,.72) 100%),url(/assets/images/caseta-entrance-sm.webp) center/cover no-repeat var(--emerald-dark)}}
     .lang{position:fixed;top:1rem;right:1.2rem;display:inline-flex;border:1px solid rgba(255,255,255,.5);border-radius:999px;overflow:hidden;z-index:5}
+    .backhome{position:fixed;top:1rem;left:1.2rem;z-index:5;display:inline-flex;align-items:center;gap:.4rem;color:#fff;text-decoration:none;font:600 .8rem "Inter",sans-serif;letter-spacing:.03em;border:1px solid rgba(255,255,255,.5);border-radius:999px;padding:.35rem .85rem;background:rgba(6,44,34,.35);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+    .backhome:hover{background:rgba(6,214,126,.25)}
     .lang button{background:transparent;border:0;color:#fff;font:600 .8rem "Inter",sans-serif;padding:.35rem .7rem;cursor:pointer;letter-spacing:.04em}
     .lang button.on{background:var(--aqua);color:#062c22}
     .wrap{max-width:560px;width:100%}
@@ -87,6 +89,7 @@
   </style>
 </head>
 <body>
+  <a class="backhome" href="/" data-es="← Volver a la landing" data-en="← Back to the site"></a>
   <div class="lang">
     <button type="button" data-lang="es">ES</button>
     <button type="button" data-lang="en">EN</button>
