@@ -200,7 +200,7 @@ async function sendEmail(to, subject, html) {
 //   { email, name, refCode, referredBy, freeNights, createdAt, reservations[], credits[] }
 const PORTAL_SECRET = () => process.env.PORTAL_SECRET || process.env.CONFIRM_SECRET || "";
 const SESSION_TTL = 30 * 24 * 60 * 60 * 1000; // 30 días
-const CODE_TTL = 10 * 60 * 1000;              // código válido 10 min
+const CODE_TTL = 15 * 60 * 1000;              // código válido 15 min
 const CODE_COOLDOWN = 45 * 1000;              // 45 s entre envíos
 const CODE_MAX_ATTEMPTS = 5;
 
@@ -380,7 +380,10 @@ async function issueCode(email) {
     return { ok: false, reason: "cooldown", wait: Math.ceil((CODE_COOLDOWN - (now - prev.sent)) / 1000) };
   }
   const code = genCode();
-  all[key] = { hash: psign(key + "|" + code), exp: now + CODE_TTL, sent: now, attempts: 0 };
+  // Si había un código vigente, se conserva como "anterior" válido: si el
+  // correo tarda y el usuario pide otro, el código del primer correo aún sirve.
+  const prevHash = prev && (prev.exp || 0) >= now ? prev.hash : undefined;
+  all[key] = { hash: psign(key + "|" + code), prevHash, exp: now + CODE_TTL, sent: now, attempts: prev ? prev.attempts || 0 : 0 };
   await writeJsonObj(CODES, all);
   return { ok: true, code };
 }
@@ -392,7 +395,8 @@ async function verifyCode(email, code) {
   const now = Date.now();
   if (!rec || (rec.exp || 0) < now) return { ok: false, reason: "expired" };
   if ((rec.attempts || 0) >= CODE_MAX_ATTEMPTS) { delete all[key]; await writeJsonObj(CODES, all); return { ok: false, reason: "attempts" }; }
-  const good = safeEqual(rec.hash, psign(key + "|" + String(code || "").trim()));
+  const sig = psign(key + "|" + String(code || "").trim());
+  const good = safeEqual(rec.hash, sig) || (rec.prevHash && safeEqual(rec.prevHash, sig));
   if (!good) {
     rec.attempts = (rec.attempts || 0) + 1;
     await writeJsonObj(CODES, all);

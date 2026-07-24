@@ -27,15 +27,29 @@ module.exports = async (req, res) => {
     }
 
     const url = process.env.N8N_PORTAL_CODE_WEBHOOK;
+    const sends = [];
     if (url) {
-      await fetch(url, {
+      sends.push(fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code: issued.code, name: admin ? "Admin" : (customers[email].name || ""), lang, secret: process.env.ESM_N8N_SECRET || "" }),
-      }).catch((e) => console.error("n8n portal code:", e.message));
+      }).catch((e) => console.error("n8n portal code:", e.message)));
     } else {
       console.error("N8N_PORTAL_CODE_WEBHOOK no configurado");
     }
+    // Admins: el código también llega al Telegram del anfitrión al instante
+    // (el correo M365 a veces tarda). Best-effort.
+    if (admin && process.env.TELEGRAM_BOT_TOKEN && process.env.OWNER_CHAT_ID) {
+      sends.push(fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: process.env.OWNER_CHAT_ID,
+          text: `🔐 Código de acceso al panel para ${email}: ${issued.code}\n(válido 15 min — si no fuiste tú, ignóralo)`,
+        }),
+      }).catch((e) => console.error("tg portal code:", e.message)));
+    }
+    await Promise.all(sends);
     return res.status(200).json({ ok: true, exists: true });
   } catch (e) {
     console.error("portal-login:", e.message);
