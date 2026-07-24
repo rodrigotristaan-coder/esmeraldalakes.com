@@ -18,9 +18,9 @@ const money = (n) => "$" + (Number(n) || 0).toLocaleString("es-MX", { maximumFra
 // /ingreso 4500 Reserva María · /gasto 650 Limpieza salida
 // Registra el movimiento en finance.json (el mismo del panel admin) con fecha de hoy.
 async function financeCommand(chatId, text) {
-  const m = text.match(/^\/(ingreso|gasto)\s+\$?\s*(\d[\d.,]*)\s+(.+)$/is);
+  const m = text.match(/^\/?(ingreso|gasto)\s+\$?\s*(\d[\d.,]*)\s+(.+)$/is);
   if (!m) {
-    await tg("sendMessage", { chat_id: chatId, text: "Formato: /ingreso 4500 Reserva María\n(o /gasto 650 Limpieza salida). Monto primero, luego el concepto." });
+    await tg("sendMessage", { chat_id: chatId, text: "Formato: ingreso 4500 Reserva María\n(o: gasto 650 Limpieza salida). Monto primero, luego el concepto." });
     return;
   }
   const type = m[1].toLowerCase() === "ingreso" ? "in" : "out";
@@ -84,13 +84,14 @@ module.exports = async (req, res) => {
   if (msg && msg.text) {
     const isOwner = String(msg.chat && msg.chat.id) === String(process.env.OWNER_CHAT_ID);
     const text = msg.text.trim();
-    if (isOwner && /^\/calendari?o?\b/i.test(text)) {
+    // Los comandos funcionan con o sin "/" (las palabras sueltas deben ser el mensaje completo)
+    if (isOwner && /^\/?(calendario|calendar)\s*$/i.test(text)) {
       await sendCalendarPhoto("📅 Calendario al día de hoy");
-    } else if (isOwner && /^\/(ingreso|gasto)\b/i.test(text)) {
+    } else if (isOwner && /^\/?(ingreso|gasto)\b/i.test(text)) {
       await financeCommand(msg.chat.id, text);
-    } else if (isOwner && /^\/resumen\b/i.test(text)) {
+    } else if (isOwner && /^\/?resumen\s*$/i.test(text)) {
       await sendResumen(msg.chat.id);
-    } else if (isOwner && /^\/(menu|menú|start)\b/i.test(text)) {
+    } else if (isOwner && /^\/?(menu|menú|start|ayuda|hola)\s*$/i.test(text)) {
       await tg("sendMessage", { chat_id: msg.chat.id, text: "¿Qué necesitas? 🌴", reply_markup: MENU_KEYBOARD });
     } else if (isOwner && /^\//.test(text)) {
       await tg("sendMessage", { chat_id: msg.chat.id, text:
