@@ -2,8 +2,8 @@
 // comandos del anfitrión (/calendario, /ingreso, /gasto).
 // Solo actúa sobre el grupo/chat configurado y verifica el secreto del webhook.
 const crypto = require("crypto");
-const { addBlock, upsertCustomerFromBooking, readFinance, writeFinance } = require("./_lib");
-const { sendCalendarPhoto } = require("./_calimg");
+const { addBlock, upsertCustomerFromBooking, readFinance, writeFinance, getAllBlocks } = require("./_lib");
+const { sendCalendarPhoto, occupancy, todayAcapulco, ymd } = require("./_calimg");
 
 async function tg(method, body) {
   return fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/${method}`, {
@@ -47,6 +47,32 @@ async function financeCommand(chatId, text) {
     `📊 Este mes: ingresos ${money(inM)} · gastos ${money(outM)} · utilidad ${money(inM - outM)}` });
 }
 
+// /resumen — mes + año + ocupación de los próximos 12 meses
+async function sendResumen(chatId) {
+  const now = todayAcapulco();
+  const Y = now.getUTCFullYear(), M = now.getUTCMonth();
+  const todayDs = ymd(Y, M, now.getUTCDate());
+  const ym = todayDs.slice(0, 7), yy = todayDs.slice(0, 4);
+  const [movs, blocks] = await Promise.all([readFinance(), getAllBlocks()]);
+  let inM = 0, outM = 0, inY = 0, outY = 0;
+  for (const x of movs) {
+    const v = Number(x.amount) || 0;
+    if ((x.date || "").slice(0, 7) === ym) { if (x.type === "in") inM += v; else outM += v; }
+    if ((x.date || "").slice(0, 4) === yy) { if (x.type === "in") inY += v; else outY += v; }
+  }
+  const occ = occupancy(todayDs, ymd(Y + 1, M, 1), blocks);
+  await tg("sendMessage", { chat_id: chatId, text:
+    `📊 Esmeralda al ${todayDs}\n\n` +
+    `Este mes: ingresos ${money(inM)} · gastos ${money(outM)} · utilidad ${money(inM - outM)}\n` +
+    `Año ${yy}: ingresos ${money(inY)} · gastos ${money(outY)} · utilidad ${money(inY - outY)}\n` +
+    `🏨 Ocupación 12 meses: ${occ.pct}% (${occ.sold} noche${occ.sold === 1 ? "" : "s"} vendida${occ.sold === 1 ? "" : "s"})` });
+}
+
+const MENU_KEYBOARD = { inline_keyboard: [
+  [{ text: "📅 Calendario anual", callback_data: "cmd|cal" }, { text: "📊 Resumen", callback_data: "cmd|fin" }],
+  [{ text: "💵 Registrar ingreso", callback_data: "cmd|in" }, { text: "💸 Registrar gasto", callback_data: "cmd|out" }],
+] };
+
 module.exports = async (req, res) => {
   // Verifica que el llamado venga de Telegram (secreto del webhook)
   if (req.headers["x-telegram-bot-api-secret-token"] !== process.env.TELEGRAM_WEBHOOK_SECRET) {
@@ -62,9 +88,13 @@ module.exports = async (req, res) => {
       await sendCalendarPhoto("📅 Calendario al día de hoy");
     } else if (isOwner && /^\/(ingreso|gasto)\b/i.test(text)) {
       await financeCommand(msg.chat.id, text);
+    } else if (isOwner && /^\/resumen\b/i.test(text)) {
+      await sendResumen(msg.chat.id);
+    } else if (isOwner && /^\/(menu|menú|start)\b/i.test(text)) {
+      await tg("sendMessage", { chat_id: msg.chat.id, text: "¿Qué necesitas? 🌴", reply_markup: MENU_KEYBOARD });
     } else if (isOwner && /^\//.test(text)) {
       await tg("sendMessage", { chat_id: msg.chat.id, text:
-        "Comandos:\n📅 /calendario — foto del calendario al día\n💵 /ingreso 4500 Reserva María\n💸 /gasto 650 Limpieza salida" });
+        "Comandos:\n🌴 /menu — botones de todo\n📅 /calendario — foto del calendario al día\n📊 /resumen — mes, año y ocupación\n💵 /ingreso 4500 Reserva María\n💸 /gasto 650 Limpieza salida" });
     }
     return res.status(200).json({ ok: true });
   }
@@ -84,6 +114,15 @@ module.exports = async (req, res) => {
   }
 
   try {
+    // Botones del /menu
+    if (action === "cmd") {
+      if (ci === "cal") { await answer("Va 📅"); await sendCalendarPhoto("📅 Calendario al día de hoy"); }
+      else if (ci === "fin") { await answer(); await sendResumen(chatId); }
+      else if (ci === "in") { await answer(); await tg("sendMessage", { chat_id: chatId, text: "Escríbeme: /ingreso 4500 Reserva María\n(monto primero, luego el concepto)" }); }
+      else if (ci === "out") { await answer(); await tg("sendMessage", { chat_id: chatId, text: "Escríbeme: /gasto 650 Limpieza salida\n(monto primero, luego el concepto)" }); }
+      else await answer();
+      return res.status(200).json({ ok: true });
+    }
     if (action === "ask") {
       // Botón "Pago recibido" → pide una confirmación antes de disparar toda la cadena
       await tg("editMessageReplyMarkup", {

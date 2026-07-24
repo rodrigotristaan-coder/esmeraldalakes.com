@@ -12,7 +12,7 @@
 //
 // 3) ?view=html&key=CAL_FEED_KEY — landing interna VIVA con los próximos 12
 //    meses (se regenera en cada visita). URL bonita: /calendario?key=...
-const { readBlocks, getAllBlocks, readCustomers, safeEqual } = require("./_lib");
+const { readBlocks, getAllBlocks, readCustomers, safeEqual, readSession } = require("./_lib");
 
 const icsDate = (s) => s.replace(/-/g, "");
 const icsEsc = (s = "") => String(s).replace(/\\/g, "\\\\").replace(/[,;]/g, (c) => "\\" + c).replace(/\n/g, "\\n");
@@ -78,7 +78,7 @@ function htmlEsc(s = "") {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function buildHtml(blocks, customers, feedKey) {
+function buildHtml(blocks, customers, authQS) {
   const { sourceFor, occupancy, prevDs, guestNameMap: nameMap, todayAcapulco, ymd, fmtCorto, MESES, DOWS } = require("./_calimg");
   const now = todayAcapulco();
   const Y = now.getUTCFullYear(), M = now.getUTCMonth();
@@ -132,7 +132,7 @@ function buildHtml(blocks, customers, feedKey) {
     ? rows.map((r) => `<li><span class="dot ${r.direct ? "dir" : "abb"}"></span><strong>${htmlEsc(r.name)}</strong><span class="fechas">🔑 entra ${fmtCorto(r.start)} · 🧳 sale ${fmtCorto(r.end)} · ${r.nights} noche${r.nights === 1 ? "" : "s"}</span></li>`).join("")
     : `<li class="vacio">Sin reservas en estos 12 meses — calendario libre</li>`;
 
-  const pngHref = `/reservas.ics?key=${encodeURIComponent(feedKey)}&png=1`;
+  const pngHref = `/reservas.ics?${authQS ? authQS + "&" : ""}png=1`;
   return `<!DOCTYPE html>
 <html lang="es"><head>
 <meta charset="utf-8">
@@ -209,12 +209,21 @@ module.exports = async (req, res) => {
   res.setHeader("Content-Type", "text/calendar; charset=utf-8");
 
   if (full || wantsHtml) {
-    // Feed completo / vista interna con nombres → requiere llave
-    const key = process.env.CAL_FEED_KEY || "";
-    if (!key || !safeEqual(String(q.key || ""), key)) {
+    // Feed/vista con nombres → requiere CAL_FEED_KEY, o credencial de admin
+    // (sesión magic-link con rol admin, o ?adminkey= para el iframe del panel).
+    const feedKey = process.env.CAL_FEED_KEY || "";
+    const byFeed = !!(feedKey && q.key && safeEqual(String(q.key), feedKey));
+    const adminKey = process.env.ADMIN_KEY || "";
+    const portalKey = process.env.PORTAL_SECRET || "";
+    const ak = String(q.adminkey || "");
+    const sess = readSession(req.headers.cookie);
+    const byAdmin = !!((ak && ((adminKey && safeEqual(ak, adminKey)) || (portalKey && safeEqual(ak, portalKey)))) || (sess && sess.admin));
+    if (!byFeed && !byAdmin) {
       res.setHeader("Content-Type", "text/plain");
       return res.status(401).send("No autorizado");
     }
+    // Credencial para armar links internos (con sesión va vacío: la cookie viaja sola)
+    const authQS = byFeed ? `key=${encodeURIComponent(String(q.key))}` : ak ? `adminkey=${encodeURIComponent(ak)}` : "";
     // ?png=1 → la imagen del calendario (la misma que llega por Telegram), bajo demanda
     if (q.png === "1" || q.png === "true") {
       const { renderCalendarPng } = require("./_calimg");
@@ -229,7 +238,7 @@ module.exports = async (req, res) => {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.setHeader("Cache-Control", "no-store");
       res.setHeader("X-Robots-Tag", "noindex, nofollow");
-      return res.status(200).send(buildHtml(blocks, customers, String(q.key)));
+      return res.status(200).send(buildHtml(blocks, customers, authQS));
     }
 
     const [blocks, customers] = await Promise.all([getAllBlocks(), readCustomers()]);

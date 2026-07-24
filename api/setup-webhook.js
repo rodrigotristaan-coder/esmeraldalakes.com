@@ -26,7 +26,9 @@ module.exports = async (req, res) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         commands: [
-          { command: "calendario", description: "Foto del calendario al día" },
+          { command: "menu", description: "Menú con botones de todo" },
+          { command: "calendario", description: "Foto del calendario anual al día" },
+          { command: "resumen", description: "Ingresos, gastos, utilidad y ocupación" },
           { command: "ingreso", description: "Registrar ingreso: /ingreso 4500 Reserva María" },
           { command: "gasto", description: "Registrar gasto: /gasto 650 Limpieza" },
         ],

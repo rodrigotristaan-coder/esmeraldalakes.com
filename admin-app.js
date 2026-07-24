@@ -48,6 +48,13 @@ async function load() {
 
   OCC = calcOccupancy(data.all || []);
 
+  // Calendario embebido: con contraseña usa ?adminkey=; con magic link basta la cookie
+  const calUrl = "/calendario" + (KEY ? "?adminkey=" + encodeURIComponent(KEY) : "");
+  const frame = $("cal-frame");
+  if (frame && frame.getAttribute("src") !== calUrl) frame.src = calUrl;
+  const open = $("cal-open");
+  if (open) open.href = calUrl;
+
   // Reservas directas (liberables + registrar ingreso)
   const d = $("direct");
   d.innerHTML = data.direct.length ? "" : '<p class="muted">Sin reservas directas próximas.</p>';
