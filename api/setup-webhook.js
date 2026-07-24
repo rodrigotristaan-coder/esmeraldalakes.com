@@ -20,7 +20,20 @@ module.exports = async (req, res) => {
       }),
     });
     const j = await r.json();
-    return res.status(200).json({ ok: j.ok, url, telegram: j });
+    // Menú de comandos del bot (autocompletado al escribir "/")
+    const rc = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/setMyCommands`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        commands: [
+          { command: "calendario", description: "Foto del calendario al día" },
+          { command: "ingreso", description: "Registrar ingreso: /ingreso 4500 Reserva María" },
+          { command: "gasto", description: "Registrar gasto: /gasto 650 Limpieza" },
+        ],
+      }),
+    });
+    const jc = await rc.json();
+    return res.status(200).json({ ok: j.ok, url, telegram: j, commands: jc.ok });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e.message });
   }
