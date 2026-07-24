@@ -7,119 +7,241 @@
   <title>Panel · Esmeralda</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <style>
-    :root { --g:#0a5944; --gb:#06d67e; }
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 0 auto; padding: 24px; color: #16231f; background: #f6f1e7; }
-    h1 { color: var(--g); font-size: 1.4rem; }
-    h2 { color: var(--g); font-size: 1.05rem; margin-top: 1.6rem; }
-    .card { background: #fff; border: 1px solid #e0e8e4; border-radius: 10px; padding: 12px 14px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-    .muted { color: #5e6e68; font-size: .85rem; }
-    input { padding: 8px 10px; border: 1px solid #cdd; border-radius: 8px; font: inherit; }
-    button { background: var(--g); color: #fff; border: 0; border-radius: 8px; padding: 8px 14px; font-weight: 700; cursor: pointer; }
-    button.danger { background: #b23b3b; }
-    .back { display: inline-block; margin-bottom: 14px; color: var(--g); text-decoration: none; font-weight: 700; border: 1px solid #cdd6d1; border-radius: 8px; padding: 7px 13px; background: #fff; }
-    .back:hover { background: #eef3f0; }
-    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-    #msg { margin: 10px 0; font-weight: 600; }
-    .hidden { display: none; }
-    select { padding: 8px 10px; border: 1px solid #cdd; border-radius: 8px; font: inherit; background: #fff; }
-    .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 10px 0 4px; }
-    .stat { background: #fff; border: 1px solid #e0e8e4; border-radius: 12px; padding: 12px 14px; }
-    .stat b { display: block; font-size: 1.25rem; margin-top: 2px; }
-    .stat .lbl { color: #5e6e68; font-size: .78rem; text-transform: uppercase; letter-spacing: .4px; }
-    .pos { color: #0a7a4f; } .neg { color: #b23b3b; }
-    table.fin { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e0e8e4; border-radius: 10px; overflow: hidden; margin: 10px 0; font-size: .92rem; }
-    table.fin th, table.fin td { padding: 8px 12px; text-align: right; border-bottom: 1px solid #eef3f0; }
-    table.fin th:first-child, table.fin td:first-child { text-align: left; }
-    table.fin th { background: #f0f5f2; color: #0a5944; font-size: .8rem; text-transform: uppercase; letter-spacing: .4px; }
-    table.fin tr:last-child td { border-bottom: 0; }
-    .tag { display: inline-block; font-size: .72rem; font-weight: 700; border-radius: 999px; padding: 2px 9px; margin-right: 6px; }
-    .tag.in { background: #d9f5e8; color: #0a7a4f; } .tag.out { background: #fbe3e3; color: #b23b3b; }
+    :root { --aqua:#06d67e; --gold:#e7c66a; --ambar:#f5b301; --ink:#062c22; --rojo:#ff8f8f;
+      --glass:rgba(255,255,255,.09); --glass2:rgba(255,255,255,.13); --borde:rgba(255,255,255,.24); }
+    * { box-sizing:border-box; margin:0; }
+    body { font-family:"Inter",system-ui,sans-serif; color:#fff; min-height:100vh; padding:1rem .9rem 4rem;
+      background:linear-gradient(160deg,#052620 0%,#0a5944 55%,#0f7a5f 100%) fixed; }
+    main { max-width:1320px; margin:0 auto; }
+    a { color:var(--aqua); }
+
+    /* ---- barra superior ---- */
+    .top { display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap; margin-bottom:1rem; }
+    .brand { font-family:Georgia,"Fraunces",serif; font-size:1.25rem; }
+    .brand .gem { color:var(--aqua); }
+    .top .row { margin:0; }
+
+    /* ---- controles ---- */
+    .row { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin:.6rem 0; }
+    button { border:0; border-radius:999px; padding:.55rem 1.05rem; font:600 .88rem "Inter",sans-serif;
+      background:var(--aqua); color:var(--ink); cursor:pointer; transition:transform .12s ease,opacity .12s ease; }
+    button:hover { transform:translateY(-1px); }
+    button.danger { background:rgba(255,143,143,.9); color:#3d0d0d; }
+    button.ghost { background:transparent; color:#fff; border:1.5px solid rgba(255,255,255,.45); }
+    input, select { padding:.55rem .9rem; border:1px solid rgba(255,255,255,.35); border-radius:999px; font:inherit;
+      background:rgba(255,255,255,.93); color:var(--ink); max-width:100%; }
+    input[type="checkbox"] { width:1.05rem; height:1.05rem; accent-color:var(--aqua); }
+    label { font-size:.82rem; display:inline-flex; align-items:center; gap:.4rem; opacity:.95; }
+    .muted { color:rgba(255,255,255,.68); font-size:.84rem; }
+    #msg { min-height:1.2rem; font-weight:600; margin:.4rem 0 .8rem; }
+
+    /* ---- login ---- */
+    #login { max-width:420px; margin:14vh auto 0; background:var(--glass2); border:1px solid var(--borde);
+      border-radius:28px; padding:1.8rem 1.5rem; text-align:center;
+      -webkit-backdrop-filter:blur(18px) saturate(1.3); backdrop-filter:blur(18px) saturate(1.3); }
+    #login h1 { font-family:Georgia,serif; font-size:1.3rem; margin-bottom:1rem; }
+    #login input { width:100%; margin-bottom:.7rem; text-align:center; }
+    #login button { width:100%; }
+
+    /* ---- secciones desplegables ---- */
+    details.sec { background:var(--glass); border:1px solid var(--borde); border-radius:24px; margin:.8rem 0;
+      -webkit-backdrop-filter:blur(12px) saturate(1.25); backdrop-filter:blur(12px) saturate(1.25); overflow:hidden; }
+    details.sec > summary { list-style:none; cursor:pointer; padding:1rem 1.2rem; font-family:Georgia,serif;
+      font-size:1.05rem; display:flex; align-items:center; justify-content:space-between; gap:.6rem; user-select:none; }
+    details.sec > summary::-webkit-details-marker { display:none; }
+    details.sec > summary::after { content:"+"; font-family:"Inter",sans-serif; font-weight:600; color:var(--gold);
+      border:1.5px solid var(--gold); border-radius:50%; width:1.5rem; height:1.5rem; display:inline-flex;
+      align-items:center; justify-content:center; flex:0 0 auto; transition:transform .2s ease; }
+    details.sec[open] > summary::after { content:"−"; transform:rotate(180deg); }
+    details.sec > .body { padding:0 1.2rem 1.2rem; }
+
+    /* ---- stats ---- */
+    .stats { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:.6rem; margin:.4rem 0 .2rem; }
+    .stat { background:var(--glass2); border:1px solid var(--borde); border-radius:18px; padding:.8rem .95rem;
+      -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+    .stat .lbl { font-size:.68rem; text-transform:uppercase; letter-spacing:.5px; color:rgba(255,255,255,.65); }
+    .stat b { display:block; font-size:1.25rem; margin-top:.15rem; }
+    .pos { color:var(--aqua); } .neg { color:var(--rojo); }
+
+    /* ---- mini calendario interactivo ---- */
+    .calhelp { font-size:.84rem; color:rgba(255,255,255,.75); margin:.2rem 0 .8rem; }
+    .minical { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:.8rem; }
+    .mc-month { background:var(--glass2); border:1px solid var(--borde); border-radius:18px; padding:.8rem .7rem; }
+    .mc-month h4 { font-family:Georgia,serif; font-size:.9rem; text-align:center; margin-bottom:.45rem; }
+    .mc-month h4 .pct { font-family:"Inter",sans-serif; font-size:.68rem; opacity:.6; font-weight:400; margin-left:.3rem; }
+    .mc-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:2.5px; }
+    .mc-dow { font-size:.6rem; font-weight:600; opacity:.55; text-align:center; padding-bottom:.25rem; }
+    .mc-day { height:30px; min-width:0; display:flex; align-items:center; justify-content:center; font-size:.72rem;
+      border-radius:7px; background:rgba(255,255,255,.07); cursor:pointer; border:0; padding:0; color:#eaf6f0; font-weight:400; transform:none; }
+    .mc-day:hover { outline:1.5px solid rgba(255,255,255,.6); transform:none; }
+    .mc-day.dir { background:var(--aqua); color:var(--ink); font-weight:600; }
+    .mc-day.abb { background:var(--ambar); color:#3a2c00; font-weight:600; }
+    .mc-day.past { opacity:.33; cursor:default; }
+    .mc-day.past:hover { outline:none; }
+    .mc-day.today { outline:2px solid #fff; }
+    .mc-day.sel { outline:2.5px solid var(--gold); background:rgba(231,198,106,.55); color:var(--ink); font-weight:700; }
+    .mc-day.inrange { background:rgba(231,198,106,.28); }
+    .callegend { display:flex; flex-wrap:wrap; gap:.5rem 1.1rem; font-size:.75rem; opacity:.85; margin-top:.7rem; }
+    .dot { display:inline-block; width:.7rem; height:.7rem; border-radius:50%; margin-right:.3rem; vertical-align:-1px; }
+    .dot.d { background:var(--aqua); } .dot.a { background:var(--ambar); } .dot.s { background:var(--gold); }
+
+    /* ---- formulario reserva ---- */
+    .form-res { background:var(--glass2); border:1px solid var(--borde); border-radius:18px; padding:1rem; margin-top:1rem; }
+    .form-res h3 { font-family:Georgia,serif; font-size:1rem; margin-bottom:.6rem; color:var(--gold); }
+    .fgrid { display:grid; grid-template-columns:1fr 1fr; gap:.55rem; }
+    .fgrid .wide { grid-column:1 / -1; }
+    .fgrid label { display:flex; flex-direction:column; align-items:stretch; gap:.25rem; font-size:.75rem; }
+    .fgrid input { width:100%; }
+
+    /* ---- tarjetas de listas ---- */
+    .card { background:var(--glass2); border:1px solid var(--borde); border-radius:16px; padding:.75rem .95rem;
+      margin:.5rem 0; display:flex; justify-content:space-between; align-items:center; gap:.7rem; flex-wrap:wrap; font-size:.9rem; }
+    .card .row { margin:0; }
+    .tag { display:inline-block; font-size:.66rem; font-weight:700; border-radius:999px; padding:.14rem .55rem; margin-right:.4rem; }
+    .tag.in { background:rgba(6,214,126,.25); color:#8effcd; } .tag.out { background:rgba(255,143,143,.22); color:#ffc4c4; }
+
+    /* ---- tabla finanzas ---- */
+    .finwrap { overflow-x:auto; }
+    table.fin { width:100%; border-collapse:collapse; font-size:.86rem; margin:.6rem 0; min-width:430px; }
+    table.fin th, table.fin td { padding:.5rem .7rem; text-align:right; border-bottom:1px solid rgba(255,255,255,.14); }
+    table.fin th:first-child, table.fin td:first-child { text-align:left; }
+    table.fin th { color:var(--gold); font-size:.68rem; text-transform:uppercase; letter-spacing:.5px; }
+    table.fin tr:last-child td { border-bottom:0; }
+
+    .hidden { display:none; }
+
+    /* ---- desktop: aprovechar el ancho ---- */
+    @media (min-width: 980px) {
+      body { padding:1.6rem 2.2rem 5rem; }
+      .cols2 { display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; align-items:start; }
+      .calwrap { display:grid; grid-template-columns:minmax(0,2.2fr) minmax(300px,1fr); gap:1.2rem; align-items:start; }
+      .form-res { margin-top:0; position:sticky; top:1rem; }
+      .fgrid { grid-template-columns:1fr 1fr; }
+    }
   </style>
 </head>
 <body>
-  <a href="/" class="back">← Volver a la landing</a>
-  <h1>🛠 Panel Esmeralda — Administración</h1>
-  <p class="muted">Privado. Reservas, finanzas, clientes y reseñas del depa.</p>
+<main>
+  <div class="top">
+    <span class="brand"><span class="gem">◆</span> Esmeralda · Panel</span>
+    <span class="row">
+      <a class="muted" href="/">← landing</a>
+      <a id="cal-open" href="#" target="_blank" rel="noopener"><button class="ghost" type="button">🗓 Vista completa</button></a>
+      <button id="logout" class="danger hidden" type="button">Salir</button>
+    </span>
+  </div>
 
   <div id="login">
-    <div class="row">
-      <input id="key" type="password" placeholder="Contraseña del panel" />
-      <button id="enter">Entrar</button>
-    </div>
-    <p class="muted" style="margin-top:.8rem">O entra sin contraseña: <a href="/portal">código por correo (magic link)</a> con tu email de admin.</p>
+    <h1>🔐 Panel privado</h1>
+    <input id="key" type="password" placeholder="Contraseña del panel" />
+    <button id="enter" type="button">Entrar</button>
+    <p class="muted" style="margin-top:.9rem">O sin contraseña: <a href="/portal">código por correo (magic link)</a> con tu email de admin.</p>
   </div>
 
   <div id="app" class="hidden">
     <p id="msg"></p>
 
-    <h2>📊 Resumen del negocio</h2>
     <div id="stats" class="stats"></div>
 
-    <h2>💰 Finanzas — ingresos y gastos</h2>
-    <p class="muted">Registra lo que entra (reservas) y lo que sale (luz, limpieza, cuota…) para saber la utilidad real. En cada reserva directa de abajo hay un botón "💵 Ingreso" que precarga el concepto.</p>
-    <div class="row">
-      <select id="f-type">
-        <option value="in">➕ Ingreso</option>
-        <option value="out">➖ Gasto</option>
-      </select>
-      <input id="f-date" type="date" />
-      <input id="f-concept" type="text" placeholder="Concepto (ej. Reserva María / Luz CFE)" style="min-width:230px" />
-      <select id="f-cat"></select>
-      <input id="f-amount" type="number" min="0" step="0.01" placeholder="$ MXN" style="width:120px" />
-      <button id="f-add">Agregar</button>
-    </div>
-    <div id="f-summary"></div>
-    <div id="f-movs"></div>
+    <!-- Calendario + nueva reserva -->
+    <details class="sec" open>
+      <summary>📅 Calendario · nueva reserva</summary>
+      <div class="body">
+        <p class="calhelp">Toca un día libre para la <strong>llegada</strong> y otro para la <strong>salida</strong> — se llenan solas en el formulario. Verde = directa · ámbar = Airbnb.</p>
+        <div class="calwrap">
+          <div>
+            <div id="minical" class="minical"></div>
+            <div class="callegend">
+              <span><span class="dot d"></span>Directa</span>
+              <span><span class="dot a"></span>Airbnb</span>
+              <span><span class="dot s"></span>Selección</span>
+              <span>◻ Hoy (borde blanco)</span>
+            </div>
+          </div>
+          <div class="form-res">
+            <h3 id="b-title">➕ Nueva reserva directa / bloqueo</h3>
+            <div class="fgrid">
+              <label>Llegada <input id="bstart" type="date" /></label>
+              <label>Salida <input id="bend" type="date" /></label>
+              <label class="wide">Huésped responsable <input id="b-name" type="text" placeholder="Nombre y apellido" /></label>
+              <label>Huéspedes <input id="b-guests" type="number" min="1" max="6" placeholder="máx 6" /></label>
+              <label>$ por noche <input id="b-rate" type="number" min="0" step="0.01" placeholder="MXN" /></label>
+              <label>Check-in <input id="b-cit" type="time" value="12:00" /></label>
+              <label>Check-out <input id="b-cot" type="time" value="11:00" /></label>
+              <label class="wide">Recomendado / referido por <input id="b-ref" type="text" placeholder="Nombre o código ESM-" /></label>
+              <label class="wide" style="flex-direction:row"><input id="b-free" type="checkbox" /> 🌙 usa noche abonada</label>
+            </div>
+            <div class="row" style="margin-top:.8rem">
+              <button id="addblock" type="button">Agregar reserva</button>
+              <button id="canceledit" class="ghost hidden" type="button">Cancelar edición</button>
+            </div>
+            <p class="muted" style="margin-top:.5rem">Solo las fechas son obligatorias (bloqueo simple). Todo aparece en el calendario, el feed y el pantallazo.</p>
+          </div>
+        </div>
+      </div>
+    </details>
 
-    <h2>📅 Calendario (12 meses)</h2>
-    <p class="muted">El mismo calendario vivo de <span id="cal-open-wrap"><a id="cal-open" href="#" target="_blank" rel="noopener">abrir en pestaña completa ↗</a></span> — verde directas, ámbar Airbnb, mitades = check-in/out.</p>
-    <iframe id="cal-frame" title="Calendario de reservas" style="width:100%;height:960px;border:1px solid #e0e8e4;border-radius:14px;background:#0a5944" loading="lazy"></iframe>
+    <!-- Finanzas -->
+    <details class="sec" open>
+      <summary>💰 Finanzas — ingresos y gastos</summary>
+      <div class="body">
+        <div class="row">
+          <select id="f-type">
+            <option value="in">➕ Ingreso</option>
+            <option value="out">➖ Gasto</option>
+          </select>
+          <input id="f-date" type="date" />
+          <input id="f-concept" type="text" placeholder="Concepto (ej. Reserva María / Luz CFE)" style="min-width:200px;flex:1" />
+          <select id="f-cat"></select>
+          <input id="f-amount" type="number" min="0" step="0.01" placeholder="$ MXN" style="width:110px" />
+          <button id="f-add" type="button">Agregar</button>
+        </div>
+        <p class="muted">También desde Telegram: <code>ingreso 4500 Reserva María</code> · <code>gasto 650 Limpieza</code>.</p>
+        <div class="cols2">
+          <div class="finwrap" id="f-summary"></div>
+          <div id="f-movs"></div>
+        </div>
+      </div>
+    </details>
 
-    <h2 id="b-title">➕ Agregar reserva directa / bloqueo</h2>
-    <p class="muted">Solo las fechas son obligatorias (un bloqueo simple). Lo demás llena la reserva completa: aparece en el calendario, el feed y el pantallazo.</p>
-    <div class="row">
-      <label>Llegada <input id="bstart" type="date" /></label>
-      <label>Salida <input id="bend" type="date" /></label>
-      <input id="b-name" type="text" placeholder="Huésped responsable" style="min-width:180px" />
-      <input id="b-guests" type="number" min="1" max="6" placeholder="Pax" style="width:70px" />
-    </div>
-    <div class="row" style="margin-top:8px">
-      <input id="b-rate" type="number" min="0" step="0.01" placeholder="$ por noche" style="width:120px" />
-      <label>Check-in <input id="b-cit" type="time" value="12:00" /></label>
-      <label>Check-out <input id="b-cot" type="time" value="11:00" /></label>
-      <input id="b-ref" type="text" placeholder="Recomendado por / código ESM-" style="min-width:190px" />
-      <label><input id="b-free" type="checkbox" /> 🌙 noche abonada</label>
-    </div>
-    <div class="row" style="margin-top:8px">
-      <button id="addblock">Agregar reserva</button>
-      <button id="canceledit" class="danger hidden">Cancelar edición</button>
-    </div>
+    <!-- Reservas directas -->
+    <details class="sec">
+      <summary>🟢 Reservas directas — editar · cobrar · liberar</summary>
+      <div class="body" id="direct"></div>
+    </details>
 
-    <h2>🟢 Reservas directas (editar / liberar)</h2>
-    <div id="direct"></div>
+    <!-- Todas las fechas -->
+    <details class="sec">
+      <summary>🗓 Todas las fechas ocupadas (incluye Airbnb)</summary>
+      <div class="body" id="all"></div>
+    </details>
 
-    <h2>📅 Todas las fechas ocupadas (incluye Airbnb)</h2>
-    <div id="all"></div>
+    <!-- Clientes -->
+    <details class="sec">
+      <summary>👤 Clientes del portal</summary>
+      <div class="body">
+        <p class="muted">Se dan de alta solos al confirmar su primera reserva ("Pago recibido" en Telegram). Aquí puedes sembrar uno a mano, acreditar o redimir noches.</p>
+        <div class="row">
+          <input id="c-name" type="text" placeholder="Nombre" />
+          <input id="c-email" type="email" placeholder="correo@ejemplo.com" />
+          <button id="c-seed" type="button">Dar de alta</button>
+        </div>
+        <div id="customers"></div>
+      </div>
+    </details>
 
-    <h2>👤 Clientes del portal</h2>
-    <p class="muted">Se dan de alta solos al confirmar su primera reserva ("Pago recibido" en Telegram). Aquí puedes sembrar uno a mano, acreditar o redimir noches gratis.</p>
-    <div class="row">
-      <input id="c-name" type="text" placeholder="Nombre" />
-      <input id="c-email" type="email" placeholder="correo@ejemplo.com" />
-      <button id="c-seed">Dar de alta</button>
-    </div>
-    <div id="customers"></div>
-
-    <h2>📝 Reseñas pendientes de aprobar</h2>
-    <div id="rv-pending"></div>
-
-    <h2>✅ Reseñas publicadas</h2>
-    <div id="rv-approved"></div>
-
-    <p class="row"><button id="logout" class="danger">Cerrar sesión</button></p>
+    <!-- Reseñas -->
+    <details class="sec">
+      <summary>📝 Reseñas — aprobar y publicar</summary>
+      <div class="body">
+        <h3 class="muted" style="margin:.4rem 0">Pendientes</h3>
+        <div id="rv-pending"></div>
+        <h3 class="muted" style="margin:.9rem 0 .4rem">Publicadas</h3>
+        <div id="rv-approved"></div>
+      </div>
+    </details>
   </div>
-
-  <script src="/admin-app.js" defer></script>
+</main>
+<script src="/admin-app.js" defer></script>
 </body>
 </html>

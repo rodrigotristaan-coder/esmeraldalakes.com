@@ -6,7 +6,7 @@ let KEY = localStorage.getItem(KEY_STORE) || "";
 function msg(t, ok = true) {
   const el = $("msg");
   el.textContent = t;
-  el.style.color = ok ? "#0a5944" : "#b23b3b";
+  el.style.color = ok ? "#8effcd" : "#ff8f8f";
 }
 
 async function api(params) {
@@ -16,8 +16,91 @@ async function api(params) {
   return r.json();
 }
 
+// Fechas visibles siempre en dd-mmm-aaaa (los <input type=date> siguen en ISO)
+const MABBR = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+function fmtD(ds) {
+  if (!/^\d{4}-\d{2}-\d{2}/.test(ds || "")) return ds || "";
+  const [y, m, d] = ds.split("-");
+  return `${d}-${MABBR[Number(m) - 1]}-${y}`;
+}
 function fmt(b) {
-  return `${b.start} → ${b.end}`;
+  return `${fmtD(b.start)} → ${fmtD(b.end)}`;
+}
+
+// ---- Mini calendario interactivo (elige llegada y salida tocando días) ----
+let BLOCKS = [];
+let SEL = { start: null, end: null };
+const DOWS_MC = ["L", "M", "M", "J", "V", "S", "D"];
+const MESES_MC = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+const isoDay = (y, m, d) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+function srcFor(ds) {
+  let src = null;
+  for (const b of BLOCKS) {
+    if (ds >= b.start && ds < b.end) {
+      if (b.source !== "airbnb") return "dir";
+      src = src || "abb";
+    }
+  }
+  return src;
+}
+
+function renderMiniCal() {
+  const box = $("minical");
+  if (!box) return;
+  const now = new Date();
+  const Y = now.getFullYear(), M = now.getMonth();
+  const todayDs = isoDay(Y, M, now.getDate());
+  box.innerHTML = "";
+  for (let k = 0; k < 12; k++) {
+    const my = Y + Math.floor((M + k) / 12), mm = (M + k) % 12;
+    const daysIn = new Date(my, mm + 1, 0).getDate();
+    let sold = 0;
+    for (let d = 1; d <= daysIn; d++) if (srcFor(isoDay(my, mm, d))) sold++;
+    const sec = document.createElement("div");
+    sec.className = "mc-month";
+    sec.innerHTML = `<h4>${MESES_MC[mm]} ${my}<span class="pct">${Math.round((sold / daysIn) * 100)}%</span></h4>`;
+    const grid = document.createElement("div");
+    grid.className = "mc-grid";
+    DOWS_MC.forEach((d) => grid.insertAdjacentHTML("beforeend", `<span class="mc-dow">${d}</span>`));
+    const startDow = (new Date(my, mm, 1).getDay() + 6) % 7; // lunes = 0
+    for (let i = 0; i < startDow; i++) grid.insertAdjacentHTML("beforeend", "<span></span>");
+    for (let d = 1; d <= daysIn; d++) {
+      const ds = isoDay(my, mm, d);
+      const cls = ["mc-day"];
+      const s = srcFor(ds);
+      if (s) cls.push(s);
+      if (ds < todayDs) cls.push("past");
+      if (ds === todayDs) cls.push("today");
+      if (ds === SEL.start || ds === SEL.end) cls.push("sel");
+      else if (SEL.start && SEL.end && ds > SEL.start && ds < SEL.end) cls.push("inrange");
+      const cell = document.createElement("button");
+      cell.type = "button";
+      cell.className = cls.join(" ");
+      cell.textContent = d;
+      if (ds >= todayDs) cell.addEventListener("click", () => pickDay(ds));
+      grid.appendChild(cell);
+    }
+    sec.appendChild(grid);
+    box.appendChild(sec);
+  }
+}
+
+function pickDay(ds) {
+  if (!SEL.start || (SEL.start && SEL.end)) SEL = { start: ds, end: null };
+  else if (ds > SEL.start) SEL.end = ds;
+  else SEL = { start: ds, end: null };
+  $("bstart").value = SEL.start || "";
+  $("bend").value = SEL.end || "";
+  renderMiniCal();
+  if (SEL.end) msg(`Fechas elegidas: ${fmtD(SEL.start)} → ${fmtD(SEL.end)} · completa los datos y agrega ✍️`);
+  else msg(`Llegada: ${fmtD(SEL.start)} — ahora toca el día de salida.`);
+}
+
+function syncSelFromInputs() {
+  SEL = { start: $("bstart").value || null, end: $("bend").value || null };
+  if (SEL.start && SEL.end && SEL.end <= SEL.start) SEL.end = null;
+  renderMiniCal();
 }
 
 // Ocupación de los próximos 365 días a partir de los bloqueos (noches vendidas / totales)
@@ -47,13 +130,13 @@ async function load() {
   $("app").classList.remove("hidden");
 
   OCC = calcOccupancy(data.all || []);
+  $("logout").classList.remove("hidden");
 
-  // Calendario embebido: con contraseña usa ?adminkey=; con magic link basta la cookie
-  const calUrl = "/calendario" + (KEY ? "?adminkey=" + encodeURIComponent(KEY) : "");
-  const frame = $("cal-frame");
-  if (frame && frame.getAttribute("src") !== calUrl) frame.src = calUrl;
+  // Mini calendario interactivo + link a la vista completa
+  BLOCKS = data.all || [];
+  renderMiniCal();
   const open = $("cal-open");
-  if (open) open.href = calUrl;
+  if (open) open.href = "/calendario" + (KEY ? "?adminkey=" + encodeURIComponent(KEY) : "");
 
   // Reservas directas (editar / liberar / registrar ingreso)
   const d = $("direct");
@@ -236,7 +319,7 @@ function renderFinance(movs) {
     const div = document.createElement("div");
     div.className = "card";
     div.innerHTML = `<span style="text-align:left"><span class="tag ${m.type}">${m.type === "in" ? "INGRESO" : "GASTO"}</span>` +
-      `<b>${escHtml(m.concept)}</b> <span class="muted">· ${m.date} · ${escHtml(m.category || "")}</span></span>` +
+      `<b>${escHtml(m.concept)}</b> <span class="muted">· ${fmtD(m.date)} · ${escHtml(m.category || "")}</span></span>` +
       `<span class="row"><b class="${m.type === "in" ? "pos" : "neg"}">${m.type === "in" ? "+" : "−"}${money(m.amount)}</b></span>`;
     const wrap = div.querySelector(".row");
     const dup = document.createElement("button");
@@ -283,7 +366,7 @@ async function addMovFromForm() {
 async function quickIncome(b) {
   const nights = Math.round((new Date(b.end) - new Date(b.start)) / 86400000);
   const sugerido = b.rate ? String(Math.round(b.rate * nights)) : "";
-  const monto = prompt(`Monto cobrado por la reserva ${b.start} → ${b.end}${b.name ? ` de ${b.name}` : ""} (MXN):`, sugerido);
+  const monto = prompt(`Monto cobrado por la reserva ${fmtD(b.start)} → ${fmtD(b.end)}${b.name ? ` de ${b.name}` : ""} (MXN):`, sugerido);
   const amount = parseFloat(String(monto || "").replace(/[$,\s]/g, ""));
   if (!(amount > 0)) return;
   try {
@@ -347,7 +430,7 @@ async function reviewAction(act, id, isPending) {
 }
 
 async function release(start, end) {
-  if (!confirm(`¿Liberar ${start} → ${end}?`)) return;
+  if (!confirm(`¿Liberar ${fmtD(start)} → ${fmtD(end)}?`)) return;
   try {
     await api(`&action=release&start=${start}&end=${end}`);
     msg("Fecha liberada ✅");
@@ -376,24 +459,29 @@ function blockFormQS() {
 
 function resetBlockForm() {
   EDITING = null;
+  SEL = { start: null, end: null };
   ["bstart", "bend", "b-name", "b-guests", "b-rate", "b-ref"].forEach((id) => { $(id).value = ""; });
   $("b-cit").value = "12:00"; $("b-cot").value = "11:00"; $("b-free").checked = false;
-  $("b-title").textContent = "➕ Agregar reserva directa / bloqueo";
+  $("b-title").textContent = "➕ Nueva reserva directa / bloqueo";
   $("addblock").textContent = "Agregar reserva";
   $("canceledit").classList.add("hidden");
+  renderMiniCal();
 }
 
 function startEdit(b) {
   EDITING = { start: b.start, end: b.end };
+  SEL = { start: b.start, end: b.end };
   $("bstart").value = b.start; $("bend").value = b.end;
   $("b-name").value = b.name || ""; $("b-guests").value = b.guests || "";
   $("b-rate").value = b.rate || ""; $("b-ref").value = b.referredBy || "";
   $("b-cit").value = b.checkinTime || "12:00"; $("b-cot").value = b.checkoutTime || "11:00";
   $("b-free").checked = !!b.freeNight;
-  $("b-title").textContent = `✏️ Editando ${b.start} → ${b.end}`;
+  $("b-title").textContent = `✏️ Editando ${fmtD(b.start)} → ${fmtD(b.end)}`;
   $("addblock").textContent = "Guardar cambios";
   $("canceledit").classList.remove("hidden");
-  window.scrollTo({ top: $("b-title").offsetTop - 20, behavior: "smooth" });
+  document.querySelector("details.sec").open = true; // sección del calendario
+  renderMiniCal();
+  window.scrollTo({ top: $("b-title").getBoundingClientRect().top + window.scrollY - 80, behavior: "smooth" });
 }
 
 async function addBlock() {
@@ -417,6 +505,7 @@ async function addBlock() {
 function showLogin() {
   $("app").classList.add("hidden");
   $("login").classList.remove("hidden");
+  $("logout").classList.add("hidden");
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -432,6 +521,8 @@ document.addEventListener("DOMContentLoaded", () => {
   $("f-add").addEventListener("click", addMovFromForm);
   fillCats();
   $("f-date").value = new Date().toISOString().slice(0, 10);
+  $("bstart").addEventListener("change", syncSelFromInputs);
+  $("bend").addEventListener("change", syncSelFromInputs);
   $("logout").addEventListener("click", async () => {
     localStorage.removeItem(KEY_STORE); KEY = ""; $("key").value = "";
     // También cierra la sesión magic-link (cookie), si existe.
