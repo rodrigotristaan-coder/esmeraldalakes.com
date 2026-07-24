@@ -1,6 +1,6 @@
 // Panel de administración (protegido con ADMIN_KEY): fechas, reseñas, clientes y finanzas.
 const crypto = require("crypto");
-const { safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail, readSession, readFinance, writeFinance } = require("./_lib");
+const { safeEqual, readBlocks, addBlock, removeBlock, updateBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail, readSession, readFinance, writeFinance } = require("./_lib");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
@@ -30,8 +30,23 @@ module.exports = async (req, res) => {
     }
     if (action === "block") {
       if (!validDate(start) || !validDate(end) || end <= start) return res.status(422).json({ ok: false, error: "fechas" });
-      await addBlock(start, end);
+      await addBlock(start, end, {
+        name: q.name, guests: q.guests, rate: q.rate,
+        checkinTime: q.checkinTime, checkoutTime: q.checkoutTime,
+        referredBy: q.referredBy, freeNight: q.freeNight,
+      });
       return res.status(200).json({ ok: true });
+    }
+    if (action === "block-update") {
+      if (!validDate(q.ostart) || !validDate(q.oend)) return res.status(422).json({ ok: false, error: "fechas" });
+      if ((q.start && !validDate(q.start)) || (q.end && !validDate(q.end))) return res.status(422).json({ ok: false, error: "fechas" });
+      const r = await updateBlock(q.ostart, q.oend, {
+        start: q.start, end: q.end, name: q.name, guests: q.guests, rate: q.rate,
+        checkinTime: q.checkinTime, checkoutTime: q.checkoutTime,
+        referredBy: q.referredBy, freeNight: q.freeNight,
+      });
+      if (!r.ok) return res.status(422).json({ ok: false, error: r.reason });
+      return res.status(200).json({ ok: true, block: r.block });
     }
     // --- Reseñas ---
     if (action === "reviews") {

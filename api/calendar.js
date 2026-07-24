@@ -250,6 +250,10 @@ module.exports = async (req, res) => {
         const nights = Math.round((new Date(b.end) - new Date(b.start)) / 86400000);
         const direct = b.source !== "airbnb";
         const name = direct ? (b.name || names[`${b.start}|${b.end}`] || "Reserva directa") : "Airbnb";
+        const ciT = /^\d{2}:\d{2}$/.test(b.checkinTime || "") ? b.checkinTime : "12:00";
+        const coT = /^\d{2}:\d{2}$/.test(b.checkoutTime || "") ? b.checkoutTime : "11:00";
+        const hhmm = (t) => t.replace(":", "") + "00";
+        const plus1h = (t) => String(Math.min(23, Number(t.slice(0, 2)) + 1)).padStart(2, "0") + t.slice(2);
         const detail =
           (direct ? "Reserva directa" : "Reserva de Airbnb") +
           ` · ${nights} noche${nights === 1 ? "" : "s"}` +
@@ -261,21 +265,22 @@ module.exports = async (req, res) => {
           start: b.start,
           end: b.end,
           summary: (direct ? "🏠 " : "🅰️ ") + name,
-          description: detail + ` · check-in ${b.start} 12:00 · check-out ${b.end} 11:00`,
+          description: detail + ` · check-in ${b.start} ${ciT} · check-out ${b.end} ${coT}`,
         });
-        // Check-in 12:00 y check-out 11:00 como eventos con hora (para recordatorios)
+        // Check-in y check-out como eventos con hora (para recordatorios); horas
+        // por reserva si el admin las definió, si no 12:00 / 11:00.
         events.push(
           {
             uid: `ci${i}-${b.start}@esmeralda-full`,
-            dtstart: `${icsDate(b.start)}T120000`,
-            dtend: `${icsDate(b.start)}T130000`,
+            dtstart: `${icsDate(b.start)}T${hhmm(ciT)}`,
+            dtend: `${icsDate(b.start)}T${hhmm(plus1h(ciT))}`,
             summary: `🔑 Check-in · ${name}`,
             description: detail,
           },
           {
             uid: `co${i}-${b.end}@esmeralda-full`,
-            dtstart: `${icsDate(b.end)}T110000`,
-            dtend: `${icsDate(b.end)}T120000`,
+            dtstart: `${icsDate(b.end)}T${hhmm(coT)}`,
+            dtend: `${icsDate(b.end)}T${hhmm(plus1h(coT))}`,
             summary: `🧳 Check-out · ${name}`,
             description: detail,
           }

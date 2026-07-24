@@ -76,13 +76,27 @@
     <p class="muted">El mismo calendario vivo de <span id="cal-open-wrap"><a id="cal-open" href="#" target="_blank" rel="noopener">abrir en pestaña completa ↗</a></span> — verde directas, ámbar Airbnb, mitades = check-in/out.</p>
     <iframe id="cal-frame" title="Calendario de reservas" style="width:100%;height:960px;border:1px solid #e0e8e4;border-radius:14px;background:#0a5944" loading="lazy"></iframe>
 
-    <h2>➕ Bloquear fechas manualmente</h2>
+    <h2 id="b-title">➕ Agregar reserva directa / bloqueo</h2>
+    <p class="muted">Solo las fechas son obligatorias (un bloqueo simple). Lo demás llena la reserva completa: aparece en el calendario, el feed y el pantallazo.</p>
     <div class="row">
-      <input id="bstart" type="date" /> <input id="bend" type="date" />
-      <button id="addblock">Bloquear</button>
+      <label>Llegada <input id="bstart" type="date" /></label>
+      <label>Salida <input id="bend" type="date" /></label>
+      <input id="b-name" type="text" placeholder="Huésped responsable" style="min-width:180px" />
+      <input id="b-guests" type="number" min="1" max="6" placeholder="Pax" style="width:70px" />
+    </div>
+    <div class="row" style="margin-top:8px">
+      <input id="b-rate" type="number" min="0" step="0.01" placeholder="$ por noche" style="width:120px" />
+      <label>Check-in <input id="b-cit" type="time" value="12:00" /></label>
+      <label>Check-out <input id="b-cot" type="time" value="11:00" /></label>
+      <input id="b-ref" type="text" placeholder="Recomendado por / código ESM-" style="min-width:190px" />
+      <label><input id="b-free" type="checkbox" /> 🌙 noche abonada</label>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="addblock">Agregar reserva</button>
+      <button id="canceledit" class="danger hidden">Cancelar edición</button>
     </div>
 
-    <h2>🟢 Reservas directas (puedes liberar)</h2>
+    <h2>🟢 Reservas directas (editar / liberar)</h2>
     <div id="direct"></div>
 
     <h2>📅 Todas las fechas ocupadas (incluye Airbnb)</h2>

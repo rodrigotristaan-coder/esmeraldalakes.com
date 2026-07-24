@@ -55,16 +55,29 @@ async function load() {
   const open = $("cal-open");
   if (open) open.href = calUrl;
 
-  // Reservas directas (liberables + registrar ingreso)
+  // Reservas directas (editar / liberar / registrar ingreso)
   const d = $("direct");
   d.innerHTML = data.direct.length ? "" : '<p class="muted">Sin reservas directas próximas.</p>';
   for (const b of data.direct) {
+    const nights = Math.round((new Date(b.end) - new Date(b.start)) / 86400000);
     const div = document.createElement("div");
     div.className = "card";
-    const who = b.name ? ` · <b>${escHtml(b.name)}</b>` : "";
-    div.innerHTML = `<span>${fmt(b)}${who} <span class="muted">(${b.source}${b.guests ? ` · ${b.guests} pax` : ""})</span></span>`;
+    const who = b.name ? `<b>${escHtml(b.name)}</b> · ` : "";
+    const extras = [
+      `${nights} noche${nights === 1 ? "" : "s"}`,
+      b.guests ? `${b.guests} pax` : null,
+      b.rate ? `$${Number(b.rate).toLocaleString("es-MX")}/noche (≈$${(b.rate * nights).toLocaleString("es-MX")})` : null,
+      `in ${b.checkinTime || "12:00"} · out ${b.checkoutTime || "11:00"}`,
+      b.referredBy ? `🎟 ref: ${escHtml(b.referredBy)}` : null,
+      b.freeNight ? "🌙 noche abonada" : null,
+    ].filter(Boolean).join(" · ");
+    div.innerHTML = `<span style="text-align:left">${who}${fmt(b)}<br><span class="muted">${extras}</span></span>`;
     const wrap = document.createElement("span");
     wrap.className = "row";
+    const edit = document.createElement("button");
+    edit.textContent = "✏️ Editar";
+    edit.addEventListener("click", () => startEdit(b));
+    wrap.appendChild(edit);
     const inc = document.createElement("button");
     inc.textContent = "💵 Ingreso";
     inc.title = "Registrar el cobro de esta reserva en finanzas";
@@ -268,7 +281,9 @@ async function addMovFromForm() {
 }
 
 async function quickIncome(b) {
-  const monto = prompt(`Monto cobrado por la reserva ${b.start} → ${b.end}${b.name ? ` de ${b.name}` : ""} (MXN):`);
+  const nights = Math.round((new Date(b.end) - new Date(b.start)) / 86400000);
+  const sugerido = b.rate ? String(Math.round(b.rate * nights)) : "";
+  const monto = prompt(`Monto cobrado por la reserva ${b.start} → ${b.end}${b.name ? ` de ${b.name}` : ""} (MXN):`, sugerido);
   const amount = parseFloat(String(monto || "").replace(/[$,\s]/g, ""));
   if (!(amount > 0)) return;
   try {
@@ -340,15 +355,63 @@ async function release(start, end) {
   } catch { msg("Error al liberar.", false); }
 }
 
-async function addBlock() {
+// --- Alta y edición de reservas directas ---
+let EDITING = null; // {start, end} originales cuando se está editando
+
+function blockFormQS() {
   const s = $("bstart").value, e = $("bend").value;
-  if (!s || !e || e <= s) return msg("Fechas inválidas (salida después de llegada).", false);
+  if (!s || !e || e <= s) { msg("Fechas inválidas (salida después de llegada).", false); return null; }
+  const p = {
+    start: s, end: e,
+    name: $("b-name").value.trim(),
+    guests: $("b-guests").value,
+    rate: $("b-rate").value,
+    checkinTime: $("b-cit").value,
+    checkoutTime: $("b-cot").value,
+    referredBy: $("b-ref").value.trim(),
+    freeNight: $("b-free").checked ? "1" : "0",
+  };
+  return Object.entries(p).map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join("");
+}
+
+function resetBlockForm() {
+  EDITING = null;
+  ["bstart", "bend", "b-name", "b-guests", "b-rate", "b-ref"].forEach((id) => { $(id).value = ""; });
+  $("b-cit").value = "12:00"; $("b-cot").value = "11:00"; $("b-free").checked = false;
+  $("b-title").textContent = "➕ Agregar reserva directa / bloqueo";
+  $("addblock").textContent = "Agregar reserva";
+  $("canceledit").classList.add("hidden");
+}
+
+function startEdit(b) {
+  EDITING = { start: b.start, end: b.end };
+  $("bstart").value = b.start; $("bend").value = b.end;
+  $("b-name").value = b.name || ""; $("b-guests").value = b.guests || "";
+  $("b-rate").value = b.rate || ""; $("b-ref").value = b.referredBy || "";
+  $("b-cit").value = b.checkinTime || "12:00"; $("b-cot").value = b.checkoutTime || "11:00";
+  $("b-free").checked = !!b.freeNight;
+  $("b-title").textContent = `✏️ Editando ${b.start} → ${b.end}`;
+  $("addblock").textContent = "Guardar cambios";
+  $("canceledit").classList.remove("hidden");
+  window.scrollTo({ top: $("b-title").offsetTop - 20, behavior: "smooth" });
+}
+
+async function addBlock() {
+  const qs = blockFormQS();
+  if (!qs) return;
   try {
-    await api(`&action=block&start=${s}&end=${e}`);
-    msg("Fechas bloqueadas ✅");
-    $("bstart").value = ""; $("bend").value = "";
+    if (EDITING) {
+      const r = await api(`&action=block-update&ostart=${EDITING.start}&oend=${EDITING.end}` + qs);
+      if (!r.ok) throw new Error(r.error);
+      msg("Reserva actualizada ✅");
+    } else {
+      const r = await api(`&action=block` + qs);
+      if (!r.ok) throw new Error(r.error);
+      msg("Reserva agregada ✅");
+    }
+    resetBlockForm();
     load();
-  } catch { msg("Error al bloquear.", false); }
+  } catch (e) { msg(EDITING ? "Error al actualizar: " + e.message : "Error al agregar.", false); }
 }
 
 function showLogin() {
@@ -363,6 +426,7 @@ document.addEventListener("DOMContentLoaded", () => {
     load();
   });
   $("addblock").addEventListener("click", addBlock);
+  $("canceledit").addEventListener("click", resetBlockForm);
   $("c-seed").addEventListener("click", seedCustomer);
   $("f-type").addEventListener("change", fillCats);
   $("f-add").addEventListener("click", addMovFromForm);

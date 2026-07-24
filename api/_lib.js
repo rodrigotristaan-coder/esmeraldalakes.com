@@ -50,16 +50,53 @@ async function writeBlocks(arr) {
   });
 }
 
+// Campos opcionales de una reserva directa (los usa el admin y el bot)
+function sanitizeBlockExtra(extra = {}) {
+  const out = {};
+  if (extra.name) out.name = String(extra.name).slice(0, 80);
+  if (extra.guests) out.guests = Number(extra.guests) || undefined;
+  if (extra.rate !== undefined && extra.rate !== "") {
+    const r = Math.round(Number(extra.rate) * 100) / 100;
+    if (r > 0 && r <= 1000000) out.rate = r;
+  }
+  if (/^\d{1,2}:\d{2}$/.test(String(extra.checkinTime || ""))) out.checkinTime = String(extra.checkinTime).padStart(5, "0");
+  if (/^\d{1,2}:\d{2}$/.test(String(extra.checkoutTime || ""))) out.checkoutTime = String(extra.checkoutTime).padStart(5, "0");
+  if (extra.referredBy) out.referredBy = String(extra.referredBy).slice(0, 60);
+  if (extra.freeNight !== undefined) out.freeNight = extra.freeNight === true || extra.freeNight === "1" || extra.freeNight === "true";
+  return out;
+}
+
 async function addBlock(start, end, extra) {
   const arr = await readBlocks();
   if (!arr.some((b) => b.start === start && b.end === end)) {
-    const block = { start, end, source: "directo" };
-    if (extra && extra.name) block.name = String(extra.name).slice(0, 80);
-    if (extra && extra.guests) block.guests = Number(extra.guests) || undefined;
-    arr.push(block);
+    arr.push({ start, end, source: "directo", ...sanitizeBlockExtra(extra) });
     await writeBlocks(arr);
   }
   return arr;
+}
+
+// Edita una reserva directa identificada por sus fechas originales (ostart/oend).
+// Puede cambiar fechas y cualquier campo extra; los campos vacíos se borran.
+async function updateBlock(ostart, oend, fields = {}) {
+  const arr = await readBlocks();
+  const i = arr.findIndex((b) => b.start === ostart && b.end === oend);
+  if (i === -1) return { ok: false, reason: "no-existe" };
+  const b = arr[i];
+  const start = fields.start || b.start;
+  const end = fields.end || b.end;
+  if (!(start < end)) return { ok: false, reason: "fechas" };
+  if (arr.some((x, k) => k !== i && x.start === start && x.end === end)) return { ok: false, reason: "duplicado" };
+  const extra = sanitizeBlockExtra(fields);
+  const next = { start, end, source: b.source || "directo" };
+  // conserva lo previo y aplica lo nuevo; string vacío = borrar campo
+  for (const k of ["name", "guests", "rate", "checkinTime", "checkoutTime", "referredBy", "freeNight"]) {
+    if (extra[k] !== undefined) next[k] = extra[k];
+    else if (fields[k] === "" || fields[k] === null) continue; // borrar
+    else if (b[k] !== undefined) next[k] = b[k];
+  }
+  arr[i] = next;
+  await writeBlocks(arr);
+  return { ok: true, block: next };
 }
 
 async function removeBlock(start, end) {
@@ -394,7 +431,7 @@ function sessionCookie(email, role) {
 const clearSessionCookie = () => "esm_portal=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0";
 
 module.exports = {
-  sign, safeEqual, readBlocks, addBlock, removeBlock, getAllBlocks, rangeOverlaps, sendEmail, readReviews, writeReviews,
+  sign, safeEqual, readBlocks, addBlock, removeBlock, updateBlock, getAllBlocks, rangeOverlaps, sendEmail, readReviews, writeReviews,
   // portal
   normEmail, isEmail, readCustomers, writeCustomers, upsertCustomerFromBooking, ownerOfRefCode, seedCustomer,
   issueCode, verifyCode, sessionCookie, clearSessionCookie, readSession, isAdminEmail,

@@ -4,6 +4,7 @@
     { "source": "/reservas.ics", "destination": "/api/calendar?full=1" },
     { "source": "/calendario", "destination": "/api/calendar?view=html" },
     { "source": "/guia", "destination": "/guia.html" },
+    { "source": "/reglamento", "destination": "/reglamento.html" },
     { "source": "/portal", "destination": "/portal.html" },
     { "source": "/privacidad", "destination": "/privacidad.html" },
     { "source": "/privacy", "destination": "/privacidad.html" }
