@@ -15,6 +15,10 @@ module.exports = async (req, res) => {
   const sess = readSession(req.headers.cookie);
   const authed = keyAuthed || !!(sess && sess.admin);
   if (!authed) {
+    // DEBUG temporal (2026-07-23): solo longitudes y huellas sha256 truncadas —
+    // nunca los valores. Quitar cuando se resuelva el misterio del ADMIN_KEY.
+    const fp = (s) => crypto.createHash("sha256").update(String(s || "")).digest("hex").slice(0, 8);
+    console.error(`auth-dbg recibida(len=${String(key || "").length} fp=${fp(key)}) env(len=${adminKey.length} fp=${fp(adminKey)})`);
     return res.status(401).json({ ok: false, error: "no autorizado" });
   }
 
