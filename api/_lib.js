@@ -25,12 +25,18 @@ function safeEqual(a, b) {
   return x.length === y.length && crypto.timingSafeEqual(x, y);
 }
 
+// Lectura del blob con cache-buster: la URL pública pasa por CDN y puede servir
+// una copia vieja aunque cacheControlMaxAge sea 0. Sin esto, un read-modify-write
+// con copia stale sobreescribe (y pierde) escrituras recientes — pasó con una
+// reseña el 25-jul-2026.
+const freshUrl = (url) => url + (url.includes("?") ? "&" : "?") + "_=" + Date.now();
+
 // --- Reservas directas guardadas (fechas) ---
 async function readBlocks() {
   try {
     const { blobs } = await list({ prefix: FILE });
     if (!blobs.length) return [];
-    const r = await fetch(blobs[0].url, { cache: "no-store" });
+    const r = await fetch(freshUrl(blobs[0].url), { cache: "no-store" });
     if (!r.ok) return [];
     const j = await r.json();
     return Array.isArray(j) ? j : [];
@@ -111,7 +117,7 @@ async function readReviews() {
   try {
     const { blobs } = await list({ prefix: REVIEWS });
     if (!blobs.length) return [];
-    const r = await fetch(blobs[0].url, { cache: "no-store" });
+    const r = await fetch(freshUrl(blobs[0].url), { cache: "no-store" });
     if (!r.ok) return [];
     const j = await r.json();
     return Array.isArray(j) ? j : [];
@@ -217,7 +223,7 @@ async function readJsonObj(name) {
   try {
     const { blobs } = await list({ prefix: name });
     if (!blobs.length) return {};
-    const r = await fetch(blobs[0].url, { cache: "no-store" });
+    const r = await fetch(freshUrl(blobs[0].url), { cache: "no-store" });
     if (!r.ok) return {};
     const j = await r.json();
     return j && typeof j === "object" && !Array.isArray(j) ? j : {};

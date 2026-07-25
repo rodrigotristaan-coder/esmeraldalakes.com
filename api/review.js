@@ -51,15 +51,26 @@ module.exports = async (req, res) => {
     return res.status(500).json({ ok: false, error: "No se pudo guardar" });
   }
 
-  // Aviso por Telegram (best-effort)
+  // Aviso por Telegram (best-effort, pero con await: sin él la función se
+  // congela al responder y el mensaje a veces nunca sale)
   const token = process.env.TELEGRAM_BOT_TOKEN, chatId = process.env.OWNER_CHAT_ID;
   if (token && chatId) {
     const msg = `📝 *Nueva reseña pendiente* (esmeraldalakes.com)\n\n${"⭐".repeat(rating)} (${rating}/5)\n👤 ${name}\n\n${text}\n\nApruébala o recházala en el panel: /admin.html`;
-    fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text: msg, parse_mode: "Markdown", disable_web_page_preview: true }),
-    }).catch(() => {});
+    const send = (body) =>
+      fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, disable_web_page_preview: true, ...body }),
+      });
+    try {
+      let tg = await send({ text: msg, parse_mode: "Markdown" });
+      // El texto del huésped puede romper el Markdown (p. ej. un "*" suelto → 400):
+      // reintenta en texto plano para que el aviso llegue siempre.
+      if (!tg.ok) tg = await send({ text: msg });
+      if (!tg.ok) console.error("review telegram:", tg.status, await tg.text());
+    } catch (e) {
+      console.error("review telegram:", e.message);
+    }
   }
 
   return res.status(200).json({ ok: true });
