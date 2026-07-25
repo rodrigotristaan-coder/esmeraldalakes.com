@@ -250,8 +250,8 @@ module.exports = async (req, res) => {
         const nights = Math.round((new Date(b.end) - new Date(b.start)) / 86400000);
         const direct = b.source !== "airbnb";
         const name = direct ? (b.name || names[`${b.start}|${b.end}`] || "Reserva directa") : "Airbnb";
-        const ciT = /^\d{2}:\d{2}$/.test(b.checkinTime || "") ? b.checkinTime : "12:00";
-        const coT = /^\d{2}:\d{2}$/.test(b.checkoutTime || "") ? b.checkoutTime : "11:00";
+        const ciT = /^\d{2}:\d{2}$/.test(b.checkinTime || "") ? b.checkinTime : "13:00";
+        const coT = /^\d{2}:\d{2}$/.test(b.checkoutTime || "") ? b.checkoutTime : "10:00";
         const hhmm = (t) => t.replace(":", "") + "00";
         const plus1h = (t) => String(Math.min(23, Number(t.slice(0, 2)) + 1)).padStart(2, "0") + t.slice(2);
         const detail =
@@ -268,7 +268,7 @@ module.exports = async (req, res) => {
           description: detail + ` · check-in ${b.start} ${ciT} · check-out ${b.end} ${coT}`,
         });
         // Check-in y check-out como eventos con hora (para recordatorios); horas
-        // por reserva si el admin las definió, si no 12:00 / 11:00.
+        // por reserva si el admin las definió, si no 13:00 / 10:00.
         events.push(
           {
             uid: `ci${i}-${b.start}@esmeralda-full`,

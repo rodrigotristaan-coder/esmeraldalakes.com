@@ -150,7 +150,7 @@ async function load() {
       `${nights} noche${nights === 1 ? "" : "s"}`,
       b.guests ? `${b.guests} pax` : null,
       b.rate ? `$${Number(b.rate).toLocaleString("es-MX")}/noche (≈$${(b.rate * nights).toLocaleString("es-MX")})` : null,
-      `in ${b.checkinTime || "12:00"} · out ${b.checkoutTime || "11:00"}`,
+      `in ${b.checkinTime || "13:00"} · out ${b.checkoutTime || "10:00"}`,
       b.referredBy ? `🎟 ref: ${escHtml(b.referredBy)}` : null,
       b.freeNight ? "🌙 noche abonada" : null,
     ].filter(Boolean).join(" · ");
@@ -461,7 +461,7 @@ function resetBlockForm() {
   EDITING = null;
   SEL = { start: null, end: null };
   ["bstart", "bend", "b-name", "b-guests", "b-rate", "b-ref"].forEach((id) => { $(id).value = ""; });
-  $("b-cit").value = "12:00"; $("b-cot").value = "11:00"; $("b-free").checked = false;
+  $("b-cit").value = "13:00"; $("b-cot").value = "10:00"; $("b-free").checked = false;
   $("b-title").textContent = "➕ Nueva reserva directa / bloqueo";
   $("addblock").textContent = "Agregar reserva";
   $("canceledit").classList.add("hidden");
@@ -474,7 +474,7 @@ function startEdit(b) {
   $("bstart").value = b.start; $("bend").value = b.end;
   $("b-name").value = b.name || ""; $("b-guests").value = b.guests || "";
   $("b-rate").value = b.rate || ""; $("b-ref").value = b.referredBy || "";
-  $("b-cit").value = b.checkinTime || "12:00"; $("b-cot").value = b.checkoutTime || "11:00";
+  $("b-cit").value = b.checkinTime || "13:00"; $("b-cot").value = b.checkoutTime || "10:00";
   $("b-free").checked = !!b.freeNight;
   $("b-title").textContent = `✏️ Editando ${fmtD(b.start)} → ${fmtD(b.end)}`;
   $("addblock").textContent = "Guardar cambios";
