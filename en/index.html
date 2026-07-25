@@ -373,6 +373,13 @@ section { padding: 5rem 1.5rem; }
 .review-card__meta { display: flex; flex-direction: column; }
 .review-card__name { font-weight: 700; color: var(--ink); }
 .review-card__role { font-size: 0.85rem; color: var(--muted); }
+.host-note { max-width: 860px; margin: 1.6rem auto 0; display: flex; gap: 1.1rem; align-items: flex-start;
+  background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius);
+  padding: 1.3rem 1.5rem; -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
+.host-note img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex: none; border: 2px solid var(--aqua); }
+.host-note blockquote { margin: 0; font-style: italic; font-size: 0.98rem; line-height: 1.65; color: var(--ink); }
+.host-note__who { margin: 0.55rem 0 0; font-weight: 700; font-size: 0.9rem; color: var(--emerald-dark); }
+.host-note__who span { font-weight: 400; color: var(--muted); }
 .review-cta { text-align: center; margin-top: 1.8rem; }
 .review-form-wrap { max-width: 640px; margin: 1.4rem auto 0; border-radius: var(--radius); padding: 2rem; box-shadow: var(--shadow); }
 .review-form-wrap h3 { color: var(--emerald-dark); font-size: 1.3rem; }
@@ -1119,16 +1126,17 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       <p data-es="Lo que se vive en Esmeralda." data-en="What it's like to stay at Esmeralda.">What it's like to stay at Esmeralda.</p>
     </div>
     <div class="reviews__grid" id="reviews-list">
-      <figure class="review-card review-card--host">
+      <figure class="review-card" data-review-name="Miguel Alejandro">
         <figcaption class="review-card__who">
-          <img class="review-card__avatar" src="/assets/images/host-rodrigo.webp" alt="Rodrigo Tristán" width="52" height="52" loading="lazy" />
+          <span class="review-card__avatar" aria-hidden="true">M</span>
           <span class="review-card__meta">
-            <span class="review-card__name">Rodrigo Tristán</span>
-            <span class="review-card__role" data-es="Socio-propietario" data-en="Co-owner">Co-owner</span>
+            <span class="review-card__name">Miguel Alejandro</span>
+            <span class="review-card__role" data-es="Huésped · reseña de Airbnb" data-en="Guest · Airbnb review">Guest · Airbnb review</span>
           </span>
           <span class="review-card__stars" aria-label="5 de 5 estrellas">★★★★★</span>
         </figcaption>
-        <blockquote class="review-card__quote" data-es="“Amo este depa con todo mi corazón. Ha sido el escenario de muchas de las mejores memorias de mi vida, y hoy tengo el gusto de abrirlo a viajeros de todo el mundo. Estoy comprometido al 100% con dar el mejor servicio: siempre estoy disponible para conocer y platicar con mis huéspedes.”" data-en="“I love this place with all my heart. It has been the backdrop to many of the best memories of my life, and today I'm delighted to open it to travelers from all over the world. I'm 100% committed to giving the best service — I'm always happy to meet and talk with my guests.”">“I love this place with all my heart. It has been the backdrop to many of the best memories of my life, and today I'm delighted to open it to travelers from all over the world. I'm 100% committed to giving the best service — I'm always happy to meet and talk with my guests.”</blockquote>
+        <blockquote class="review-card__quote" data-es="“Lo recomiendo al 100. Es un residencial con acceso controlado, frente al estadio de tenis GNP, con un área de alberca muy bonita y agradable. Tenía mis dudas porque no tenía evaluaciones, pero el anfitrión me comentó que éramos los primeros. Aun así, su atención fue excelente: siempre estuvo atento a todos los detalles y dudas. El depa cuenta con clima y ventiladores de techo con control remoto, así que no es necesario pararse a apagarlos. Volveremos en diciembre.”" data-en="“I recommend it 100%. It's a gated community with controlled access, right across from the GNP tennis stadium, with a really nice pool area. I had my doubts because there were no reviews yet, but the host told us we were the very first guests. Even so, his attention was excellent — always on top of every detail and question. The apartment has A/C and ceiling fans with remote controls, so you never have to get up to turn them off. We'll be back in December.”">“I recommend it 100%. It's a gated community with controlled access, right across from the GNP tennis stadium, with a really nice pool area. I had my doubts because there were no reviews yet, but the host told us we were the very first guests. Even so, his attention was excellent — always on top of every detail and question. The apartment has A/C and ceiling fans with remote controls, so you never have to get up to turn them off. We'll be back in December.”</blockquote>
+        <time class="review-card__date" datetime="2026-07-24" data-es="julio de 2026 · 4 noches" data-en="July 2026 · 4 nights">July 2026 · 4 nights</time>
       </figure>
       <figure class="review-card" data-review-name="Paulina González">
         <figcaption class="review-card__who">
@@ -1142,19 +1150,15 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
         <blockquote class="review-card__quote">“Está súper limpio y cómodo! La ubicación es excelente, frente al estadio GNP y solo a 5 minutos caminando de la playa. Definitivamente me quedaré aquí de nuevo, es un gran lugar para disfrutar de las áreas comunes, las albercas están increíbles!”</blockquote>
         <time class="review-card__date" datetime="2026-06-22" data-es="junio de 2026" data-en="June 2026">June 2026</time>
       </figure>
-      <figure class="review-card" data-review-name="Miguel Alejandro">
-        <figcaption class="review-card__who">
-          <span class="review-card__avatar" aria-hidden="true">M</span>
-          <span class="review-card__meta">
-            <span class="review-card__name">Miguel Alejandro</span>
-            <span class="review-card__role" data-es="Huésped · reseña de Airbnb" data-en="Guest · Airbnb review">Guest · Airbnb review</span>
-          </span>
-          <span class="review-card__stars" aria-label="5 de 5 estrellas">★★★★★</span>
-        </figcaption>
-        <blockquote class="review-card__quote" data-es="“Lo recomiendo al 100. Es un residencial con acceso controlado, frente al estadio de tenis GNP, con un área de alberca muy bonita y agradable. Tenía mis dudas porque no tenía evaluaciones, pero el anfitrión me comentó que éramos los primeros. Aun así, su atención fue excelente: siempre estuvo atento a todos los detalles y dudas. El depa cuenta con clima y ventiladores de techo con control remoto, así que no es necesario pararse a apagarlos. Volveremos en diciembre.”" data-en="“I recommend it 100%. It's a gated community with controlled access, right across from the GNP tennis stadium, with a really nice pool area. I had my doubts because there were no reviews yet, but the host told us we were the very first guests. Even so, his attention was excellent — always on top of every detail and question. The apartment has A/C and ceiling fans with remote controls, so you never have to get up to turn them off. We'll be back in December.”">“I recommend it 100%. It's a gated community with controlled access, right across from the GNP tennis stadium, with a really nice pool area. I had my doubts because there were no reviews yet, but the host told us we were the very first guests. Even so, his attention was excellent — always on top of every detail and question. The apartment has A/C and ceiling fans with remote controls, so you never have to get up to turn them off. We'll be back in December.”</blockquote>
-        <time class="review-card__date" datetime="2026-07-24" data-es="julio de 2026 · 4 noches" data-en="July 2026 · 4 nights">July 2026 · 4 nights</time>
-      </figure>
     </div>
+    <aside class="host-note">
+      <img src="/assets/images/host-rodrigo.webp" alt="Rodrigo Tristán" width="56" height="56" loading="lazy" />
+      <div>
+        <blockquote data-es="“Amo este depa con todo mi corazón. Ha sido el escenario de muchas de las mejores memorias de mi vida, y hoy tengo el gusto de abrirlo a viajeros de todo el mundo. Estoy comprometido al 100% con dar el mejor servicio: siempre estoy disponible para conocer y platicar con mis huéspedes.”" data-en="“I love this place with all my heart. It has been the backdrop to many of the best memories of my life, and today I'm delighted to open it to travelers from all over the world. I'm 100% committed to giving the best service — I'm always happy to meet and talk with my guests.”">“I love this place with all my heart. It has been the backdrop to many of the best memories of my life, and today I'm delighted to open it to travelers from all over the world. I'm 100% committed to giving the best service — I'm always happy to meet and talk with my guests.”</blockquote>
+        <p class="host-note__who">Rodrigo Tristán · <span data-es="Tu anfitrión" data-en="Your host">Your host</span></p>
+      </div>
+    </aside>
+
 
     <div class="review-cta">
       <button type="button" id="review-toggle" class="btn" data-es="✍️ Dejar una reseña" data-en="✍️ Leave a review">✍️ Leave a review</button>
