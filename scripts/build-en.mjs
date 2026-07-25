@@ -115,7 +115,7 @@ const faqEn = `{
       { "@type": "Question", "name": "How close is Revolcadero Beach?",
         "acceptedAnswer": { "@type": "Answer", "text": "The apartment is in Revolcadero, a short distance from Revolcadero Beach, the Princess Mundo Imperial hotel zone and malls like La Isla Acapulco." } },
       { "@type": "Question", "name": "What time are check-in and check-out?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Check-in is at 1:00 PM and check-out at 10:00 AM. Entry is via smart lock: the code is sent to the email and phone used for your booking, close to your arrival date." } },
+        "acceptedAnswer": { "@type": "Answer", "text": "Check-in is at 2:00 PM and check-out at 10:00 AM. Entry is via smart lock: the code is sent to the email and phone used for your booking, close to your arrival date." } },
       { "@type": "Question", "name": "Are pets allowed?",
         "acceptedAnswer": { "@type": "Answer", "text": "Pets are not allowed. Special cases only upon request and with the owner's approval before booking." } },
       { "@type": "Question", "name": "Is smoking allowed?",
