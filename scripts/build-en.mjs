@@ -50,7 +50,7 @@ const swaps = [
   ],
   [
     /<meta name="description" content="[^"]*" \/>/,
-    '<meta name="description" content="Esmeralda: 2-bedroom vacation rental in Acapulco Diamante (Diamante Lakes, Revolcadero) sleeping up to 9. Lakeside resort with pool, jacuzzi & water slide, minutes from Arena GNP Seguros. Book direct with the host — better rates than Airbnb, no platform fees." />',
+    '<meta name="description" content="Esmeralda: 2-bedroom vacation rental in Acapulco Diamante (Diamante Lakes, Revolcadero) sleeping up to 6. Lakeside resort with pool, jacuzzi & water slide, minutes from Arena GNP Seguros. Book direct with the host — better rates than Airbnb, no platform fees." />',
   ],
   [
     /<meta name="keywords" content="[^"]*" \/>/,
@@ -98,7 +98,7 @@ for (const [from, to] of swaps) {
 // ---------- 3. JSON-LD en inglés ----------
 html = html.replace(
   /"description": "Departamento de renta vacacional[^"]*"/,
-  '"description": "Vacation rental apartment for up to 9 guests at Diamante Lakes condominium, Revolcadero, Acapulco Diamante. 2 bedrooms, lakeside resort with pool, jacuzzi, water slide and swim-up bar. Minutes from Arena GNP Seguros, home of major concerts and the Mexican Open (ATP 500). Book direct with the host — no platform fees."'
+  '"description": "Vacation rental apartment for up to 6 guests at Diamante Lakes condominium, Revolcadero, Acapulco Diamante. 2 bedrooms, lakeside resort with pool, jacuzzi, water slide and swim-up bar. Minutes from Arena GNP Seguros, home of major concerts and the Mexican Open (ATP 500). Book direct with the host — no platform fees."'
 );
 html = html.replace('"@type": "VacationRental",', '"@type": "VacationRental",\n    "inLanguage": ["en", "es"],');
 // FAQ JSON-LD → versión EN completa
@@ -107,15 +107,15 @@ const faqEn = `{
     "@type": "FAQPage",
     "mainEntity": [
       { "@type": "Question", "name": "Where to stay near the Arena GNP Seguros in Acapulco?",
-        "acceptedAnswer": { "@type": "Answer", "text": "The Esmeralda apartment at Diamante Lakes (Revolcadero, Acapulco Diamante) is a few minutes' drive from the Arena GNP Seguros, home of major concerts and the Mexican Open tennis. It sleeps up to 9 guests and has a resort pool, jacuzzi and water slide." } },
+        "acceptedAnswer": { "@type": "Answer", "text": "The Esmeralda apartment at Diamante Lakes (Revolcadero, Acapulco Diamante) is a few minutes' drive from the Arena GNP Seguros, home of major concerts and the Mexican Open tennis. It sleeps up to 6 guests and has a resort pool, jacuzzi and water slide." } },
       { "@type": "Question", "name": "Is there a good Airbnb alternative in Acapulco with direct booking?",
         "acceptedAnswer": { "@type": "Answer", "text": "Yes — Esmeralda takes direct bookings at esmeraldalakes.com with a live availability calendar. Booking direct means better rates than Airbnb (no platform service fees) and direct contact with the host." } },
       { "@type": "Question", "name": "Are there vacation rentals in Acapulco Diamante for groups or families?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Esmeralda at Diamante Lakes has 2 bedrooms and sleeps up to 9, with a fully equipped kitchen and washer — ideal for families and groups visiting Acapulco Diamante." } },
+        "acceptedAnswer": { "@type": "Answer", "text": "Esmeralda at Diamante Lakes has 2 bedrooms and sleeps up to 6, with a fully equipped kitchen and washer — ideal for families and groups visiting Acapulco Diamante." } },
       { "@type": "Question", "name": "How close is Revolcadero Beach?",
         "acceptedAnswer": { "@type": "Answer", "text": "The apartment is in Revolcadero, a short distance from Revolcadero Beach, the Princess Mundo Imperial hotel zone and malls like La Isla Acapulco." } },
       { "@type": "Question", "name": "What time are check-in and check-out?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Check-in is at 12:00 PM and check-out at 11:00 AM. Entry is via smart lock: the code is sent to the email and phone used for your booking, close to your arrival date." } },
+        "acceptedAnswer": { "@type": "Answer", "text": "Check-in is at 1:00 PM and check-out at 10:00 AM. Entry is via smart lock: the code is sent to the email and phone used for your booking, close to your arrival date." } },
       { "@type": "Question", "name": "Are pets allowed?",
         "acceptedAnswer": { "@type": "Answer", "text": "Pets are not allowed. Special cases only upon request and with the owner's approval before booking." } },
       { "@type": "Question", "name": "Is smoking allowed?",
