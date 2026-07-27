@@ -46,7 +46,7 @@ const swaps = [
   ['<html lang="es">', '<html lang="en">'],
   [
     /<title>[^<]*<\/title>/,
-    "<title>Acapulco Vacation Rental · Esmeralda at Diamante Lakes — 2BR Condo, Sleeps 9 | Book Direct</title>",
+    "<title>Acapulco Vacation Rental · Esmeralda at Diamante Lakes — 2BR Condo, Sleeps 6 | Book Direct</title>",
   ],
   [
     /<meta name="description" content="[^"]*" \/>/,
@@ -54,7 +54,7 @@ const swaps = [
   ],
   [
     /<meta name="keywords" content="[^"]*" \/>/,
-    '<meta name="keywords" content="Acapulco vacation rental, Acapulco Diamante apartment, lake view condo Acapulco, Airbnb alternative Acapulco, direct booking Acapulco Mexico, condo near Arena GNP Seguros, Revolcadero vacation rental, Acapulco condo sleeps 9, Puerto Marques apartment rental" />',
+    '<meta name="keywords" content="Acapulco vacation rental, Acapulco Diamante apartment, lake view condo Acapulco, Airbnb alternative Acapulco, direct booking Acapulco Mexico, condo near Arena GNP Seguros, Revolcadero vacation rental, Acapulco condo sleeps 6, Puerto Marques apartment rental" />',
   ],
   [
     '<link rel="canonical" href="https://esmeraldalakes.com/" />',
@@ -70,7 +70,7 @@ const swaps = [
   ],
   [
     /<meta property="og:description" content="[^"]*" \/>/,
-    '<meta property="og:description" content="Your 2-bedroom home base in Acapulco Diamante: lakeside resort, pool, jacuzzi & water slide, sleeps 9, minutes from Arena GNP. Book direct — no platform fees." />',
+    '<meta property="og:description" content="Your 2-bedroom home base in Acapulco Diamante: lakeside resort, pool, jacuzzi & water slide, sleeps 6, minutes from Arena GNP. Book direct — no platform fees." />',
   ],
   [
     '<meta property="og:url" content="https://esmeraldalakes.com/" />',
@@ -84,7 +84,7 @@ const swaps = [
   ],
   [
     /<meta name="twitter:description" content="[^"]*" \/>/,
-    '<meta name="twitter:description" content="2-bedroom condo in Acapulco Diamante, sleeps 9. Pool, jacuzzi, water slide, minutes from Arena GNP. Book direct & save vs Airbnb." />',
+    '<meta name="twitter:description" content="2-bedroom condo in Acapulco Diamante, sleeps 6. Pool, jacuzzi, water slide, minutes from Arena GNP. Book direct & save vs Airbnb." />',
   ],
   // Fijar idioma de página (CSP no permite <script> inline)
   ['<body>', '<body data-page-lang="en">'],
