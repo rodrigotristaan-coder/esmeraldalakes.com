@@ -657,3 +657,28 @@ document.addEventListener("DOMContentLoaded", () => {
   loadReviews();
   wireReviewForm();
 });
+
+/* ============ Interacciones extra de la landing ============ */
+document.addEventListener("DOMContentLoaded", () => {
+  // El departamento: en ESCRITORIO, "Ver detalles" abre/cierra TODAS las áreas a la vez.
+  const rooms = Array.from(document.querySelectorAll(".room__more"));
+  const isDesktop = () => window.matchMedia("(min-width: 780px)").matches;
+  let syncingRooms = false;
+  rooms.forEach((d) => {
+    d.addEventListener("toggle", () => {
+      if (syncingRooms || !isDesktop()) return;
+      syncingRooms = true;
+      rooms.forEach((o) => { if (o !== d) o.open = d.open; });
+      syncingRooms = false;
+    });
+  });
+
+  // Acordeones (.acc): al abrir uno, se cierran los demás de su misma sección (solo uno abierto).
+  Array.from(document.querySelectorAll("details.acc")).forEach((d) => {
+    d.addEventListener("toggle", () => {
+      if (!d.open) return;
+      const scope = d.closest("section") || document;
+      scope.querySelectorAll("details.acc").forEach((o) => { if (o !== d) o.open = false; });
+    });
+  });
+});
