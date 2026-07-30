@@ -632,18 +632,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (waBook) { waBook.href = waUrl; waBook.style.display = "block"; waBook.addEventListener("click", waEvent); }
   }
 
-  // Galería: botón "ver más / ver menos"
-  const moreBtn = document.getElementById("gallery-more");
-  const grid = document.getElementById("gallery-grid");
-  if (moreBtn && grid) {
-    moreBtn.addEventListener("click", () => {
-      const collapsed = grid.classList.toggle("is-collapsed");
-      moreBtn.setAttribute("data-es", collapsed ? "Ver más fotos" : "Ver menos");
-      moreBtn.setAttribute("data-en", collapsed ? "See more photos" : "See less");
-      moreBtn.innerHTML = moreBtn.getAttribute("data-" + (document.body.dataset.lang || "es"));
-    });
-  }
-
   const form = document.getElementById("booking-form");
   if (form) form.addEventListener("submit", submitBooking);
   const tsEl = document.getElementById("bf-ts");
