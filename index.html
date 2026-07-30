@@ -554,6 +554,7 @@ section { padding: 3.2rem 1.5rem; }
 .loc__card--photo h3, .loc__card--photo .loc__link { padding-left: 0.9rem; padding-right: 0.9rem; }
 .loc__card--photo h3 { margin-top: 0.7rem; }
 .loc__card--photo .loc__link { padding-bottom: 0.8rem; display: inline-block; }
+.loc__card .loc__desc { display: block; padding: 0.15rem 0.9rem 0; font-size: 0.82rem; color: #5b6b6b; line-height: 1.4; }
 /* Tarjeta con LOGO de marca (Burger King, Walmart, etc.): logo centrado sobre blanco */
 .loc__card--logo { padding: 0; overflow: hidden; background: #fff; border-radius: var(--radius-lg); }
 .loc__card--logo .loc__logo { width: 100%; height: 118px; object-fit: contain; padding: 16px; box-sizing: border-box; display: block; background: #fff; }
@@ -1015,7 +1016,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
 
     <div class="rooms">
       <article class="room">
-        <img class="room__photo" src="assets/images/living-room.webp" alt="Sala del departamento con sofá y Smart TV" loading="lazy" />
+        <img class="room__photo" src="assets/images/entertainment-center.webp" alt="Sala del departamento con Smart TV y área de estar" loading="lazy" />
         <div class="room__tag" data-es="Sala" data-en="Living room"></div>
         <h3 data-es="Sala para convivir y descansar" data-en="Living room to hang out and unwind"></h3>
         <details class="room__more"><summary data-es="Ver detalles" data-en="See details"></summary><ul class="checks">
@@ -1037,7 +1038,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       </article>
 
       <article class="room">
-        <img class="room__photo" src="assets/images/dining.webp" alt="Comedor del departamento" loading="lazy" />
+        <img class="room__photo" src="assets/images/living-dining.webp" alt="Comedor del departamento con mesa para la familia" loading="lazy" />
         <div class="room__tag" data-es="Comedor" data-en="Dining"></div>
         <h3 data-es="Comedor para compartir" data-en="Dining area to share"></h3>
         <details class="room__more"><summary data-es="Ver detalles" data-en="See details"></summary><ul class="checks">
@@ -1048,18 +1049,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       </article>
 
       <article class="room">
-        <img class="room__photo" src="assets/images/terrace-pool-view.webp" alt="Terraza propia con mesa y vista a la alberca" loading="lazy" />
-        <div class="room__tag" data-es="Terraza · mesa" data-en="Terrace · table"></div>
-        <h3 data-es="Terraza propia con su mesita" data-en="Private terrace with its table"></h3>
-        <details class="room__more"><summary data-es="Ver detalles" data-en="See details"></summary><ul class="checks">
-          <li data-es="Mesa y sillas al aire libre" data-en="Outdoor table and chairs"></li>
-          <li data-es="Ventiladores de techo" data-en="Ceiling fans"></li>
-          <li data-es="Ideal para desayunar o cenar afuera" data-en="Perfect for breakfast or dinner outside"></li>
-        </ul></details>
-      </article>
-
-      <article class="room">
-        <img class="room__photo" src="assets/images/kitchen-bar.webp" alt="Cocina equipada con barra" loading="lazy" />
+        <img class="room__photo" src="assets/images/kitchen.webp" alt="Cocina equipada del departamento" loading="lazy" />
         <div class="room__tag" data-es="Cocina y servicio" data-en="Kitchen & laundry"></div>
         <h3 data-es="Cocina equipada con barra" data-en="Fully equipped kitchen with bar"></h3>
         <details class="room__more"><summary data-es="Ver detalles" data-en="See details"></summary><ul class="checks">
@@ -1111,9 +1101,9 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
     </div>
     <div class="amen__grid">
       <div class="amen__card amen__card--photo"><img src="assets/images/pool-aerial-v2.webp" alt="Alberca completa del condominio Diamante Lakes" loading="lazy" /><h3 data-es="Alberca" data-en="Swimming pool"></h3></div>
-      <div class="amen__card amen__card--photo"><img src="assets/images/amen-jacuzzi.jpg" alt="Jacuzzi del condominio con hidrojets" loading="lazy" style="object-position:center 30%" /><h3 data-es="Jacuzzi" data-en="Jacuzzi"></h3></div>
+      <div class="amen__card amen__card--photo"><img src="assets/images/amen-jacuzzi.jpg" alt="Jacuzzi del condominio con hidrojets" loading="lazy" style="object-position:center 82%" /><h3 data-es="Jacuzzi" data-en="Jacuzzi"></h3></div>
       <div class="amen__card amen__card--photo"><img src="assets/images/amen-chapoteadero.jpg" alt="Chapoteadero: alberca redonda poco profunda del condominio" loading="lazy" style="object-position:center 82%" /><h3 data-es="Chapoteadero" data-en="Kiddie pool"></h3></div>
-      <div class="amen__card amen__card--photo"><img src="assets/images/pool-hero.webp" alt="Tobogán en la alberca del condominio" loading="lazy" /><h3 data-es="Tobogán" data-en="Water slide"></h3></div>
+      <div class="amen__card amen__card--photo"><img src="assets/images/amen-tobogan.jpg" alt="Tobogán en la alberca del condominio" loading="lazy" /><h3 data-es="Tobogán" data-en="Water slide"></h3></div>
       <div class="amen__card amen__card--photo"><img src="assets/images/amen-bar.jpg" alt="Bar tipo palapa pegado a la alberca" loading="lazy" style="object-position:center 58%" /><h3 data-es="Bar en la alberca" data-en="Swim-up bar"></h3></div>
       <div class="amen__card amen__card--photo"><img src="assets/images/pool-loungers.webp" alt="Camastros y sillones junto a la alberca" loading="lazy" /><h3 data-es="Camastros y sillones" data-en="Loungers & sofas"></h3></div>
     </div>
@@ -1142,27 +1132,26 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Playa+Revolcadero+Acapulco">
         <img src="assets/images/punto-revolcadero.jpg" alt="Playa Revolcadero, Acapulco Diamante" loading="lazy" />
         <h3 data-es="Playa Revolcadero" data-en="Revolcadero Beach"></h3>
+        <span class="loc__desc" data-es="La playa más cercana (5 min): amplia, oleaje abierto y atardeceres." data-en="The closest beach (5 min): wide, open surf and sunsets."></span>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
       <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Princess+Mundo+Imperial+Acapulco">
         <img src="assets/images/punto-princess.jpg" alt="Playa del Princess Mundo Imperial, Acapulco" loading="lazy" />
         <h3 data-es="Playa Hotel Princess" data-en="Princess Hotel beach"></h3>
+        <span class="loc__desc" data-es="La playa del icónico Princess Mundo Imperial, a unos minutos." data-en="The beach of the iconic Princess Mundo Imperial, minutes away."></span>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
       <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=La+Isla+Acapulco+Shopping+Village">
         <img src="assets/images/punto-laisla.jpg" alt="La Isla Acapulco Shopping Village" loading="lazy" />
         <h3 data-es="La Isla (plaza)" data-en="La Isla (mall)"></h3>
+        <span class="loc__desc" data-es="Plaza al aire libre con canales, tiendas, cine y restaurantes." data-en="Open-air mall with canals, shops, cinema and restaurants."></span>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
       <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Arena+GNP+Seguros+Acapulco">
         <img src="assets/images/punto-arenagnp.jpg" alt="Arena GNP Seguros, Acapulco" loading="lazy" />
         <h3>Arena GNP Seguros</h3>
+        <span class="loc__desc" data-es="Sede de conciertos y del Abierto Mexicano de Tenis, a minutos." data-en="Home of concerts and the Mexican Open tennis, minutes away."></span>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
-      </a>
-      <a class="loc__card loc__card--photo loc__card--wide" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&origin=Ciudad+de+Mexico&destination=Condominio+Diamante+Lakes+Acapulco">
-        <img src="assets/images/punto-carretera.jpg" alt="Autopista del Sol rumbo a Acapulco" loading="lazy" />
-        <h3 data-es="Desde la Ciudad de México" data-en="Driving from Mexico City"></h3>
-        <span class="loc__link" data-es="Ver ruta por la Autopista del Sol →" data-en="Get directions via the Autopista del Sol →"></span>
       </a>
     </div>
       </div>
@@ -1182,9 +1171,9 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
         <h3 data-es="Gasolinera · 3 min" data-en="Gas station · 3 min"></h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
-      <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Taqueria+Acapulco+Diamante">
-        <img src="assets/images/punto-taqueria.jpg" alt="Taquería cerca del departamento" loading="lazy" />
-        <h3 data-es="Taquería · 5 min" data-en="Taco spot · 5 min"></h3>
+      <a class="loc__card loc__card--logo" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Oxxo+Acapulco+Diamante">
+        <img class="loc__logo" src="assets/images/logo-oxxo.png" alt="Oxxo" loading="lazy" />
+        <h3 data-es="Oxxo · 4 min" data-en="Oxxo · 4 min"></h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
       <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Farmacia+Acapulco+Diamante">
@@ -1213,6 +1202,11 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       <a class="loc__card loc__card--logo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Home+Depot+Acapulco+Diamante">
         <img class="loc__logo" src="assets/images/logo-homedepot.jpg" alt="The Home Depot" loading="lazy" />
         <h3 data-es="Home Depot · 5 min" data-en="Home Depot · 5 min"></h3>
+        <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
+      </a>
+      <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Taqueria+Acapulco+Diamante">
+        <img src="assets/images/punto-taqueria.jpg" alt="Taquería cerca del departamento" loading="lazy" />
+        <h3 data-es="Taquería · 5 min" data-en="Taco spot · 5 min"></h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
     </div>
