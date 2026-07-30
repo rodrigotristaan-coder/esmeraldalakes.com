@@ -660,6 +660,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 /* ============ Interacciones extra de la landing ============ */
 document.addEventListener("DOMContentLoaded", () => {
+  // Cinta dinámica: duplica los chips para que el desplazamiento sea un loop continuo.
+  const mq = document.getElementById("dept-marquee");
+  if (mq) mq.innerHTML += mq.innerHTML;
+
   // El departamento: en ESCRITORIO, "Ver detalles" abre/cierra TODAS las áreas a la vez.
   const rooms = Array.from(document.querySelectorAll(".room__more"));
   const isDesktop = () => window.matchMedia("(min-width: 780px)").matches;
