@@ -417,13 +417,16 @@ section { padding: 3.2rem 1.5rem; }
 .reviews__grid .review-card { flex: 1 1 300px; max-width: 430px; }
 /* Carrusel de reseñas (lo activa el JS con .reviews__track) */
 .reviews__track { flex-wrap: nowrap !important; justify-content: flex-start; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; gap: 1.2rem; padding: 4px 2px 14px; scrollbar-width: thin; }
+.reviews__track { align-items: flex-start; }   /* cada tarjeta a su altura: sin huecos al deslizar */
 .reviews__track .review-card { flex: 0 0 clamp(280px, 86%, 380px) !important; max-width: 380px !important; scroll-snap-align: center; }
+/* la reseña más larga se recorta para no estirar el carrusel */
+.reviews__track .review-card__quote { display: -webkit-box; -webkit-line-clamp: 8; -webkit-box-orient: vertical; overflow: hidden; }
 .reviews__track::-webkit-scrollbar { height: 6px; }
 .reviews__track::-webkit-scrollbar-thumb { background: rgba(0,0,0,.18); border-radius: 3px; }
 
 /* Receta de vidrio (Apple-style): panel translúcido, borde luminoso, esquinas generosas */
 .review-card, .review-form-wrap, .room, .amen__card, .loc__card, .safety__card,
-.faq__item, .capacity-note, .safety__photo figcaption, details.acc, .how__card {
+.faq__item, .capacity-note, .safety__photo figcaption, details.acc, .how__card, .blogcard {
   background: var(--glass);
   -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border);
@@ -540,6 +543,12 @@ section { padding: 3.2rem 1.5rem; }
 @media (max-width: 600px) { .recs__photos { grid-template-columns: 1fr; } .recphoto img { height: 200px; } }
 /* Puntos clave con foto (tarjeta-enlace) */
 .loc__card--photo { padding: 0; overflow: hidden; position: relative; border-radius: var(--radius-lg); }
+/* Puntos clave con el mismo formato que las recomendaciones del anfitrión */
+.loc__card--rec { padding: 0; overflow: hidden; position: relative; border-radius: var(--radius-lg); background: #fff; }
+.loc__card--rec img { width: 100%; height: 168px; object-fit: cover; display: block; transition: transform .4s ease; }
+.loc__card--rec:hover img { transform: scale(1.06); }
+.loc__card--rec h3 { margin: 0.7rem 0 0; padding: 0 0.85rem; font-size: 1rem; color: var(--emerald-dark); }
+.loc__card--rec .loc__desc { padding: 0.15rem 0.85rem 0.9rem; }
 .loc__card--photo img { width: 100%; height: 130px; object-fit: cover; display: block; transition: transform .4s ease; }
 .loc__card--photo:hover img { transform: scale(1.06); }
 .loc__card--photo .loc__ico { position: absolute; top: 8px; left: 10px; margin: 0; font-size: 1.5rem; filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
@@ -701,6 +710,16 @@ section { padding: 3.2rem 1.5rem; }
 
 /* ---------- FAQ ---------- */
 .faq { background: transparent; }
+/* ---- Blog (contenido de guía / posicionamiento, fuera de las preguntas del huésped) ---- */
+.blogsec__grid { max-width: var(--max); margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; }
+.blogcard { display: block; text-decoration: none; padding: 1.4rem 1.3rem; border-radius: var(--radius-lg); transition: transform .25s ease; }
+.blogcard:hover { transform: translateY(-3px); }
+.blogcard h3 { font-size: 1.05rem; color: var(--emerald-dark); margin-bottom: 0.5rem; line-height: 1.3; }
+.blogcard p { color: var(--muted); font-size: 0.92rem; }
+.blogcard__link { display: inline-block; margin-top: 0.7rem; color: var(--emerald); font-weight: 600; font-size: 0.9rem; }
+.blogsec__cta { text-align: center; margin-top: 1.6rem; }
+@media (max-width: 860px) { .blogsec__grid { grid-template-columns: 1fr; } }
+
 .faq__list { max-width: 820px; margin: 0 auto; }
 .faq__item {
   border-radius: var(--radius); padding: 1.4rem 1.7rem; margin-bottom: 0.9rem;
@@ -1019,7 +1038,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       </article>
 
       <article class="room">
-        <img class="room__photo" src="assets/images/comedor-v2.webp" alt="Comedor con mesa de vidrio para seis personas" loading="lazy" />
+        <img class="room__photo" src="assets/images/comedor-v3.webp" alt="Comedor con mesa de vidrio para seis personas" loading="lazy" />
         <div class="room__tag" data-es="Comedor" data-en="Dining"></div>
         <h3 data-es="Comedor para compartir" data-en="Dining area to share"></h3>
         <details class="room__more"><summary data-es="Ver detalles" data-en="See details"></summary><ul class="checks">
@@ -1121,29 +1140,25 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       <summary><span data-es="📍 Cómo llegar a los puntos clave" data-en="📍 How to get to the key spots"></span></summary>
       <div class="acc__body">
     <div class="loc__grid">
-      <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Playa+Revolcadero+Acapulco">
+      <a class="loc__card loc__card--rec" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Playa+Revolcadero+Acapulco">
         <img src="assets/images/punto-revolcadero.jpg" alt="Playa Revolcadero, Acapulco Diamante" loading="lazy" />
         <h3 data-es="Playa Revolcadero" data-en="Revolcadero Beach"></h3>
         <span class="loc__desc" data-es="La playa más cercana (5 min): amplia, oleaje abierto y atardeceres." data-en="The closest beach (5 min): wide, open surf and sunsets."></span>
-        <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
-      <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Princess+Mundo+Imperial+Acapulco">
+      <a class="loc__card loc__card--rec" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Princess+Mundo+Imperial+Acapulco">
         <img src="assets/images/punto-princess.jpg" alt="Playa del Princess Mundo Imperial, Acapulco" loading="lazy" />
         <h3 data-es="Playa Hotel Princess" data-en="Princess Hotel beach"></h3>
         <span class="loc__desc" data-es="La playa del icónico Princess Mundo Imperial, a unos minutos." data-en="The beach of the iconic Princess Mundo Imperial, minutes away."></span>
-        <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
-      <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=La+Isla+Acapulco+Shopping+Village">
+      <a class="loc__card loc__card--rec" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=La+Isla+Acapulco+Shopping+Village">
         <img src="assets/images/punto-laisla.jpg" alt="La Isla Acapulco Shopping Village" loading="lazy" />
         <h3 data-es="La Isla (plaza)" data-en="La Isla (mall)"></h3>
         <span class="loc__desc" data-es="Plaza al aire libre con canales, tiendas, cine y restaurantes." data-en="Open-air mall with canals, shops, cinema and restaurants."></span>
-        <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
-      <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Arena+GNP+Seguros+Acapulco">
+      <a class="loc__card loc__card--rec" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Arena+GNP+Seguros+Acapulco">
         <img src="assets/images/punto-arenagnp.jpg" alt="Arena GNP Seguros, Acapulco" loading="lazy" />
         <h3>Arena GNP Seguros</h3>
         <span class="loc__desc" data-es="Sede de conciertos y del Abierto Mexicano de Tenis, a minutos." data-en="Home of concerts and the Mexican Open tennis, minutes away."></span>
-        <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
     </div>
       </div>
@@ -1214,7 +1229,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
             <figcaption><strong>Paititi del Mar</strong><span data-es="Mariscos gourmet en jardín · nuestro favorito" data-en="Gourmet seafood in a garden · our favorite"></span></figcaption>
           </figure>
           <figure class="recphoto">
-            <img src="assets/images/rec-zibu.jpg" alt="Restaurante Zibu con vista a la bahía, Acapulco" loading="lazy" />
+            <img src="assets/images/rec-zibu-v2.webp" alt="Terraza del restaurante Zibu con vista a la bahía, Acapulco" loading="lazy" />
             <figcaption><strong>Zibu</strong><span data-es="Cocina mexicano-thai con vista a la bahía" data-en="Mexican-Thai cuisine with bay views"></span></figcaption>
           </figure>
           <figure class="recphoto">
@@ -1222,7 +1237,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
             <figcaption><strong>Tabachín</strong><span data-es="Alta cocina en Pierre Mundo Imperial · a un paso" data-en="Fine dining at Pierre Mundo Imperial · steps away"></span></figcaption>
           </figure>
           <figure class="recphoto">
-            <img src="assets/images/rec-banyan.jpg" alt="Saffron y Cello en Banyan Tree Cabo Marqués" loading="lazy" />
+            <img src="assets/images/rec-saffron-v2.webp" alt="Terraza de Saffron en Banyan Tree Cabo Marqués" loading="lazy" />
             <figcaption><strong>Saffron &amp; Cello</strong><span data-es="En Banyan Tree Cabo Marqués · lo más elegante" data-en="At Banyan Tree Cabo Marqués · the fanciest"></span></figcaption>
           </figure>
         </div>
@@ -1436,37 +1451,97 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
   <section class="faq" id="faq">
     <div class="section__head">
       <h2 data-es="Preguntas frecuentes" data-en="Frequently asked questions"></h2>
-      <p data-es="Todo sobre hospedarte en Acapulco Diamante, cerca de la Arena GNP." data-en="Everything about staying in Acapulco Diamante, near the Arena GNP."></p>
+      <p data-es="Lo que suelen preguntar nuestros huéspedes: reglas del condominio, accesos, horarios y multas." data-en="What our guests usually ask: condo rules, access, hours and fines."></p>
     </div>
     <div class="faq__list">
       <details class="faq__item">
-        <summary><h3 data-es="¿Dónde hospedarse para un concierto o el tenis en la Arena GNP Seguros?" data-en="Where to stay for a concert or the tennis at the Arena GNP Seguros?"></h3></summary>
-        <p data-es="El Departamento Esmeralda en Diamante Lakes (Revolcadero, Acapulco Diamante) está a pocos minutos de la Arena GNP Seguros, sede de conciertos y del Abierto Mexicano de Tenis: regresas a descansar sin traslados largos ni tarifas infladas. Aloja hasta 6 huéspedes, con reserva directa y sin intermediarios." data-en="The Esmeralda apartment at Diamante Lakes (Revolcadero, Acapulco Diamante) is minutes from the Arena GNP Seguros, home of concerts and the Mexican Open tennis — head back to rest without long transfers or surge pricing. Sleeps up to 6, direct booking with no middlemen."></p>
+        <summary><h3 data-es="¿Cuántos lugares de estacionamiento tengo?" data-en="How many parking spaces do I get?"></h3></summary>
+        <p data-es="Tienes <strong>1 cajón asignado</strong> al departamento. Tus visitas se estacionan en los cajones del perímetro del cluster. No se pueden usar cajones de otros departamentos aunque estén vacíos." data-en="You get <strong>1 assigned space</strong> for the apartment. Your visitors park in the spaces around the cluster perimeter. Other units' spaces can't be used, even if empty."></p>
       </details>
       <details class="faq__item">
-        <summary><h3 data-es="¿Departamentos para rentar en Acapulco Diamante para grupos?" data-en="Apartments to rent in Acapulco Diamante for groups?"></h3></summary>
-        <p data-es="Sí. Esmeralda tiene 2 recámaras y aloja hasta 6 personas, con cocina equipada y lavadora — ideal para familias y grupos." data-en="Yes. Esmeralda has 2 bedrooms and sleeps up to 6, with a fully equipped kitchen and washer — ideal for families and groups."></p>
+        <summary><h3 data-es="¿Se pueden hacer fiestas o eventos?" data-en="Are parties or events allowed?"></h3></summary>
+        <p data-es="No. El condominio <strong>no permite fiestas ni eventos</strong>. La música dentro del departamento debe estar a volumen moderado, y después de las 23:00 aún más bajo." data-en="No. The condo <strong>does not allow parties or events</strong>. Music inside the apartment must be kept at a moderate volume, and even lower after 11:00 PM."></p>
       </details>
       <details class="faq__item">
-        <summary><h3 data-es="¿Qué tan cerca está la playa Revolcadero y otros lugares?" data-en="How close are Revolcadero beach and other spots?"></h3></summary>
-        <p data-es="Estás en Revolcadero, a corta distancia de la playa, del Hotel Princess Mundo Imperial y de plazas como La Isla Acapulco." data-en="You’re in Revolcadero, a short distance from the beach, the Princess Mundo Imperial hotel and malls like La Isla Acapulco."></p>
+        <summary><h3 data-es="¿Puedo recibir visitas?" data-en="Can I have visitors?"></h3></summary>
+        <p data-es="Sí, pero requieren <strong>autorización previa</strong> del propietario y aviso a la administración: máximo <strong>4 personas</strong>, sin uso del área de alberca y sin pernoctar. Sin ese aviso, la caseta niega el acceso." data-en="Yes, but they need the owner's <strong>prior approval</strong> and notice to the administration: maximum <strong>4 people</strong>, no pool access and no overnight stays. Without that notice, the gatehouse will deny entry."></p>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Hay multas? ¿De cuánto?" data-en="Are there fines? How much?"></h3></summary>
+        <p data-es="Sí. Incumplir el reglamento genera primero una llamada de atención; en caso de reincidencia, una <strong>multa de $2,500 MXN</strong>. Las multas de huéspedes se le cobran al propietario, así que te pedimos cuidar las reglas del condominio." data-en="Yes. Breaking the rules brings a first warning; if repeated, a <strong>$2,500 MXN fine</strong>. Guest fines are charged to the owner, so please respect the condo rules."></p>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Necesito pulsera para entrar?" data-en="Do I need a wristband to get in?"></h3></summary>
+        <p data-es="Sí. Al llegar pasas a la administración por tus <strong>pulseras de identificación</strong> (<strong>$50 MXN cada una</strong>, sujeto a cambios). Sin pulsera no hay acceso al condominio ni a las áreas comunes; no te la quites durante la estancia porque el reemplazo se cobra." data-en="Yes. On arrival you stop by the administration office for your <strong>ID wristbands</strong> (<strong>$50 MXN each</strong>, subject to change). Without a wristband there's no access to the condo or common areas; keep it on — replacements are charged."></p>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Cuántas personas pueden quedarse?" data-en="How many people can stay?"></h3></summary>
+        <p data-es="Hasta <strong>6 huéspedes</strong>. Es el máximo que permite el condominio para departamentos de 2 recámaras, y la renta se registra con los nombres del grupo 48 h antes." data-en="Up to <strong>6 guests</strong>. That's the condo maximum for 2-bedroom units, and the stay is registered with the group's names 48 hours in advance."></p>
       </details>
       <details class="faq__item">
         <summary><h3 data-es="¿A qué hora son el check-in y el check-out?" data-en="What time are check-in and check-out?"></h3></summary>
-        <p data-es="Check-in a las <strong>14:00</strong> y check-out a las <strong>10:00</strong>. El acceso es con cerradura inteligente: el código se envía al correo y celular con los que reservaste, cerca de tu fecha de llegada." data-en="Check-in at <strong>2:00 PM</strong> and check-out at <strong>10:00 AM</strong>. Entry is via smart lock: the code is sent to the email and phone used for your booking, close to your arrival date."></p>
-      </details>
-      <details class="faq__item">
-        <summary><h3 data-es="¿Aceptan mascotas?" data-en="Are pets allowed?"></h3></summary>
-        <p data-es="No se permiten mascotas. Casos especiales, únicamente a solicitud y con autorización del propietario antes de reservar." data-en="Pets are not allowed. Special cases only upon request and with the owner's approval before booking."></p>
-      </details>
-      <details class="faq__item">
-        <summary><h3 data-es="¿Se puede fumar?" data-en="Is smoking allowed?"></h3></summary>
-        <p data-es="Dentro del departamento no; en la <strong>terraza privada sí</strong> está permitido." data-en="Not inside the apartment; smoking <strong>is allowed on the private terrace</strong>."></p>
+        <p data-es="Check-in a las <strong>14:00</strong> y check-out a las <strong>10:00</strong>. El acceso es con cerradura inteligente: el código llega al correo y celular con los que reservaste, cerca de tu fecha de llegada." data-en="Check-in at <strong>2:00 PM</strong> and check-out at <strong>10:00 AM</strong>. Entry is via smart lock: the code arrives at the email and phone used for your booking, close to your arrival date."></p>
       </details>
       <details class="faq__item">
         <summary><h3 data-es="¿Cuál es el horario de la alberca y el jacuzzi?" data-en="What are the pool and jacuzzi hours?"></h3></summary>
-        <p data-es="Las áreas de alberca y jacuzzi abren de <strong>9:00 a 23:00</strong> todos los días. El jacuzzi es solo para mayores de 12 años. Usa las toallas de alberca del depa (son las reglamentarias del condominio); no se permite vidrio, alimentos ni hieleras en el área." data-en="The pool and jacuzzi areas are open <strong>9:00 AM – 11:00 PM</strong> daily. The jacuzzi is for ages 12+. Use the pool towels provided in the apartment (they are the condo-approved ones); no glass, food or coolers in the pool area."></p>
+        <p data-es="De <strong>9:00 a 23:00</strong> todos los días (mantenimiento de 7:00 a 9:00). El <strong>jacuzzi es solo para mayores de 12 años</strong>, sin excepción, y no hay servicio de salvavidas." data-en="<strong>9:00 AM – 11:00 PM</strong> daily (maintenance 7:00–9:00 AM). The <strong>jacuzzi is for ages 12+</strong>, no exceptions, and there is no lifeguard on duty."></p>
       </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Qué está prohibido en el área de la alberca?" data-en="What's not allowed in the pool area?"></h3></summary>
+        <p data-es="Nada de <strong>vidrio, cerámica ni cristal</strong>, ni hieleras. Comer, fumar o beber dentro de la alberca tampoco; los alimentos van solo en las mesas alrededor de la palapa. Prohibido apartar camastros (a los 20 minutos sin uso se retiran las cosas) y los inflables de más de 60 cm." data-en="No <strong>glass or ceramic</strong> items, and no coolers. No eating, smoking or drinking inside the pool; food only at the tables around the palapa. Saving loungers is not allowed (after 20 minutes unused, belongings are removed) and inflatables over 60 cm are banned."></p>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Qué toallas debo usar en la alberca?" data-en="Which towels should I use at the pool?"></h3></summary>
+        <p data-es="Las <strong>toallas de alberca que están en el departamento</strong>: son las reglamentarias del condominio (color miel con el logotipo y el número de depa). No se permiten toallas ni sombrillas de otro color." data-en="The <strong>pool towels provided in the apartment</strong>: they are the condo-approved ones (honey colored, with the logo and unit number). Towels or umbrellas of any other color are not allowed."></p>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Aceptan mascotas?" data-en="Are pets allowed?"></h3></summary>
+        <p data-es="No se permiten mascotas. Casos especiales, únicamente a solicitud y con autorización del propietario antes de reservar. Aun autorizadas, no pueden estar en áreas verdes, alberca ni jacuzzi." data-en="Pets are not allowed. Special cases only upon request and with the owner's approval before booking. Even when approved, pets can't be in the green areas, pool or jacuzzi."></p>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Se puede fumar?" data-en="Is smoking allowed?"></h3></summary>
+        <p data-es="Dentro del departamento no; en la <strong>terraza privada sí</strong> está permitido. En la alberca y el jacuzzi no se puede fumar." data-en="Not inside the apartment; smoking <strong>is allowed on the private terrace</strong>. No smoking in the pool or jacuzzi."></p>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Dónde dejo la basura?" data-en="Where do I leave the trash?"></h3></summary>
+        <p data-es="En los <strong>contenedores del perímetro del cluster</strong>, siempre en bolsas bien cerradas. No dejes basura ni objetos en la terraza." data-en="In the <strong>containers around the cluster perimeter</strong>, always in well-closed bags. Don't leave trash or objects on the terrace."></p>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Tengo acceso a la Casa Club?" data-en="Do I have access to the Club House?"></h3></summary>
+        <p data-es="No. La Casa Club es exclusiva de propietarios; los huéspedes en renta no tienen acceso. Sí tienes alberca, jacuzzi, tobogán, chapoteadero y bar de la alberca." data-en="No. The Club House is for owners only; rental guests don't have access. You do have the pool, jacuzzi, waterslide, kiddie pool and swim-up bar."></p>
+      </details>
+      <details class="faq__item">
+        <summary><h3 data-es="¿Puedo entrar en coche y a qué velocidad?" data-en="Can I drive in, and at what speed?"></h3></summary>
+        <p data-es="Sí, con tu <strong>marbete de acceso siempre visible</strong> en el retrovisor. La velocidad máxima dentro del condominio es de <strong>10 km/h</strong>." data-en="Yes, with your <strong>access sticker always visible</strong> on the rear-view mirror. The speed limit inside the condo is <strong>10 km/h</strong>."></p>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============ BLOG ============ -->
+  <section class="blogsec" id="blog">
+    <div class="section__head">
+      <h2 data-es="Blog · Esmeralda Lakes" data-en="Blog · Esmeralda Lakes"></h2>
+      <p data-es="Guías de Acapulco Diamante: dónde hospedarte, qué hay cerca y cómo sacarle jugo a tu viaje." data-en="Acapulco Diamante guides: where to stay, what's nearby and how to make the most of your trip."></p>
+    </div>
+    <div class="blogsec__grid">
+      <a class="blogcard" href="blog.html">
+        <h3 data-es="Dónde hospedarse para un concierto o el tenis en la Arena GNP Seguros" data-en="Where to stay for a concert or the tennis at the Arena GNP Seguros"></h3>
+        <p data-es="El Departamento Esmeralda en Diamante Lakes (Revolcadero, Acapulco Diamante) está a pocos minutos de la Arena GNP Seguros, sede de conciertos y del Abierto Mexicano de Tenis: regresas a descansar sin traslados largos ni tarifas infladas. Aloja hasta 6 huéspedes, con reserva directa y sin intermediarios." data-en="The Esmeralda apartment at Diamante Lakes (Revolcadero, Acapulco Diamante) is minutes from the Arena GNP Seguros, home of concerts and the Mexican Open tennis — head back to rest without long transfers or surge pricing. Sleeps up to 6, direct booking with no middlemen."></p>
+        <span class="blogcard__link" data-es="Leer más →" data-en="Read more →"></span>
+      </a>
+      <a class="blogcard" href="blog.html">
+        <h3 data-es="Departamentos para rentar en Acapulco Diamante para grupos" data-en="Apartments to rent in Acapulco Diamante for groups"></h3>
+        <p data-es="Esmeralda tiene 2 recámaras y aloja hasta 6 personas, con cocina equipada y lavadora — ideal para familias y grupos que prefieren un depa completo antes que varios cuartos de hotel." data-en="Esmeralda has 2 bedrooms and sleeps up to 6, with a fully equipped kitchen and washer — ideal for families and groups who'd rather have a whole apartment than several hotel rooms."></p>
+        <span class="blogcard__link" data-es="Leer más →" data-en="Read more →"></span>
+      </a>
+      <a class="blogcard" href="blog.html">
+        <h3 data-es="Qué tan cerca están la playa Revolcadero y los demás lugares" data-en="How close are Revolcadero beach and the other spots"></h3>
+        <p data-es="Estás en Revolcadero, a corta distancia de la playa, del Hotel Princess Mundo Imperial y de plazas como La Isla Acapulco — además de Walmart, Starbucks y farmacia a minutos." data-en="You're in Revolcadero, a short distance from the beach, the Princess Mundo Imperial hotel and malls like La Isla Acapulco — plus Walmart, Starbucks and a pharmacy minutes away."></p>
+        <span class="blogcard__link" data-es="Leer más →" data-en="Read more →"></span>
+      </a>
+    </div>
+    <div class="blogsec__cta">
+      <a class="btn btn--sm" href="blog.html" data-es="Ver todo el blog" data-en="See the full blog"></a>
     </div>
   </section>
 
