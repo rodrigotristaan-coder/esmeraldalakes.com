@@ -337,10 +337,16 @@ function renderFinance(movs) {
   if (movs.length > 40) box.insertAdjacentHTML("beforeend", `<p class="muted">… y ${movs.length - 40} movimientos más (siguen contando en los totales).</p>`);
 }
 
+// Estado local de finanzas: tras escribir usamos la lista que el server ya tiene
+// en memoria (viene en la respuesta) en vez de releer el blob — así evitamos el
+// read-after-write stale que hacía "desaparecer" el movimiento recién creado.
+let FIN = [];
+function applyFinance(movs) { FIN = Array.isArray(movs) ? movs : []; renderFinance(FIN); }
+
 async function loadFinance() {
   try {
     const data = await api("&action=finance-list");
-    renderFinance(data.movs || []);
+    applyFinance(data.movs || []);
   } catch { /* si falla, el resto del panel sigue */ }
 }
 
@@ -351,16 +357,27 @@ async function financeAdd(params) {
   return r;
 }
 
+// Candado anti-doble-click: el put del blob tarda; sin esto el usuario re-clickea
+// y se crean movimientos duplicados (o se pisan escrituras).
+let finBusy = false;
 async function addMovFromForm() {
+  if (finBusy) return;
   const type = $("f-type").value, date = $("f-date").value, concept = $("f-concept").value.trim();
   const category = $("f-cat").value, amount = parseFloat($("f-amount").value);
   if (!date || !concept || !(amount > 0)) return msg("Faltan datos: fecha, concepto y monto.", false);
+  const btn = $("f-add");
+  finBusy = true;
+  if (btn) { btn.disabled = true; btn.dataset.txt = btn.textContent; btn.textContent = "Guardando…"; }
   try {
-    await financeAdd({ type, date, concept, category, amount });
+    const r = await financeAdd({ type, date, concept, category, amount });
+    applyFinance(r.movs || FIN.concat(r.mov));
     msg(type === "in" ? "Ingreso registrado ✅" : "Gasto registrado ✅");
     $("f-concept").value = ""; $("f-amount").value = "";
-    loadFinance();
   } catch { msg("Error al registrar el movimiento.", false); }
+  finally {
+    finBusy = false;
+    if (btn) { btn.disabled = false; if (btn.dataset.txt) btn.textContent = btn.dataset.txt; }
+  }
 }
 
 async function quickIncome(b) {
@@ -370,9 +387,9 @@ async function quickIncome(b) {
   const amount = parseFloat(String(monto || "").replace(/[$,\s]/g, ""));
   if (!(amount > 0)) return;
   try {
-    await financeAdd({ type: "in", date: b.start, concept: `Reserva ${b.name || "directa"} ${b.start} → ${b.end}`, category: "Reserva", amount });
+    const r = await financeAdd({ type: "in", date: b.start, concept: `Reserva ${b.name || "directa"} ${b.start} → ${b.end}`, category: "Reserva", amount });
+    applyFinance(r.movs || FIN.concat(r.mov));
     msg("Ingreso de la reserva registrado ✅");
-    loadFinance();
   } catch { msg("Error al registrar el ingreso.", false); }
 }
 
@@ -380,9 +397,9 @@ async function duplicateMov(m) {
   const hoy = new Date().toISOString().slice(0, 10);
   if (!confirm(`¿Repetir "${m.concept}" (${money(m.amount)}) con fecha de hoy?`)) return;
   try {
-    await financeAdd({ type: m.type, date: hoy, concept: m.concept, category: m.category || "", amount: m.amount });
+    const r = await financeAdd({ type: m.type, date: hoy, concept: m.concept, category: m.category || "", amount: m.amount });
+    applyFinance(r.movs || FIN.concat(r.mov));
     msg("Movimiento duplicado ✅");
-    loadFinance();
   } catch { msg("Error al duplicar.", false); }
 }
 
@@ -391,8 +408,8 @@ async function deleteMov(m) {
   try {
     const r = await api(`&action=finance-del&id=${encodeURIComponent(m.id)}`);
     if (!r.ok) throw new Error(r.error);
+    applyFinance(r.movs || FIN.filter((x) => x.id !== m.id));
     msg("Movimiento eliminado 🗑️");
-    loadFinance();
   } catch { msg("Error al eliminar.", false); }
 }
 

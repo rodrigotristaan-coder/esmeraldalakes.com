@@ -101,14 +101,18 @@ module.exports = async (req, res) => {
       const mov = { id: crypto.randomBytes(5).toString("hex"), type, date: q.date, concept, category, amount, at: new Date().toISOString() };
       movs.push(mov);
       await writeFinance(movs);
-      return res.status(200).json({ ok: true, mov });
+      // Devuelve la lista autoritativa (ya en memoria tras el put): el cliente la
+      // usa directo y NO relee el blob (evita read-after-write stale = mov "perdido").
+      const sorted = movs.slice().sort((a, b) => (b.date + b.at).localeCompare(a.date + a.at));
+      return res.status(200).json({ ok: true, mov, movs: sorted });
     }
     if (action === "finance-del") {
       const movs = await readFinance();
       const next = movs.filter((m) => m.id !== q.id);
       if (next.length === movs.length) return res.status(404).json({ ok: false, error: "movimiento" });
       await writeFinance(next);
-      return res.status(200).json({ ok: true });
+      const sorted = next.slice().sort((a, b) => (b.date + b.at).localeCompare(a.date + a.at));
+      return res.status(200).json({ ok: true, movs: sorted });
     }
 
     if (action === "customer-seed") {
