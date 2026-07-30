@@ -522,6 +522,12 @@ section { padding: 5rem 1.5rem; }
 .loc__card--photo h3, .loc__card--photo .loc__link { padding-left: 0.9rem; padding-right: 0.9rem; }
 .loc__card--photo h3 { margin-top: 0.7rem; }
 .loc__card--photo .loc__link { padding-bottom: 0.8rem; display: inline-block; }
+/* Tarjeta con LOGO de marca (Burger King, Walmart, etc.): logo centrado sobre blanco */
+.loc__card--logo { padding: 0; overflow: hidden; background: #fff; }
+.loc__card--logo .loc__logo { width: 100%; height: 118px; object-fit: contain; padding: 16px; box-sizing: border-box; display: block; background: #fff; }
+.loc__card--logo h3, .loc__card--logo .loc__link { padding-left: 0.9rem; padding-right: 0.9rem; }
+.loc__card--logo h3 { margin-top: 0.6rem; }
+.loc__card--logo .loc__link { padding-bottom: 0.8rem; display: inline-block; }
 
 /* ---------- Ubicación ---------- */
 .loc { background: transparent; }
@@ -1076,7 +1082,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
     <div class="map map--main">
       <iframe title="Mapa Condominio Diamante Lakes"
         src="https://www.google.com/maps?q=Condominio+Diamante+Lakes+Revolcadero+Acapulco&output=embed"
-        loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        loading="eager" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
 
     <details class="acc">
@@ -1085,26 +1091,27 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
     <div class="loc__grid">
       <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Playa+Revolcadero+Acapulco">
         <img src="/assets/images/punto-revolcadero.jpg" alt="Playa Revolcadero, Acapulco Diamante" loading="lazy" />
-        <span class="loc__ico">🏖️</span><h3 data-es="Playa Revolcadero" data-en="Revolcadero Beach">Revolcadero Beach</h3>
+        <h3 data-es="Playa Revolcadero" data-en="Revolcadero Beach">Revolcadero Beach</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →">Get directions →</span>
       </a>
       <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Princess+Mundo+Imperial+Acapulco">
         <img src="/assets/images/punto-princess.jpg" alt="Playa del Princess Mundo Imperial, Acapulco" loading="lazy" />
-        <span class="loc__ico">🏨</span><h3 data-es="Playa Hotel Princess" data-en="Princess Hotel beach">Princess Hotel beach</h3>
+        <h3 data-es="Playa Hotel Princess" data-en="Princess Hotel beach">Princess Hotel beach</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →">Get directions →</span>
       </a>
       <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=La+Isla+Acapulco+Shopping+Village">
         <img src="/assets/images/punto-laisla.jpg" alt="La Isla Acapulco Shopping Village" loading="lazy" />
-        <span class="loc__ico">🛍️</span><h3 data-es="La Isla (plaza)" data-en="La Isla (mall)">La Isla (mall)</h3>
+        <h3 data-es="La Isla (plaza)" data-en="La Isla (mall)">La Isla (mall)</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →">Get directions →</span>
       </a>
       <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Arena+GNP+Seguros+Acapulco">
         <img src="/assets/images/punto-arenagnp.jpg" alt="Arena GNP Seguros, Acapulco" loading="lazy" />
-        <span class="loc__ico">🎤</span><h3>Arena GNP Seguros</h3>
+        <h3>Arena GNP Seguros</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →">Get directions →</span>
       </a>
-      <a class="loc__card loc__card--wide" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&origin=Ciudad+de+Mexico&destination=Condominio+Diamante+Lakes+Acapulco">
-        <span class="loc__ico">🚗</span><h3 data-es="Desde la Ciudad de México" data-en="Driving from Mexico City">Driving from Mexico City</h3>
+      <a class="loc__card loc__card--photo loc__card--wide" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&origin=Ciudad+de+Mexico&destination=Condominio+Diamante+Lakes+Acapulco">
+        <img src="/assets/images/punto-carretera.jpg" alt="Autopista del Sol rumbo a Acapulco" loading="lazy" />
+        <h3 data-es="Desde la Ciudad de México" data-en="Driving from Mexico City">Driving from Mexico City</h3>
         <span class="loc__link" data-es="Ver ruta por la Autopista del Sol →" data-en="Get directions via the Autopista del Sol →">Get directions via the Autopista del Sol →</span>
       </a>
     </div>
@@ -1115,23 +1122,23 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       <summary><span data-es="🚶 Caminando desde el depa" data-en="🚶 Walking distance from the apartment">🚶 Walking distance from the apartment</span></summary>
       <div class="acc__body">
     <div class="loc__grid">
-      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Burger+King+Acapulco+Diamante">
-        <span class="loc__ico">🍔</span>
+      <a class="loc__card loc__card--logo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Burger+King+Acapulco+Diamante">
+        <img class="loc__logo" src="/assets/images/logo-bk.png" alt="Burger King" loading="lazy" />
         <h3 data-es="Burger King · caminando" data-en="Burger King · walking distance">Burger King · walking distance</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →">Get directions →</span>
       </a>
-      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Gasolinera+Acapulco+Diamante">
-        <span class="loc__ico">⛽</span>
+      <a class="loc__card loc__card--logo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Gasolinera+Acapulco+Diamante">
+        <img class="loc__logo" src="/assets/images/logo-pemex.png" alt="Gasolinera Pemex" loading="lazy" />
         <h3 data-es="Gasolinera · 3 min" data-en="Gas station · 3 min">Gas station · 3 min</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →">Get directions →</span>
       </a>
-      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Taqueria+Acapulco+Diamante">
-        <span class="loc__ico">🌮</span>
+      <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Taqueria+Acapulco+Diamante">
+        <img src="/assets/images/punto-taqueria.jpg" alt="Taquería cerca del departamento" loading="lazy" />
         <h3 data-es="Taquería · 5 min" data-en="Taco spot · 5 min">Taco spot · 5 min</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →">Get directions →</span>
       </a>
-      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Farmacia+Acapulco+Diamante">
-        <span class="loc__ico">💊</span>
+      <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Farmacia+Acapulco+Diamante">
+        <img src="/assets/images/punto-farmacia.jpg" alt="Farmacia cerca del departamento" loading="lazy" />
         <h3 data-es="Farmacia · 5 min" data-en="Pharmacy · 5 min">Pharmacy · 5 min</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →">Get directions →</span>
       </a>
@@ -1143,18 +1150,18 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       <summary><span data-es="🚗 A 5 minutos en coche" data-en="🚗 A 5-minute drive away">🚗 A 5-minute drive away</span></summary>
       <div class="acc__body">
     <div class="loc__grid">
-      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Walmart+Diamante+Acapulco">
-        <span class="loc__ico">🛒</span>
+      <a class="loc__card loc__card--logo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Walmart+Diamante+Acapulco">
+        <img class="loc__logo" src="/assets/images/logo-walmart.png" alt="Walmart" loading="lazy" />
         <h3 data-es="Walmart · 5 min" data-en="Walmart · 5 min">Walmart · 5 min</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →">Get directions →</span>
       </a>
-      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Starbucks+Acapulco+Diamante">
-        <span class="loc__ico">☕</span>
+      <a class="loc__card loc__card--logo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Starbucks+Acapulco+Diamante">
+        <img class="loc__logo" src="/assets/images/logo-starbucks.png" alt="Starbucks" loading="lazy" />
         <h3 data-es="Starbucks · 5 min" data-en="Starbucks · 5 min">Starbucks · 5 min</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →">Get directions →</span>
       </a>
-      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Home+Depot+Acapulco+Diamante">
-        <span class="loc__ico">🔨</span>
+      <a class="loc__card loc__card--logo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Home+Depot+Acapulco+Diamante">
+        <img class="loc__logo" src="/assets/images/logo-homedepot.jpg" alt="The Home Depot" loading="lazy" />
         <h3 data-es="Home Depot · 5 min" data-en="Home Depot · 5 min">Home Depot · 5 min</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →">Get directions →</span>
       </a>
