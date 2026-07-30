@@ -506,6 +506,22 @@ section { padding: 5rem 1.5rem; }
 .amen__card--photo img { width: 100%; height: 150px; object-fit: cover; display: block; transition: transform .4s ease; }
 .amen__card--photo:hover img { transform: scale(1.06); }
 .amen__card--photo h3 { padding: 0.9rem 0.6rem; }
+/* Recomendaciones del anfitrión: restaurantes con foto */
+.recs__photos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1.4rem; }
+.recphoto { border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); background: #fff; }
+.recphoto img { width: 100%; height: 155px; object-fit: cover; display: block; transition: transform .4s ease; }
+.recphoto:hover img { transform: scale(1.06); }
+.recphoto figcaption { padding: 0.7rem 0.8rem; }
+.recphoto figcaption strong { display: block; color: var(--emerald-dark); font-size: 1rem; }
+.recphoto figcaption span { display: block; font-size: 0.82rem; color: #5b6b6b; margin-top: 0.15rem; }
+/* Puntos clave con foto (tarjeta-enlace) */
+.loc__card--photo { padding: 0; overflow: hidden; position: relative; }
+.loc__card--photo img { width: 100%; height: 130px; object-fit: cover; display: block; transition: transform .4s ease; }
+.loc__card--photo:hover img { transform: scale(1.06); }
+.loc__card--photo .loc__ico { position: absolute; top: 8px; left: 10px; margin: 0; font-size: 1.5rem; filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
+.loc__card--photo h3, .loc__card--photo .loc__link { padding-left: 0.9rem; padding-right: 0.9rem; }
+.loc__card--photo h3 { margin-top: 0.7rem; }
+.loc__card--photo .loc__link { padding-bottom: 0.8rem; display: inline-block; }
 
 /* ---------- Ubicación ---------- */
 .loc { background: transparent; }
@@ -1050,19 +1066,23 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       <summary><span data-es="📍 Cómo llegar a los puntos clave" data-en="📍 How to get to the key spots">📍 How to get to the key spots</span></summary>
       <div class="acc__body">
     <div class="loc__grid">
-      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Playa+Revolcadero+Acapulco">
+      <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Playa+Revolcadero+Acapulco">
+        <img src="/assets/images/punto-revolcadero.jpg" alt="Playa Revolcadero, Acapulco Diamante" loading="lazy" />
         <span class="loc__ico">🏖️</span><h3 data-es="Playa Revolcadero" data-en="Revolcadero Beach">Revolcadero Beach</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →">Get directions →</span>
       </a>
-      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Princess+Mundo+Imperial+Acapulco">
+      <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Princess+Mundo+Imperial+Acapulco">
+        <img src="/assets/images/punto-princess.jpg" alt="Playa del Princess Mundo Imperial, Acapulco" loading="lazy" />
         <span class="loc__ico">🏨</span><h3 data-es="Playa Hotel Princess" data-en="Princess Hotel beach">Princess Hotel beach</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →">Get directions →</span>
       </a>
-      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=La+Isla+Acapulco+Shopping+Village">
+      <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=La+Isla+Acapulco+Shopping+Village">
+        <img src="/assets/images/punto-laisla.jpg" alt="La Isla Acapulco Shopping Village" loading="lazy" />
         <span class="loc__ico">🛍️</span><h3 data-es="La Isla (plaza)" data-en="La Isla (mall)">La Isla (mall)</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →">Get directions →</span>
       </a>
-      <a class="loc__card" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Arena+GNP+Seguros+Acapulco">
+      <a class="loc__card loc__card--photo" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Arena+GNP+Seguros+Acapulco">
+        <img src="/assets/images/punto-arenagnp.jpg" alt="Arena GNP Seguros, Acapulco" loading="lazy" />
         <span class="loc__ico">🎤</span><h3>Arena GNP Seguros</h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →">Get directions →</span>
       </a>
@@ -1135,6 +1155,24 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
           <li>🐟 <strong>Barra Vieja</strong> — <span data-es="la más virgen: kilómetros de arena y el famoso pescado a la talla (20–25 min)." data-en="the most unspoiled: miles of sand and the famous pescado a la talla (20–25 min).">the most unspoiled: miles of sand and the famous pescado a la talla (20–25 min).</span></li>
         </ul>
         <p data-es="<strong>Para comer:</strong> nuestro favorito es <strong>Paititi del Mar</strong> (mariscos gourmet en jardín, zona Diamante). Más elegantes: <strong>Saffron</strong> y <strong>Cello</strong> en Banyan Tree Cabo Marqués, <strong>Zibu</strong> en la Escénica y <strong>Tabachín</strong> en el Pierre Mundo Imperial, a un paso del depa." data-en="<strong>Where to eat:</strong> our favorite is <strong>Paititi del Mar</strong> (gourmet seafood in a garden setting, Diamante area). Fancier picks: <strong>Saffron</strong> and <strong>Cello</strong> at Banyan Tree Cabo Marqués, <strong>Zibu</strong> on the Escénica and <strong>Tabachín</strong> at Pierre Mundo Imperial, steps from the apartment."><strong>Where to eat:</strong> our favorite is <strong>Paititi del Mar</strong> (gourmet seafood in a garden setting, Diamante area). Fancier picks: <strong>Saffron</strong> and <strong>Cello</strong> at Banyan Tree Cabo Marqués, <strong>Zibu</strong> on the Escénica and <strong>Tabachín</strong> at Pierre Mundo Imperial, steps from the apartment.</p>
+        <div class="recs__photos">
+          <figure class="recphoto">
+            <img src="/assets/images/rec-paititi.jpg" alt="Restaurante Paititi del Mar, Acapulco Diamante" loading="lazy" />
+            <figcaption><strong>Paititi del Mar</strong><span data-es="Mariscos gourmet en jardín · nuestro favorito" data-en="Gourmet seafood in a garden · our favorite">Gourmet seafood in a garden · our favorite</span></figcaption>
+          </figure>
+          <figure class="recphoto">
+            <img src="/assets/images/rec-zibu.jpg" alt="Restaurante Zibu con vista a la bahía, Acapulco" loading="lazy" />
+            <figcaption><strong>Zibu</strong><span data-es="Cocina mexicano-thai con vista a la bahía" data-en="Mexican-Thai cuisine with bay views">Mexican-Thai cuisine with bay views</span></figcaption>
+          </figure>
+          <figure class="recphoto">
+            <img src="/assets/images/rec-tabachin.jpg" alt="Restaurante Tabachín en Pierre Mundo Imperial" loading="lazy" />
+            <figcaption><strong>Tabachín</strong><span data-es="Alta cocina en Pierre Mundo Imperial · a un paso" data-en="Fine dining at Pierre Mundo Imperial · steps away">Fine dining at Pierre Mundo Imperial · steps away</span></figcaption>
+          </figure>
+          <figure class="recphoto">
+            <img src="/assets/images/rec-banyan.jpg" alt="Saffron y Cello en Banyan Tree Cabo Marqués" loading="lazy" />
+            <figcaption><strong>Saffron &amp; Cello</strong><span data-es="En Banyan Tree Cabo Marqués · lo más elegante" data-en="At Banyan Tree Cabo Marqués · the fanciest">At Banyan Tree Cabo Marqués · the fanciest</span></figcaption>
+          </figure>
+        </div>
       </div>
     </details>
   </section>
