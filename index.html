@@ -396,8 +396,9 @@ p, li, a, h1, h2, h3, h4, span { overflow-wrap: break-word; }
 .hero__price { margin-top: 1.4rem; font-size: 1.05rem; opacity: 0.95; }
 .hero__price strong { font-family: "Fraunces", serif; font-size: 1.4rem; font-weight: 600; }
 /* Cinta dinámica (marquee) de borde a borde con las burbujas del depa + seguridad */
-.marquee { width: 100vw; margin-left: calc(50% - 50vw); overflow: hidden; padding: 0.5rem 0; margin-top: 0.2rem; margin-bottom: 1.4rem;
+.marquee { width: 100vw; margin-left: calc(50% - 50vw); overflow: hidden; padding: 0.5rem 0; margin-top: 0; margin-bottom: 0;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); }
+.marquee--band { padding: 0.9rem 0; background: rgba(6,44,34,0.045); }
 .marquee__track { display: inline-flex; align-items: center; gap: 0.85rem; white-space: nowrap; will-change: transform; animation: marquee-scroll 34s linear infinite; }
 .marquee:hover .marquee__track { animation-play-state: paused; }
 .chip { display: inline-flex; align-items: center; gap: 0.42rem; padding: 0.55rem 1.15rem; border-radius: 999px; background: rgba(255,255,255,0.82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); border: 1px solid var(--glass-border); box-shadow: var(--shadow); color: var(--emerald-dark); font-weight: 600; font-size: 0.95rem; white-space: nowrap; }
@@ -582,10 +583,10 @@ section { padding: 3.2rem 1.5rem; }
 .safety { background: transparent; }
 .safety__layout { max-width: var(--max); margin: 0 auto; display: grid; grid-template-columns: 1.55fr 1fr; gap: 1.6rem; align-items: center; }
 .safety__photo {
-  max-width: 1000px; margin: 0 auto; border-radius: var(--radius-lg); overflow: hidden;
+  max-width: var(--max); margin: 0 auto; border-radius: var(--radius-lg); overflow: hidden;
   box-shadow: var(--shadow); border: 1px solid var(--glass-border);
 }
-.safety__photo img { width: 100%; aspect-ratio: 16 / 8.4; object-fit: cover; object-position: center 42%; display: block; }
+.safety__photo img { width: 100%; aspect-ratio: 16 / 8.9; object-fit: cover; object-position: center 42%; display: block; }
 .safety__photo figcaption {
   padding: 0.8rem 1.2rem; text-align: center; color: var(--emerald-dark); font-weight: 600;
   border: 0; border-top: 1px solid var(--glass-border);
@@ -974,6 +975,24 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
     </div>
   </section>
 
+  <!-- ============ CINTA / MARQUEE (abajito del hero) ============ -->
+  <div class="marquee marquee--band" aria-label="Lo que incluye el departamento y su seguridad">
+    <div class="marquee__track" id="dept-marquee">
+      <span class="chip">📶 <span data-es="Wi-Fi" data-en="Wi-Fi"></span></span>
+      <span class="chip">❄️ <span data-es="Aire acondicionado" data-en="Air conditioning"></span></span>
+      <span class="chip">🍳 <span data-es="Cocina equipada" data-en="Fully equipped kitchen"></span></span>
+      <span class="chip">📺 <span data-es="Smart TV · Netflix y canales" data-en="Smart TV · Netflix & cable"></span></span>
+      <span class="chip">🧺 <span data-es="Lavadora" data-en="Washer"></span></span>
+      <span class="chip">🏊 <span data-es="Alberca y jacuzzi" data-en="Pool & jacuzzi"></span></span>
+      <span class="chip">🌴 <span data-es="Terraza propia con vista" data-en="Private terrace with a view"></span></span>
+      <span class="chip">🅿️ <span data-es="Estacionamiento privado · 1 lugar" data-en="Private parking · 1 spot"></span></span>
+      <span class="chip">💧 <span data-es="Purificador de agua" data-en="Water purifier"></span></span>
+      <span class="chip">🛡️ <span data-es="Vigilancia 24 hrs / 7 días" data-en="Security 24 hrs / 7 days"></span></span>
+      <span class="chip">📹 <span data-es="Cámara de vigilancia exterior" data-en="Exterior security camera"></span></span>
+      <span class="chip">🚨 <span data-es="Detector de monóxido de carbono" data-en="Carbon monoxide detector"></span></span>
+    </div>
+  </div>
+
   <!-- ============ SEGURIDAD ============ -->
   <section class="safety" id="seguridad">
     <div class="section__head">
@@ -994,33 +1013,26 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       <p data-es="Espacio cómodo y completo, pensado para familias y grupos." data-en="A comfortable, fully equipped space designed for families and groups."></p>
     </div>
 
-    <div class="marquee" aria-label="Lo que incluye el departamento y su seguridad">
-      <div class="marquee__track" id="dept-marquee">
-        <span class="chip">📶 <span data-es="Wi-Fi" data-en="Wi-Fi"></span></span>
-        <span class="chip">❄️ <span data-es="Aire acondicionado" data-en="Air conditioning"></span></span>
-        <span class="chip">🍳 <span data-es="Cocina equipada" data-en="Fully equipped kitchen"></span></span>
-        <span class="chip">📺 <span data-es="Smart TV · Netflix y canales" data-en="Smart TV · Netflix & cable"></span></span>
-        <span class="chip">🧺 <span data-es="Lavadora" data-en="Washer"></span></span>
-        <span class="chip">🏊 <span data-es="Alberca y jacuzzi" data-en="Pool & jacuzzi"></span></span>
-        <span class="chip">🌴 <span data-es="Terraza propia con vista" data-en="Private terrace with a view"></span></span>
-        <span class="chip">🅿️ <span data-es="Estacionamiento privado · 1 lugar" data-en="Private parking · 1 spot"></span></span>
-        <span class="chip">💧 <span data-es="Purificador de agua" data-en="Water purifier"></span></span>
-        <span class="chip">🛡️ <span data-es="Vigilancia 24 hrs / 7 días" data-en="Security 24 hrs / 7 days"></span></span>
-        <span class="chip">📹 <span data-es="Cámara de vigilancia exterior" data-en="Exterior security camera"></span></span>
-        <span class="chip">🚨 <span data-es="Detector de monóxido de carbono" data-en="Carbon monoxide detector"></span></span>
-      </div>
-    </div>
-
     <div class="rooms">
       <article class="room">
-        <img class="room__photo" src="assets/images/terrace-dining.webp" alt="Terraza propia con comedor exterior y vista a la alberca" loading="lazy" />
-        <div class="room__tag" data-es="Terraza" data-en="Terrace"></div>
-        <h3 data-es="Terraza propia con vista" data-en="Private terrace with a view"></h3>
+        <img class="room__photo" src="assets/images/living-room.webp" alt="Sala del departamento con sofá y Smart TV" loading="lazy" />
+        <div class="room__tag" data-es="Sala" data-en="Living room"></div>
+        <h3 data-es="Sala para convivir y descansar" data-en="Living room to hang out and unwind"></h3>
         <details class="room__more"><summary data-es="Ver detalles" data-en="See details"></summary><ul class="checks">
-          <li data-es="Mesa y sillas al aire libre" data-en="Outdoor table and chairs"></li>
+          <li data-es="Sofá y Smart TV: Netflix y canales de televisión" data-en="Sofa and Smart TV: Netflix and cable channels"></li>
+          <li data-es="Aire acondicionado" data-en="Air conditioning"></li>
+          <li data-es="Wi-Fi de alta velocidad" data-en="High-speed Wi-Fi"></li>
+        </ul></details>
+      </article>
+
+      <article class="room">
+        <img class="room__photo" src="assets/images/balcony-pool-view.webp" alt="Vista a la alberca desde la terraza del departamento" loading="lazy" />
+        <div class="room__tag" data-es="Terraza · vista" data-en="Terrace · view"></div>
+        <h3 data-es="Terraza con vista a la alberca" data-en="Terrace overlooking the pool"></h3>
+        <details class="room__more"><summary data-es="Ver detalles" data-en="See details"></summary><ul class="checks">
+          <li data-es="Vista panorámica a la alberca del condominio" data-en="Panoramic view over the condo pool"></li>
           <li data-es="Ventiladores de techo" data-en="Ceiling fans"></li>
-          <li data-es="Vista a la alberca del condominio" data-en="View over the condo pool"></li>
-          <li data-es="Ideal para desayunar o cenar afuera" data-en="Perfect for breakfast or dinner outside"></li>
+          <li data-es="Ideal para el café de la mañana o el atardecer" data-en="Perfect for morning coffee or sunset"></li>
         </ul></details>
       </article>
 
@@ -1036,13 +1048,13 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       </article>
 
       <article class="room">
-        <img class="room__photo" src="assets/images/living-room.webp" alt="Sala del departamento con sofá y Smart TV" loading="lazy" />
-        <div class="room__tag" data-es="Sala" data-en="Living room"></div>
-        <h3 data-es="Sala para convivir y descansar" data-en="Living room to hang out and unwind"></h3>
+        <img class="room__photo" src="assets/images/terrace-pool-view.webp" alt="Terraza propia con mesa y vista a la alberca" loading="lazy" />
+        <div class="room__tag" data-es="Terraza · mesa" data-en="Terrace · table"></div>
+        <h3 data-es="Terraza propia con su mesita" data-en="Private terrace with its table"></h3>
         <details class="room__more"><summary data-es="Ver detalles" data-en="See details"></summary><ul class="checks">
-          <li data-es="Sofá y Smart TV: Netflix y canales de televisión" data-en="Sofa and Smart TV: Netflix and cable channels"></li>
-          <li data-es="Aire acondicionado" data-en="Air conditioning"></li>
-          <li data-es="Wi-Fi de alta velocidad" data-en="High-speed Wi-Fi"></li>
+          <li data-es="Mesa y sillas al aire libre" data-en="Outdoor table and chairs"></li>
+          <li data-es="Ventiladores de techo" data-en="Ceiling fans"></li>
+          <li data-es="Ideal para desayunar o cenar afuera" data-en="Perfect for breakfast or dinner outside"></li>
         </ul></details>
       </article>
 
@@ -1061,7 +1073,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       </article>
 
       <article class="room">
-        <img class="room__photo" src="assets/images/bedroom1-two-beds.webp" alt="Recámara principal con dos camas matrimoniales" loading="lazy" />
+        <img class="room__photo" src="assets/images/room-recamara1.webp" alt="Recámara principal con dos camas matrimoniales" loading="lazy" />
         <div class="room__tag" data-es="Recámara 1" data-en="Bedroom 1"></div>
         <h3 data-es="Suite principal con baño propio" data-en="Master suite with private bath"></h3>
         <details class="room__more"><summary data-es="Ver detalles" data-en="See details"></summary><ul class="checks">
@@ -1075,9 +1087,9 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       </article>
 
       <article class="room">
-        <img class="room__photo" src="assets/images/bedroom2-red.webp" alt="Recámara 2 con cama matrimonial" loading="lazy" />
+        <img class="room__photo" src="assets/images/bedroom2-bunk.webp" alt="Recámara 2 con litera: individual arriba y matrimonial abajo" loading="lazy" />
         <div class="room__tag" data-es="Recámara 2" data-en="Bedroom 2"></div>
-        <h3 data-es="Recámara familiar" data-en="Family bedroom"></h3>
+        <h3 data-es="Recámara familiar con litera" data-en="Family bedroom with bunk bed"></h3>
         <details class="room__more"><summary data-es="Ver detalles" data-en="See details"></summary><ul class="checks">
           <li data-es="Litera: individual arriba + matrimonial abajo" data-en="Bunk bed: single on top + queen below"></li>
           <li data-es="Cama matrimonial adicional" data-en="Additional queen bed"></li>
