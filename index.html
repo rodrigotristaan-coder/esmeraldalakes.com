@@ -533,7 +533,7 @@ section { padding: 3.2rem 1.5rem; }
 .amen__ico { font-size: 2.2rem; display: block; margin-bottom: 0.6rem; }
 .amen__card h3 { font-size: 1rem; color: var(--emerald-dark); }
 .amen__card--photo { padding: 0; overflow: hidden; }
-.amen__card--photo img { width: 100%; height: 150px; object-fit: cover; display: block; transition: transform .4s ease; }
+.amen__card--photo img { width: 100%; height: 172px; object-fit: cover; object-position: center; display: block; transition: transform .4s ease; }
 .amen__card--photo:hover img { transform: scale(1.06); }
 .amen__card--photo h3 { padding: 0.9rem 0.6rem; }
 /* Recomendaciones del anfitrión: restaurantes con foto */
@@ -547,7 +547,7 @@ section { padding: 3.2rem 1.5rem; }
 @media (min-width: 601px) and (max-width: 900px) { .recs__photos { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { .recs__photos { grid-template-columns: 1fr; } .recphoto img { height: 200px; } }
 /* Puntos clave con foto (tarjeta-enlace) */
-.loc__card--photo { padding: 0; overflow: hidden; position: relative; }
+.loc__card--photo { padding: 0; overflow: hidden; position: relative; border-radius: var(--radius-lg); }
 .loc__card--photo img { width: 100%; height: 130px; object-fit: cover; display: block; transition: transform .4s ease; }
 .loc__card--photo:hover img { transform: scale(1.06); }
 .loc__card--photo .loc__ico { position: absolute; top: 8px; left: 10px; margin: 0; font-size: 1.5rem; filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
@@ -555,7 +555,7 @@ section { padding: 3.2rem 1.5rem; }
 .loc__card--photo h3 { margin-top: 0.7rem; }
 .loc__card--photo .loc__link { padding-bottom: 0.8rem; display: inline-block; }
 /* Tarjeta con LOGO de marca (Burger King, Walmart, etc.): logo centrado sobre blanco */
-.loc__card--logo { padding: 0; overflow: hidden; background: #fff; }
+.loc__card--logo { padding: 0; overflow: hidden; background: #fff; border-radius: var(--radius-lg); }
 .loc__card--logo .loc__logo { width: 100%; height: 118px; object-fit: contain; padding: 16px; box-sizing: border-box; display: block; background: #fff; }
 .loc__card--logo h3, .loc__card--logo .loc__link { padding-left: 0.9rem; padding-right: 0.9rem; }
 .loc__card--logo h3 { margin-top: 0.6rem; }
@@ -1110,11 +1110,11 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       <p data-es="Diamante Lakes pone el resort a tu disposición." data-en="Diamante Lakes puts the whole resort at your fingertips."></p>
     </div>
     <div class="amen__grid">
-      <div class="amen__card amen__card--photo"><img src="assets/images/amen-alberca.jpg" alt="Alberca del condominio Diamante Lakes" loading="lazy" /><h3 data-es="Alberca" data-en="Swimming pool"></h3></div>
-      <div class="amen__card amen__card--photo"><img src="assets/images/amen-jacuzzi.jpg" alt="Jacuzzi del condominio con hidrojets" loading="lazy" /><h3 data-es="Jacuzzi" data-en="Jacuzzi"></h3></div>
-      <div class="amen__card amen__card--photo"><img src="assets/images/amen-chapoteadero.jpg" alt="Chapoteadero: alberca redonda poco profunda del condominio" loading="lazy" /><h3 data-es="Chapoteadero" data-en="Kiddie pool"></h3></div>
-      <div class="amen__card amen__card--photo"><img src="assets/images/amen-tobogan.jpg" alt="Tobogán en la alberca del condominio" loading="lazy" /><h3 data-es="Tobogán" data-en="Water slide"></h3></div>
-      <div class="amen__card amen__card--photo"><img src="assets/images/amen-bar.jpg" alt="Bar tipo palapa en la alberca" loading="lazy" /><h3 data-es="Bar en la alberca" data-en="Swim-up bar"></h3></div>
+      <div class="amen__card amen__card--photo"><img src="assets/images/pool-aerial-v2.webp" alt="Alberca completa del condominio Diamante Lakes" loading="lazy" /><h3 data-es="Alberca" data-en="Swimming pool"></h3></div>
+      <div class="amen__card amen__card--photo"><img src="assets/images/amen-jacuzzi.jpg" alt="Jacuzzi del condominio con hidrojets" loading="lazy" style="object-position:center 30%" /><h3 data-es="Jacuzzi" data-en="Jacuzzi"></h3></div>
+      <div class="amen__card amen__card--photo"><img src="assets/images/amen-chapoteadero.jpg" alt="Chapoteadero: alberca redonda poco profunda del condominio" loading="lazy" style="object-position:center 82%" /><h3 data-es="Chapoteadero" data-en="Kiddie pool"></h3></div>
+      <div class="amen__card amen__card--photo"><img src="assets/images/pool-hero.webp" alt="Tobogán en la alberca del condominio" loading="lazy" /><h3 data-es="Tobogán" data-en="Water slide"></h3></div>
+      <div class="amen__card amen__card--photo"><img src="assets/images/amen-bar.jpg" alt="Bar tipo palapa pegado a la alberca" loading="lazy" style="object-position:center 58%" /><h3 data-es="Bar en la alberca" data-en="Swim-up bar"></h3></div>
       <div class="amen__card amen__card--photo"><img src="assets/images/pool-loungers.webp" alt="Camastros y sillones junto a la alberca" loading="lazy" /><h3 data-es="Camastros y sillones" data-en="Loungers & sofas"></h3></div>
     </div>
 
