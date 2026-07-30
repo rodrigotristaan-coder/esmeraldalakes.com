@@ -164,13 +164,13 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 
 // ---------- Calculadora de precios (MXN) ----------
 const PRICING = {
-  rateBase: 2000,      // entre semana, temporada baja (precio "desde")
-  rateWeekend: 2700,   // viernes y sábado (+35%)
-  rateMedia: 2400,     // puentes (temporada media): sube la noche entre semana, respeta vie/sáb
-  rateHigh: 4200,      // alta pico: Navidad/Año Nuevo y Semana Santa (comps de alta en $4,500–5,500)
-  rateHighSummer: 2900, // verano (ajuste 2026-07-22: comps del edificio en $1,200–2,550; $4,200 espantaba al directo vs Airbnb)
+  rateBase: 2500,      // BASE (entre semana, temporada baja) — precio "desde"
+  rateWeekend: 3000,   // ALTA DEMANDA (viernes y sábado)
+  rateMedia: 3000,     // ALTA DEMANDA (puentes)
+  rateHigh: 5000,      // FESTIVOS (Navidad/Año Nuevo y Semana Santa)
+  rateHighSummer: 3000, // ALTA DEMANDA (verano)
   summerRange: ["07-01", "08-23"], // MM-DD dentro de highRanges que cobra rateHighSummer
-  rateSpecial: 5000,   // fechas especiales: Navidad y Año Nuevo (MM-DD, cada año)
+  rateSpecial: 5000,   // FESTIVOS (Navidad y Año Nuevo, MM-DD cada año)
   specialDates: ["12-24", "12-25", "12-31", "01-01"],
   eventSurcharge: 0.40, // +40% en fechas de eventos de la Arena GNP (estudio 2026-07)
   // Temporada alta (MM-DD). El primero cruza fin de año. Verano hasta el fin real de
@@ -681,4 +681,25 @@ document.addEventListener("DOMContentLoaded", () => {
       scope.querySelectorAll("details.acc").forEach((o) => { if (o !== d) o.open = false; });
     });
   });
+
+  // Reseñas: carrusel que auto-rota + swipe. Al primer swipe/scroll se pausa; reanuda al minuto.
+  const rlist = document.getElementById("reviews-list");
+  if (rlist) {
+    rlist.classList.add("reviews__track");
+    let auto = null, resume = null;
+    const step = () => {
+      const first = rlist.firstElementChild;
+      if (!first || document.hidden) return;
+      const cw = first.getBoundingClientRect().width + 20;
+      const max = rlist.scrollWidth - rlist.clientWidth - 4;
+      if (rlist.scrollLeft >= max) rlist.scrollTo({ left: 0, behavior: "smooth" });
+      else rlist.scrollBy({ left: cw, behavior: "smooth" });
+    };
+    const start = () => { stop(); auto = setInterval(step, 4500); };
+    const stop = () => { if (auto) { clearInterval(auto); auto = null; } };
+    const pauseAndResume = () => { stop(); if (resume) clearTimeout(resume); resume = setTimeout(start, 60000); };
+    ["pointerdown", "touchstart", "wheel"].forEach((e) => rlist.addEventListener(e, pauseAndResume, { passive: true }));
+    // arranca tras un momento para que ya estén las reseñas cargadas del blob
+    setTimeout(start, 1800);
+  }
 });

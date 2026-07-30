@@ -398,6 +398,11 @@ section { padding: 5rem 1.5rem; }
 .reviews { background: transparent; }
 .reviews__grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.4rem; max-width: var(--max); margin: 0 auto; }
 .reviews__grid .review-card { flex: 1 1 300px; max-width: 430px; }
+/* Carrusel de reseñas (lo activa el JS con .reviews__track) */
+.reviews__track { flex-wrap: nowrap !important; justify-content: flex-start; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; gap: 1.2rem; padding: 4px 2px 14px; scrollbar-width: thin; }
+.reviews__track .review-card { flex: 0 0 clamp(280px, 86%, 380px) !important; max-width: 380px !important; scroll-snap-align: center; }
+.reviews__track::-webkit-scrollbar { height: 6px; }
+.reviews__track::-webkit-scrollbar-thumb { background: rgba(0,0,0,.18); border-radius: 3px; }
 
 /* Receta de vidrio (Apple-style): panel translúcido, borde luminoso, esquinas generosas */
 .review-card, .review-form-wrap, .room, .amen__card, .loc__card, .safety__card,
@@ -514,6 +519,8 @@ section { padding: 5rem 1.5rem; }
 .recphoto figcaption { padding: 0.7rem 0.8rem; }
 .recphoto figcaption strong { display: block; color: var(--emerald-dark); font-size: 1rem; }
 .recphoto figcaption span { display: block; font-size: 0.82rem; color: #5b6b6b; margin-top: 0.15rem; }
+@media (min-width: 601px) and (max-width: 900px) { .recs__photos { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .recs__photos { grid-template-columns: 1fr; } .recphoto img { height: 200px; } }
 /* Puntos clave con foto (tarjeta-enlace) */
 .loc__card--photo { padding: 0; overflow: hidden; position: relative; }
 .loc__card--photo img { width: 100%; height: 130px; object-fit: cover; display: block; transition: transform .4s ease; }
@@ -586,6 +593,11 @@ section { padding: 5rem 1.5rem; }
   padding: 1.5rem; margin-top: 1.8rem;
 }
 .book__step { font-weight: 700; color: var(--emerald-dark); font-size: 1.05rem; margin-bottom: 0.6rem; font-family: "Fraunces", serif; }
+.book__datos { margin-bottom: 0.2rem; }
+.book__datos > summary.book__step { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+.book__datos > summary::-webkit-details-marker { display: none; }
+.book__datos > summary::after { content: "▾"; color: var(--muted); font-size: 0.9rem; }
+.book__datos[open] > summary::after { content: "▴"; }
 .book__intro h2 { font-size: clamp(2rem, 5vw, 2.8rem); }
 .book__intro p { margin-top: 0.8rem; opacity: 0.95; font-size: 1.1rem; }
 .book__perks { list-style: none; margin-top: 1.4rem; }
@@ -720,7 +732,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
 .footer a { display: block; color: #cdd8d3; text-decoration: none; margin-bottom: 0.3rem; }
 .footer a:hover { color: var(--aqua); }
 .footer__copy { max-width: var(--max); margin: 2.5rem auto 0; padding-top: 1.5rem; border-top: 1px solid #2a3a34; font-size: 0.85rem; text-align: center; }
-.footer__satori { color: var(--aqua); font-weight: 700; text-decoration: none; }
+.footer__satori { color: var(--gold); font-weight: 700; text-decoration: none; }
 .footer__satori:hover { text-decoration: underline; }
 
 /* ---------- Botones flotantes (WhatsApp + Reservar) ---------- */
@@ -880,7 +892,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
         <p class="hero__eyebrow" data-es="<strong>“Mejor que Airbnb”</strong>" data-en="<strong>“Better than Airbnb”</strong>"><strong>“Better than Airbnb”</strong></p>
         <h1 class="hero__title">Esmeralda</h1>
         <p class="hero__sub">Condominio Diamante Lakes</p>
-        <p class="hero__price" data-es="Desde <strong>$2,000 MXN</strong> / noche · reserva directa" data-en="From <strong>$116 USD</strong> / night · book direct">From <strong>$116 USD</strong> / night · book direct</p>
+        <p class="hero__price" data-es="Desde <strong>$2,500 MXN</strong> / noche · reserva directa" data-en="From <strong>$145 USD</strong> / night · book direct">From <strong>$145 USD</strong> / night · book direct</p>
         <div class="hero__stats">
           <div><strong>6</strong><span data-es="huéspedes" data-en="guests">guests</span></div>
           <div><strong>2</strong><span data-es="recámaras" data-en="bedrooms">bedrooms</span></div>
@@ -908,7 +920,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
         <p class="hero__eyebrow" data-es="<strong>“Mejor que Airbnb”</strong>" data-en="<strong>“Better than Airbnb”</strong>"><strong>“Better than Airbnb”</strong></p>
         <p class="hero__title" role="heading" aria-level="1">Esmeralda</p>
         <p class="hero__sub">Condominio Diamante Lakes</p>
-        <p class="hero__price" data-es="Desde <strong>$2,000 MXN</strong> / noche · reserva directa" data-en="From <strong>$116 USD</strong> / night · book direct">From <strong>$116 USD</strong> / night · book direct</p>
+        <p class="hero__price" data-es="Desde <strong>$2,500 MXN</strong> / noche · reserva directa" data-en="From <strong>$145 USD</strong> / night · book direct">From <strong>$145 USD</strong> / night · book direct</p>
         <div class="hero__stats">
           <div><strong>6</strong><span data-es="huéspedes" data-en="guests">guests</span></div>
           <div><strong>2</strong><span data-es="recámaras" data-en="bedrooms">bedrooms</span></div>
@@ -1172,13 +1184,6 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
     <details class="acc">
       <summary><span data-es="🌴 Recomendaciones del anfitrión: playas y restaurantes" data-en="🌴 Host picks: beaches & restaurants">🌴 Host picks: beaches & restaurants</span></summary>
       <div class="acc__body">
-        <ul class="recs">
-          <li>🏖️ <strong data-es="Playa Revolcadero" data-en="Revolcadero Beach">Revolcadero Beach</strong> — <span data-es="la más cercana (5 min): amplia, de oleaje abierto, atardeceres y el ambiente de los grandes hoteles." data-en="the closest (5 min): wide, open surf, sunsets and the big-resort vibe.">the closest (5 min): wide, open surf, sunsets and the big-resort vibe.</span></li>
-          <li>⛵ <strong>Puerto Marqués</strong> — <span data-es="bahía de aguas tranquilas, ideal con niños, con restaurantes sobre la arena (10 min)." data-en="calm-water bay, perfect with kids, with restaurants right on the sand (10 min).">calm-water bay, perfect with kids, with restaurants right on the sand (10 min).</span></li>
-          <li>🏄 <strong data-es="Playa Bonfil" data-en="Bonfil Beach">Bonfil Beach</strong> — <span data-es="ambiente local y olas para surfear (10–15 min)." data-en="local vibe and surfable waves (10–15 min).">local vibe and surfable waves (10–15 min).</span></li>
-          <li>🐟 <strong>Barra Vieja</strong> — <span data-es="la más virgen: kilómetros de arena y el famoso pescado a la talla (20–25 min)." data-en="the most unspoiled: miles of sand and the famous pescado a la talla (20–25 min).">the most unspoiled: miles of sand and the famous pescado a la talla (20–25 min).</span></li>
-        </ul>
-        <p data-es="<strong>Para comer:</strong> nuestro favorito es <strong>Paititi del Mar</strong> (mariscos gourmet en jardín, zona Diamante). Más elegantes: <strong>Saffron</strong> y <strong>Cello</strong> en Banyan Tree Cabo Marqués, <strong>Zibu</strong> en la Escénica y <strong>Tabachín</strong> en el Pierre Mundo Imperial, a un paso del depa." data-en="<strong>Where to eat:</strong> our favorite is <strong>Paititi del Mar</strong> (gourmet seafood in a garden setting, Diamante area). Fancier picks: <strong>Saffron</strong> and <strong>Cello</strong> at Banyan Tree Cabo Marqués, <strong>Zibu</strong> on the Escénica and <strong>Tabachín</strong> at Pierre Mundo Imperial, steps from the apartment."><strong>Where to eat:</strong> our favorite is <strong>Paititi del Mar</strong> (gourmet seafood in a garden setting, Diamante area). Fancier picks: <strong>Saffron</strong> and <strong>Cello</strong> at Banyan Tree Cabo Marqués, <strong>Zibu</strong> on the Escénica and <strong>Tabachín</strong> at Pierre Mundo Imperial, steps from the apartment.</p>
         <div class="recs__photos">
           <figure class="recphoto">
             <img src="/assets/images/rec-paititi.jpg" alt="Restaurante Paititi del Mar, Acapulco Diamante" loading="lazy" />
@@ -1286,27 +1291,23 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       <h2 data-es="¿Cómo funciona tu reserva?" data-en="How does booking work?">How does booking work?</h2>
       <p data-es="Reservas directo con el anfitrión, sin plataformas de por medio. Así de simple:" data-en="You book directly with the host — no platforms in between. It's this simple:">You book directly with the host — no platforms in between. It's this simple:</p>
     </div>
-    <div class="how__steps">
-      <div class="how__card">
-        <span class="how__num">1</span>
-        <h3 data-es="Solicita tus fechas" data-en="Request your dates">Request your dates</h3>
-        <p data-es="Elige tus fechas en el calendario y envía el formulario. En este paso no pagas nada." data-en="Pick your dates on the calendar and send the form. You don't pay anything at this step.">Pick your dates on the calendar and send the form. You don't pay anything at this step.</p>
-      </div>
-      <div class="how__card">
-        <span class="how__num">2</span>
-        <h3 data-es="Te confirmamos" data-en="We confirm">We confirm</h3>
-        <p data-es="En menos de 24 h te contactamos por WhatsApp o correo para confirmar disponibilidad y el total de tu estancia." data-en="Within 24 hours we contact you by WhatsApp or email to confirm availability and your total.">Within 24 hours we contact you by WhatsApp or email to confirm availability and your total.</p>
-      </div>
-      <div class="how__card">
-        <span class="how__num">3</span>
-        <h3 data-es="Aparta con tu pago" data-en="Secure it with payment">Secure it with payment</h3>
-        <p data-es="Pagas por transferencia bancaria y tu reserva queda confirmada. Te llega un correo de confirmación." data-en="You pay by bank transfer and your booking is confirmed. A confirmation email is sent to you.">You pay by bank transfer and your booking is confirmed. A confirmation email is sent to you.</p>
-      </div>
-      <div class="how__card">
-        <span class="how__num">4</span>
-        <h3 data-es="Llega y disfruta" data-en="Arrive and enjoy">Arrive and enjoy</h3>
-        <p data-es="Antes de tu llegada recibes la guía del huésped y el código de la cerradura inteligente. Check-in a las 14:00." data-en="Before arrival you get the guest guide and the smart-lock code. Check-in at 2:00 PM.">Before arrival you get the guest guide and the smart-lock code. Check-in at 2:00 PM.</p>
-      </div>
+    <div class="how__policies">
+      <details class="acc">
+        <summary><span data-es="1 · Solicita tus fechas" data-en="1 · Request your dates">1 · Request your dates</span></summary>
+        <div class="acc__body"><p data-es="Elige tus fechas en el calendario y envía el formulario. En este paso no pagas nada." data-en="Pick your dates on the calendar and send the form. You don't pay anything at this step.">Pick your dates on the calendar and send the form. You don't pay anything at this step.</p></div>
+      </details>
+      <details class="acc">
+        <summary><span data-es="2 · Te confirmamos" data-en="2 · We confirm">2 · We confirm</span></summary>
+        <div class="acc__body"><p data-es="En menos de 24 h te contactamos por WhatsApp o correo para confirmar disponibilidad y el total de tu estancia." data-en="Within 24 hours we contact you by WhatsApp or email to confirm availability and your total.">Within 24 hours we contact you by WhatsApp or email to confirm availability and your total.</p></div>
+      </details>
+      <details class="acc">
+        <summary><span data-es="3 · Aparta con tu pago" data-en="3 · Secure it with payment">3 · Secure it with payment</span></summary>
+        <div class="acc__body"><p data-es="Pagas por transferencia bancaria y tu reserva queda confirmada. Te llega un correo de confirmación." data-en="You pay by bank transfer and your booking is confirmed. A confirmation email is sent to you.">You pay by bank transfer and your booking is confirmed. A confirmation email is sent to you.</p></div>
+      </details>
+      <details class="acc">
+        <summary><span data-es="4 · Llega y disfruta" data-en="4 · Arrive and enjoy">4 · Arrive and enjoy</span></summary>
+        <div class="acc__body"><p data-es="Antes de tu llegada recibes la guía del huésped y el código de la cerradura inteligente. Check-in a las 14:00." data-en="Before arrival you get the guest guide and the smart-lock code. Check-in at 2:00 PM.">Before arrival you get the guest guide and the smart-lock code. Check-in at 2:00 PM.</p></div>
+      </details>
     </div>
     <div class="how__policies">
       <details class="acc">
@@ -1352,7 +1353,8 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
       </div>
 
       <form class="book__form" id="booking-form" novalidate>
-        <p class="book__step" data-es="2 · Tus datos" data-en="2 · Your details">2 · Your details</p>
+        <details class="book__datos" open>
+        <summary class="book__step"><span data-es="2 · Tus datos" data-en="2 · Your details">2 · Your details</span></summary>
         <div class="field">
           <label for="bf-name" data-es="Nombre completo" data-en="Full name">Full name</label>
           <input id="bf-name" name="name" type="text" required />
@@ -1390,6 +1392,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
           <label for="bf-refcode" data-es="Código de recomendación (opcional)" data-en="Referral code (optional)">Referral code (optional)</label>
           <input id="bf-refcode" name="refcode" type="text" placeholder="ESM-XXXX" autocomplete="off" maxlength="12" style="text-transform:uppercase" />
         </div>
+        </details>
         <label class="consent">
           <input type="checkbox" id="bf-consent" />
           <span data-es="Acepto el <a href='/privacidad' target='_blank' rel='noopener'>Aviso de Privacidad</a> y que mis datos se usen para gestionar mi solicitud de reserva." data-en="I accept the <a href='/privacidad' target='_blank' rel='noopener'>Privacy Notice</a> and agree that my data may be used to manage my booking request.">I accept the <a href='/privacidad' target='_blank' rel='noopener'>Privacy Notice</a> and agree that my data may be used to manage my booking request.</span>
