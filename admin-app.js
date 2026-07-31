@@ -325,6 +325,25 @@ function applyBlocks(data) {
     if (b.source === "airbnb") {
       const wrap = document.createElement("span");
       wrap.className = "row";
+      // Airbnb sí manda el link a la reserva y los últimos 4 del teléfono:
+      // con un clic ves ahí el nombre y el pago, y regresas a escribirlos.
+      if (b.url) {
+        const a2 = document.createElement("a");
+        a2.href = b.url;
+        a2.target = "_blank";
+        a2.rel = "noopener";
+        a2.className = "quiet";
+        a2.style.cssText = "text-decoration:none;display:inline-block";
+        a2.textContent = "Ver en Airbnb ↗";
+        a2.title = "Abre esta reserva en Airbnb, donde sí están el nombre y el pago";
+        wrap.appendChild(a2);
+      }
+      if (b.tel4) {
+        const t = document.createElement("span");
+        t.className = "muted";
+        t.textContent = `tel …${b.tel4}`;
+        wrap.appendChild(t);
+      }
       const btn = document.createElement("button");
       btn.className = "quiet";
       btn.textContent = b.name ? "Editar datos" : "Poner nombre";
@@ -334,8 +353,44 @@ function applyBlocks(data) {
     }
     a.appendChild(div);
   }
+  PASADAS = data.pasadas || [];
+  renderPasadas();
   renderHoy();
   renderResPend(); // las reservas cambiaron: recepción y limpieza también
+}
+
+// Estancias que ya terminaron. El panel solo mostraba el futuro, así que los
+// huéspedes anteriores no aparecían por ningún lado.
+let PASADAS = [];
+function renderPasadas() {
+  const box = $("pasadas");
+  if (!box) return;
+  box.innerHTML = "";
+  if (!PASADAS.length) {
+    box.innerHTML = '<div class="vacio"><b>Sin estancias anteriores</b>Aquí van apareciendo los huéspedes conforme terminan su estancia.</div>';
+    return;
+  }
+  for (const b of PASADAS) {
+    const n = noches(b);
+    // Lo que dejó: los movimientos que lleven su nombre
+    const g = (b.name || "").trim().toLowerCase();
+    let ing = 0, gas = 0;
+    if (g) for (const m of FIN) {
+      if ((m.guest || "").trim().toLowerCase() !== g) continue;
+      const v = Number(m.amount) || 0;
+      if (m.type === "in") ing += v; else gas += v;
+    }
+    const dejo = ing - gas;
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `<span style="text-align:left"><b>${escHtml(quienDe(b))}</b><br>` +
+      `<span class="muted">${fmtD(b.start)} → ${fmtD(b.end)} · ${n} noche${n === 1 ? "" : "s"}` +
+      `${b.guests ? " · " + b.guests + " pax" : ""} · ${b.source === "airbnb" ? "Airbnb" : "directa"}</span></span>` +
+      (ing || gas
+        ? `<span class="muted num">pagó <b class="pos">${money(ing)}</b> · costó <b class="neg">${money(gas)}</b> · dejó <b class="${dejo >= 0 ? "pos" : "neg"}">${money(dejo)}</b></span>`
+        : '<span class="muted">sin movimientos a su nombre</span>');
+    box.appendChild(div);
+  }
 }
 
 const escHtml = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
@@ -634,6 +689,15 @@ const CATS = {
         "Desayunos", "Ida al súper", "Publicidad", "Comisiones", "Otro gasto"],
 };
 const money = (n) => (Number(n) || 0).toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
+// Versión corta para las barras de la gráfica: $24k, $7.9k, $640
+function moneyCorto(n) {
+  const v = Math.round(Number(n) || 0);
+  if (v >= 1000) {
+    const k = v / 1000;
+    return "$" + (k >= 10 ? Math.round(k) : k.toFixed(1).replace(/\.0$/, "")) + "k";
+  }
+  return "$" + v;
+}
 const MES_LBL = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 const mesLabel = (ym) => `${MES_LBL[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
 
@@ -691,14 +755,19 @@ function renderChart(movs) {
   const meses = Object.keys(by).sort().slice(-12);
   if (!meses.length) { svg.innerHTML = '<text x="10" y="24">Sin movimientos todavía.</text>'; return; }
   const max = Math.max(...meses.map((ym) => Math.max(by[ym].in, by[ym].out)), 1);
-  const W = 720, H = 190, base = H - 26, alto = base - 12;
+  // Se deja aire arriba (alto útil menor) para que quepan las cifras sobre las barras
+  const W = 720, H = 210, base = H - 26, alto = base - 26;
   const paso = W / meses.length, ancho = Math.min(16, paso / 3.2);
-  let out = `<line x1="0" y1="${base}" x2="${W}" y2="${base}" stroke="rgba(255,255,255,.22)" />`;
+  let out = `<line class="base" x1="0" y1="${base}" x2="${W}" y2="${base}" />`;
   meses.forEach((ym, i) => {
     const cx = i * paso + paso / 2;
     const hi = (by[ym].in / max) * alto, ho = (by[ym].out / max) * alto;
-    out += `<rect class="gin"  x="${cx - ancho - 1.5}" y="${base - hi}" width="${ancho}" height="${hi}" rx="2"><title>${mesLabel(ym)} · ingresos ${money(by[ym].in)}</title></rect>`;
-    out += `<rect class="gout" x="${cx + 1.5}"          y="${base - ho}" width="${ancho}" height="${ho}" rx="2"><title>${mesLabel(ym)} · gastos ${money(by[ym].out)}</title></rect>`;
+    const xi = cx - ancho - 1.5, xo = cx + 1.5;
+    out += `<rect class="gin"  x="${xi}" y="${base - hi}" width="${ancho}" height="${hi}" rx="2"><title>${mesLabel(ym)} · ingresos ${money(by[ym].in)}</title></rect>`;
+    out += `<rect class="gout" x="${xo}" y="${base - ho}" width="${ancho}" height="${ho}" rx="2"><title>${mesLabel(ym)} · gastos ${money(by[ym].out)}</title></rect>`;
+    // Cifra sobre cada barra, abreviada para que quepan las 12 columnas
+    if (by[ym].in) out += `<text class="val gin" x="${xi + ancho / 2}" y="${base - hi - 4}" text-anchor="middle">${moneyCorto(by[ym].in)}</text>`;
+    if (by[ym].out) out += `<text class="val gout" x="${xo + ancho / 2}" y="${base - ho - 4}" text-anchor="middle">${moneyCorto(by[ym].out)}</text>`;
     out += `<text x="${cx}" y="${H - 8}" text-anchor="middle">${mesLabel(ym).replace(" ", "'")}</text>`;
   });
   svg.innerHTML = out;

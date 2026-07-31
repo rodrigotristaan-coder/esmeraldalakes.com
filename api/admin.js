@@ -28,14 +28,21 @@ module.exports = async (req, res) => {
   // una copia vieja del blob y la reserva recién hecha "desaparece" hasta el
   // siguiente refresh. Mismo arreglo que ya llevan finanzas, reseñas y clientes.
   const upcoming = (arr, today) => arr.filter((b) => (b.end || b.start) >= today).sort((a, b) => a.start.localeCompare(b.start));
+  // Estancias que ya terminaron, de la más reciente hacia atrás. Sin esto el panel
+  // solo enseñaba el futuro y los huéspedes anteriores desaparecían del todo.
+  // Ojo: de Airbnb no habrá historial — su iCal solo exporta fechas futuras.
+  const pasadas = (arr, today) => arr.filter((b) => (b.end || b.start) < today)
+    .sort((a, b) => b.start.localeCompare(a.start)).slice(0, 80);
   const listsFrom = async (direct) => {
     const today = new Date().toISOString().slice(0, 10);
     // Las notas ponen nombre a lo que llega de Airbnb (su iCal solo manda fechas)
     let notas = {};
     try { notas = (await readFinanceDoc()).notas; } catch { /* sin notas se ve igual, solo sin nombres */ }
+    const todos = aplicarNotas(await getAllBlocks(direct), notas);
     return {
       direct: upcoming(aplicarNotas(direct, notas), today),
-      all: upcoming(aplicarNotas(await getAllBlocks(direct), notas), today),
+      all: upcoming(todos, today),
+      pasadas: pasadas(todos, today),
     };
   };
 

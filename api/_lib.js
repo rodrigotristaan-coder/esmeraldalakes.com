@@ -154,15 +154,33 @@ function matchSummary(blk) {
   return !s || SUMMARY_GENERICO.test(s) ? null : s.slice(0, 80);
 }
 
+// Airbnb quitó el nombre del huésped del iCal en dic-2019 (privacidad). Lo único
+// identificable que queda en la DESCRIPTION es el link a la reserva y los últimos
+// 4 dígitos del teléfono; los rescatamos para que el panel lleve directo a ella.
+// ⚠️ Estos campos solo salen por /api/admin (con contraseña). El feed público
+// (/calendar.ics) se arma aparte y solo dice "No disponible".
+function matchReserva(blk) {
+  const out = {};
+  const u = blk.match(/https:\/\/www\.airbnb\.[a-z.]+\/[^\s"'<>\\]+/i);
+  if (u) out.url = u[0];
+  const t = blk.match(/Phone\s*Number\s*\(Last\s*4\s*Digits\)\s*:?\s*(\d{4})/i);
+  if (t) out.tel4 = t[1];
+  return out;
+}
+
 function parseICal(text, source) {
+  // iCal parte las líneas largas y las continúa con un espacio al inicio;
+  // sin volver a unirlas, la DESCRIPTION llega cortada a la mitad.
+  const plano = String(text).replace(/\r?\n[ \t]/g, "");
   const out = [];
-  for (const blk of text.split("BEGIN:VEVENT").slice(1)) {
+  for (const blk of plano.split("BEGIN:VEVENT").slice(1)) {
     const start = matchDate(blk, "DTSTART");
     const end = matchDate(blk, "DTEND");
     if (start && end) {
       const b = { start, end, source };
       const n = matchSummary(blk);
       if (n) b.name = n;
+      Object.assign(b, matchReserva(blk));
       out.push(b);
     }
   }
