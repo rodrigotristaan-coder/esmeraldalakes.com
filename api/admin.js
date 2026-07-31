@@ -22,20 +22,31 @@ module.exports = async (req, res) => {
   const { start, end } = q;
   const validDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d || ""));
 
+  // Arma las listas que pinta el panel a partir de las reservas directas que YA
+  // están en memoria. Se usa después de escribir para devolver la lista
+  // autoritativa: si el panel volviera a pedir "list", esa relectura puede traer
+  // una copia vieja del blob y la reserva recién hecha "desaparece" hasta el
+  // siguiente refresh. Mismo arreglo que ya llevan finanzas, reseñas y clientes.
+  const upcoming = (arr, today) => arr.filter((b) => (b.end || b.start) >= today).sort((a, b) => a.start.localeCompare(b.start));
+  const listsFrom = async (direct) => {
+    const today = new Date().toISOString().slice(0, 10);
+    return { direct: upcoming(direct, today), all: upcoming(await getAllBlocks(direct), today) };
+  };
+
   try {
     if (action === "release") {
       if (!validDate(start) || !validDate(end)) return res.status(422).json({ ok: false, error: "fechas" });
-      await removeBlock(start, end);
-      return res.status(200).json({ ok: true });
+      const blocks = await removeBlock(start, end);
+      return res.status(200).json({ ok: true, ...(await listsFrom(blocks)) });
     }
     if (action === "block") {
       if (!validDate(start) || !validDate(end) || end <= start) return res.status(422).json({ ok: false, error: "fechas" });
-      await addBlock(start, end, {
+      const blocks = await addBlock(start, end, {
         name: q.name, guests: q.guests, rate: q.rate,
         checkinTime: q.checkinTime, checkoutTime: q.checkoutTime,
         referredBy: q.referredBy, freeNight: q.freeNight,
       });
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({ ok: true, ...(await listsFrom(blocks)) });
     }
     if (action === "block-update") {
       if (!validDate(q.ostart) || !validDate(q.oend)) return res.status(422).json({ ok: false, error: "fechas" });
@@ -46,7 +57,7 @@ module.exports = async (req, res) => {
         referredBy: q.referredBy, freeNight: q.freeNight,
       });
       if (!r.ok) return res.status(422).json({ ok: false, error: r.reason });
-      return res.status(200).json({ ok: true, block: r.block });
+      return res.status(200).json({ ok: true, block: r.block, ...(await listsFrom(r.blocks)) });
     }
     // --- Reseñas ---
     if (action === "reviews") {
@@ -180,13 +191,8 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, email: r.email, refCode: r.refCode, customers: lista });
     }
 
-    // list
-    const today = new Date().toISOString().slice(0, 10);
-    const direct = (await readBlocks()).filter((b) => (b.end || b.start) >= today)
-      .sort((a, b) => a.start.localeCompare(b.start));
-    const all = (await getAllBlocks()).filter((b) => (b.end || b.start) >= today)
-      .sort((a, b) => a.start.localeCompare(b.start));
-    return res.status(200).json({ ok: true, direct, all });
+    // list (una sola lectura del blob: la comparten "direct" y "all")
+    return res.status(200).json({ ok: true, ...(await listsFrom(await readBlocks())) });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e.message });
   }

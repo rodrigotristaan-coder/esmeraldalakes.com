@@ -102,7 +102,7 @@ async function updateBlock(ostart, oend, fields = {}) {
   }
   arr[i] = next;
   await writeBlocks(arr);
-  return { ok: true, block: next };
+  return { ok: true, block: next, blocks: arr };
 }
 
 async function removeBlock(start, end) {
@@ -163,14 +163,18 @@ async function fetchIcal(url, source) {
 }
 
 // Todos los bloqueos: Airbnb + iCal directo + reservas directas guardadas.
-async function getAllBlocks() {
+// `known`: arreglo de reservas directas ya en memoria (p. ej. el que acaba de
+// escribirse). Se pasa para NO releer el blob justo después de un put —
+// esa relectura puede traer una copia vieja y "desaparecer" la reserva recién
+// hecha. Sin argumento se comporta como siempre y lee del blob.
+async function getAllBlocks(known) {
   const urls = [
     [process.env.AIRBNB_ICAL_URL, "airbnb"],
     [process.env.DIRECT_ICAL_URL, "directo-ical"],
   ].filter(([u]) => Boolean(u));
   const [ical, direct] = await Promise.all([
     Promise.all(urls.map(([u, s]) => fetchIcal(u, s))),
-    readBlocks(),
+    Array.isArray(known) ? known : readBlocks(),
   ]);
   return [...ical.flat(), ...direct];
 }

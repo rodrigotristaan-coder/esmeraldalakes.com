@@ -172,7 +172,18 @@ async function load() {
   }
   $("login").classList.add("hidden");
   $("app").classList.remove("hidden");
+  applyBlocks(data);
 
+  loadReviews();
+  loadCustomers();
+  loadFinance();
+  loadRecurring();
+}
+
+// Pinta calendario y reservas con la lista que mande el servidor. Se llama
+// también después de agregar/editar/liberar, con la lista que devuelve esa misma
+// llamada: volver a pedir "list" ahí puede traer el blob viejo y perder el cambio.
+function applyBlocks(data) {
   OCC = calcOccupancy(data.all || []);
   $("logout").classList.remove("hidden");
 
@@ -183,9 +194,10 @@ async function load() {
   if (open) open.href = "/calendario" + (KEY ? "?adminkey=" + encodeURIComponent(KEY) : "");
 
   // Reservas directas (editar / liberar / registrar ingreso)
+  const direct = data.direct || [];
   const d = $("direct");
-  d.innerHTML = data.direct.length ? "" : '<p class="muted">Sin reservas directas próximas.</p>';
-  for (const b of data.direct) {
+  d.innerHTML = direct.length ? "" : '<p class="muted">Sin reservas directas próximas.</p>';
+  for (const b of direct) {
     const nights = Math.round((new Date(b.end) - new Date(b.start)) / 86400000);
     const div = document.createElement("div");
     div.className = "card";
@@ -220,19 +232,15 @@ async function load() {
   }
 
   // Todas (read-only)
+  const all = data.all || [];
   const a = $("all");
-  a.innerHTML = data.all.length ? "" : '<p class="muted">Sin fechas ocupadas.</p>';
-  for (const b of data.all) {
+  a.innerHTML = all.length ? "" : '<p class="muted">Sin fechas ocupadas.</p>';
+  for (const b of all) {
     const div = document.createElement("div");
     div.className = "card";
     div.innerHTML = `<span>${fmt(b)}${b.name ? ` · ${escHtml(b.name)}` : ""}</span><span class="muted">${b.source}</span>`;
     a.appendChild(div);
   }
-
-  loadReviews();
-  loadCustomers();
-  loadFinance();
-  loadRecurring();
 }
 
 const escHtml = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
@@ -749,9 +757,9 @@ async function reviewAction(act, id, isPending) {
 async function release(start, end) {
   if (!confirm(`¿Liberar ${fmtD(start)} → ${fmtD(end)}?`)) return;
   try {
-    await api(`&action=release&start=${start}&end=${end}`);
+    const r = await api(`&action=release&start=${start}&end=${end}`);
     msg("Fecha liberada ✅");
-    load();
+    if (r && r.direct) applyBlocks(r); else load();
   } catch { msg("Error al liberar.", false); }
 }
 
@@ -805,17 +813,18 @@ async function addBlock() {
   const qs = blockFormQS();
   if (!qs) return;
   try {
+    let r;
     if (EDITING) {
-      const r = await api(`&action=block-update&ostart=${EDITING.start}&oend=${EDITING.end}` + qs);
+      r = await api(`&action=block-update&ostart=${EDITING.start}&oend=${EDITING.end}` + qs);
       if (!r.ok) throw new Error(r.error);
       msg("Reserva actualizada ✅");
     } else {
-      const r = await api(`&action=block` + qs);
+      r = await api(`&action=block` + qs);
       if (!r.ok) throw new Error(r.error);
       msg("Reserva agregada ✅");
     }
     resetBlockForm();
-    load();
+    if (r.direct) applyBlocks(r); else load();
   } catch (e) { msg(EDITING ? "Error al actualizar: " + e.message : "Error al agregar.", false); }
 }
 
