@@ -181,6 +181,25 @@ module.exports = async (req, res) => {
       const doc = await readFinanceDoc();
       return res.status(200).json({ ok: true, recurring: doc.recurring });
     }
+    // Pronto pago: algunos cobros (la cuota del condominio) valen menos si se
+    // pagan antes de cierto día del mes y suben después. dayLimit = último día
+    // con el precio bajo; amountLate = lo que cuesta a partir del día siguiente.
+    const prontoPago = (q, destino) => {
+      if (q.dayLimit !== undefined) {
+        const d = parseInt(q.dayLimit, 10);
+        if (d >= 1 && d <= 28) destino.dayLimit = d; else delete destino.dayLimit;
+      }
+      if (q.amountLate !== undefined) {
+        const a = Math.round(Number(q.amountLate) * 100) / 100;
+        if (a > 0 && a <= 5000000) destino.amountLate = a; else delete destino.amountLate;
+      }
+      // Sin los dos campos no hay recargo que aplicar
+      if (destino.dayLimit === undefined || destino.amountLate === undefined) {
+        delete destino.dayLimit; delete destino.amountLate;
+      }
+      return destino;
+    };
+
     if (action === "recurring-add") {
       const type = q.type === "in" ? "in" : "out";
       const amount = Math.round(Number(q.amount) * 100) / 100;
@@ -188,11 +207,29 @@ module.exports = async (req, res) => {
       const day = Math.min(28, Math.max(1, parseInt(q.day, 10) || 1));
       if (!concept || !(amount > 0) || amount > 5000000) return res.status(422).json({ ok: false, error: "datos" });
       const doc = await readFinanceDoc();
-      doc.recurring.push({
+      doc.recurring.push(prontoPago(q, {
         id: crypto.randomBytes(5).toString("hex"), type, concept,
         category: String(q.category || "").trim().slice(0, 40) || "Otro gasto",
         amount, day, activo: true, at: new Date().toISOString(),
-      });
+      }));
+      await writeFinanceDoc(doc);
+      return res.status(200).json({ ok: true, recurring: doc.recurring });
+    }
+    // Editar un recurrente (antes solo se podía borrar y volver a crear)
+    if (action === "recurring-update") {
+      const doc = await readFinanceDoc();
+      const i = doc.recurring.findIndex((r) => r.id === q.id);
+      if (i < 0) return res.status(404).json({ ok: false, error: "recurrente" });
+      const r = { ...doc.recurring[i] };
+      if (q.concept !== undefined) { const c = String(q.concept).trim().slice(0, 120); if (!c) return res.status(422).json({ ok: false, error: "concepto" }); r.concept = c; }
+      if (q.category !== undefined) r.category = String(q.category).trim().slice(0, 40);
+      if (q.day !== undefined) r.day = Math.min(28, Math.max(1, parseInt(q.day, 10) || 1));
+      if (q.amount !== undefined) {
+        const a = Math.round(Number(q.amount) * 100) / 100;
+        if (!(a > 0) || a > 5000000) return res.status(422).json({ ok: false, error: "monto" });
+        r.amount = a;
+      }
+      doc.recurring[i] = prontoPago(q, r);
       await writeFinanceDoc(doc);
       return res.status(200).json({ ok: true, recurring: doc.recurring });
     }

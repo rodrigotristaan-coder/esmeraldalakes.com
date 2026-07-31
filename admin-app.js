@@ -24,7 +24,7 @@ const VISTAS = [
   { id: "hoy",         nombre: "Hoy",         corto: "Hoy",     ico: "◆",  accion: { txt: "+ Nueva reserva",        mini: "+ Reserva",    fn: () => nuevaReserva() } },
   { id: "calendario",  nombre: "Calendario",  corto: "Calend.", ico: "🗓", accion: { txt: "+ Nueva reserva",        mini: "+ Reserva",    fn: () => nuevaReserva() } },
   { id: "dinero",      nombre: "Dinero",      corto: "Dinero",  ico: "💰", accion: { txt: "+ Registrar movimiento", mini: "+ Movimiento", fn: () => nuevoMov() } },
-  { id: "recurrentes", nombre: "Recurrentes", corto: "Recurr.", ico: "🔁", accion: { txt: "+ Nuevo recurrente",     mini: "+ Recurrente", fn: () => abrir("dlg-recurrente") } },
+  { id: "recurrentes", nombre: "Recurrentes", corto: "Recurr.", ico: "🔁", accion: { txt: "+ Nuevo recurrente",     mini: "+ Recurrente", fn: () => nuevoRecurrente() } },
   { id: "gente",       nombre: "Huéspedes",   corto: "Gente",   ico: "👤", accion: { txt: "+ Dar de alta cliente",  mini: "+ Cliente",    fn: () => abrir("dlg-cliente") } },
 ];
 let VISTA = "hoy";
@@ -541,7 +541,7 @@ function renderHoy() {
     }
     const rec = pendientesDelMes();
     if (rec.length) {
-      const total = rec.reduce((a, r) => a + (Number(r.amount) || 0), 0);
+      const total = rec.reduce((a, r) => a + montoHoy(r).monto, 0);
       items.push({ ico: "🔁", txt: `${rec.length} gasto${rec.length === 1 ? "" : "s"} recurrente${rec.length === 1 ? "" : "s"} sin registrar`,
         sub: `${money(total)} en total · ${rec.map((r) => r.concept).join(", ")}`, btn: "Revisar", ir: "recurrentes" });
     }
@@ -1065,26 +1065,51 @@ async function confirmarCostoReserva(it, amount, btn) {
   }
 }
 
+// ¿Cuánto cuesta HOY este recurrente? Si tiene pronto pago y ya se pasó el día
+// límite, cuesta el monto con recargo.
+function montoHoy(r, diaRef) {
+  const dia = diaRef || new Date().getDate();
+  if (r.dayLimit && r.amountLate && dia > r.dayLimit) {
+    return { monto: r.amountLate, tarde: true, faltan: 0 };
+  }
+  if (r.dayLimit && r.amountLate) {
+    return { monto: r.amount, tarde: false, faltan: r.dayLimit - dia };
+  }
+  return { monto: r.amount, tarde: false, faltan: null };
+}
+
+function textoProntoPago(r) {
+  if (!r.dayLimit || !r.amountLate) return "";
+  const { tarde, faltan } = montoHoy(r);
+  if (tarde) return `⚠️ ya pasó el día ${r.dayLimit}: cuesta ${money(r.amountLate)} en vez de ${money(r.amount)}`;
+  if (faltan === 0) return `⚠️ hoy es el último día a ${money(r.amount)}; mañana sube a ${money(r.amountLate)}`;
+  return `${money(r.amount)} hasta el día ${r.dayLimit} · ${money(r.amountLate)} después (faltan ${faltan} día${faltan === 1 ? "" : "s"})`;
+}
+
 function renderRecurring() {
   renderResPend();
   const pend = pendientesDelMes();
   const ym = new Date().toISOString().slice(0, 7);
   const bp = $("r-pending");
   if (bp) {
-    const total = pend.reduce((a, r) => a + (Number(r.amount) || 0), 0);
+    const total = pend.reduce((a, r) => a + montoHoy(r).monto, 0);
     bp.innerHTML = pend.length
       ? `<p class="muted">${pend.length} por registrar · ${money(total)} en total</p>`
       : '<p class="muted">Todo lo recurrente de este mes ya está registrado ✅</p>';
     for (const r of pend) {
       const div = document.createElement("div");
-      div.className = "card";
+      const pp = montoHoy(r);
+      const aviso = textoProntoPago(r);
+      div.className = "card" + (pp.tarde || pp.faltan === 0 ? " urgente" : "");
       const fecha = `${ym}-${String(r.day).padStart(2, "0")}`;
       div.innerHTML = `<span style="text-align:left"><span class="tag ${r.type}">${r.type === "in" ? "INGRESO" : "GASTO"}</span>` +
-        `<b>${escHtml(r.concept)}</b> <span class="muted">· día ${r.day} · ${escHtml(r.category || "")}</span></span>`;
+        `<b>${escHtml(r.concept)}</b> <span class="muted">· día ${r.day} · ${escHtml(r.category || "")}</span>` +
+        (aviso ? `<br><span class="${pp.tarde || pp.faltan === 0 ? "aviso-pp" : "muted"}">${escHtml(aviso)}</span>` : "") +
+        `</span>`;
       const wrap = document.createElement("span");
       wrap.className = "row";
       const amt = document.createElement("input");
-      amt.type = "number"; amt.step = "0.01"; amt.min = "0"; amt.value = r.amount; amt.style.width = "105px";
+      amt.type = "number"; amt.step = "0.01"; amt.min = "0"; amt.value = pp.monto; amt.style.width = "105px";
       amt.title = "Puedes cambiar el monto antes de confirmar";
       const dt = document.createElement("input");
       dt.type = "date"; dt.value = fecha; dt.title = "Puedes cambiar la fecha antes de confirmar";
@@ -1103,18 +1128,25 @@ function renderRecurring() {
   for (const r of RECUR) {
     const div = document.createElement("div");
     div.className = "card";
-    div.innerHTML = `<span style="text-align:left"><b>${escHtml(r.concept)}</b> <span class="muted">· ${money(r.amount)} · día ${r.day} · ${escHtml(r.category || "")}${r.activo ? "" : " · ⏸ pausado"}</span></span>`;
+    const aviso = textoProntoPago(r);
+    div.innerHTML = `<span style="text-align:left"><b>${escHtml(r.concept)}</b> ` +
+      `<span class="muted">· ${money(r.amount)} · día ${r.day} · ${escHtml(r.category || "")}${r.activo ? "" : " · ⏸ pausado"}</span>` +
+      (aviso ? `<br><span class="muted">${escHtml(aviso)}</span>` : "") + `</span>`;
     const wrap = document.createElement("span");
     wrap.className = "row";
+    const ed = document.createElement("button");
+    ed.className = "quiet";
+    ed.textContent = "Editar";
+    ed.addEventListener("click", () => editarRecurrente(r));
     const tg = document.createElement("button");
-    tg.className = "ghost";
+    tg.className = "quiet";
     tg.textContent = r.activo ? "Pausar" : "Reactivar";
     tg.addEventListener("click", () => recurringAction("toggle", r.id));
     const del = document.createElement("button");
-    del.className = "danger";
-    del.textContent = "✕";
+    del.className = "quiet peligro";
+    del.textContent = "Borrar";
     del.addEventListener("click", () => recurringAction("del", r.id, r.concept));
-    wrap.append(tg, del);
+    wrap.append(ed, tg, del);
     div.appendChild(wrap);
     bl.appendChild(div);
   }
@@ -1134,22 +1166,63 @@ async function confirmRecurring(r, amount, date, btn) {
   }
 }
 
+// --- Alta y edición de recurrentes ---
+let EDIT_REC = null;
+
+function nuevoRecurrente() {
+  EDIT_REC = null;
+  $("rec-title").textContent = "Nuevo gasto recurrente";
+  $("r-concept").value = ""; $("r-amount").value = ""; $("r-day").value = "1";
+  $("r-pp").checked = false; $("r-daylimit").value = ""; $("r-amountlate").value = "";
+  $("r-pp-campos").classList.add("hidden");
+  $("r-add").textContent = "Guardar recurrente";
+  abrir("dlg-recurrente");
+  $("r-concept").focus();
+}
+
+function editarRecurrente(r) {
+  EDIT_REC = r.id;
+  $("rec-title").textContent = "Editar recurrente";
+  $("r-concept").value = r.concept || "";
+  $("r-cat").value = r.category || "";
+  $("r-amount").value = r.amount;
+  $("r-day").value = r.day || 1;
+  const tienePP = !!(r.dayLimit && r.amountLate);
+  $("r-pp").checked = tienePP;
+  $("r-daylimit").value = tienePP ? r.dayLimit : "";
+  $("r-amountlate").value = tienePP ? r.amountLate : "";
+  $("r-pp-campos").classList.toggle("hidden", !tienePP);
+  $("r-add").textContent = "Guardar cambios";
+  abrir("dlg-recurrente");
+}
+
 async function addRecurring() {
   const concept = $("r-concept").value.trim();
   const amount = parseFloat($("r-amount").value);
   const category = $("r-cat").value;
   const day = parseInt($("r-day").value, 10) || 1;
   if (!concept || !(amount > 0)) return msg("Falta el concepto o el monto del recurrente.", false);
+  // Pronto pago: los dos campos o ninguno
+  const usaPP = $("r-pp").checked;
+  const dayLimit = usaPP ? parseInt($("r-daylimit").value, 10) : "";
+  const amountLate = usaPP ? parseFloat($("r-amountlate").value) : "";
+  if (usaPP && (!(dayLimit >= 1 && dayLimit <= 28) || !(amountLate > 0))) {
+    return msg("Para el precio que sube: pon hasta qué día vale el precio bajo y cuánto cuesta después.", false);
+  }
+  const qs = `&concept=${encodeURIComponent(concept)}&category=${encodeURIComponent(category)}` +
+    `&amount=${amount}&day=${day}&dayLimit=${usaPP ? dayLimit : ""}&amountLate=${usaPP ? amountLate : ""}`;
   try {
-    const r = await api(`&action=recurring-add&type=out&concept=${encodeURIComponent(concept)}&category=${encodeURIComponent(category)}&amount=${amount}&day=${day}`);
+    const r = EDIT_REC
+      ? await api(`&action=recurring-update&id=${encodeURIComponent(EDIT_REC)}` + qs)
+      : await api(`&action=recurring-add&type=out` + qs);
     if (!r.ok) throw new Error(r.error);
     RECUR = r.recurring || [];
     renderRecurring();
     renderHoy();
-    $("r-concept").value = ""; $("r-amount").value = "";
     cerrar("dlg-recurrente");
-    msg("Recurrente agregado ✅");
-  } catch { msg("Error al agregar el recurrente.", false); }
+    msg(EDIT_REC ? "Recurrente actualizado ✅" : "Recurrente agregado ✅");
+    EDIT_REC = null;
+  } catch { msg("Error al guardar el recurrente.", false); }
 }
 
 async function recurringAction(act, id, concepto) {
@@ -1346,6 +1419,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("canceledit").addEventListener("click", resetBlockForm);
   $("c-seed").addEventListener("click", seedCustomer);
   $("n-save").addEventListener("click", guardarNota);
+  $("r-pp").addEventListener("change", (e) => $("r-pp-campos").classList.toggle("hidden", !e.target.checked));
   $("f-type").addEventListener("change", fillCats);
   $("f-add").addEventListener("click", addMovFromForm);
   $("f-cancel").addEventListener("click", () => { resetMovForm(); msg("Edición cancelada."); });

@@ -216,9 +216,12 @@
     .fgrid label { display:flex; flex-direction:column; align-items:stretch; gap:.25rem; font-size:.74rem;
       text-transform:uppercase; letter-spacing:.4px; color:rgba(255,255,255,.7); }
     .fgrid input, .fgrid select { width:100%; }
-    .fgrid label.check { flex-direction:row; align-items:center; justify-content:flex-start; gap:.55rem;
-      text-transform:none; letter-spacing:0; font-size:.9rem; color:#fff; }
-    .fgrid label.check input { width:1.15rem; flex:0 0 auto; }
+    .fgrid label.check, label.check { flex-direction:row; align-items:center; justify-content:flex-start; gap:.55rem;
+      text-transform:none; letter-spacing:0; font-size:.9rem; color:#fff; display:flex; }
+    .fgrid label.check input, label.check input { width:1.15rem; flex:0 0 auto; }
+    /* Aviso de que un cobro está por subir de precio */
+    .aviso-pp { color:var(--ambar); font-weight:600; }
+    .card.urgente { border-color:rgba(245,179,1,.55); background:rgba(245,179,1,.1); }
     @media (max-width:520px) { .fgrid { grid-template-columns:1fr; } }
 
     /* ---------- escritorio ---------- */
@@ -510,6 +513,12 @@
       <label>Categoría <select id="r-cat"></select></label>
       <label>Monto <input id="r-amount" type="number" min="0" step="0.01" placeholder="MXN" /></label>
       <label>Día del mes <input id="r-day" type="number" min="1" max="28" value="1" /></label>
+    </div>
+    <label class="check" style="margin:1rem 0 .2rem"><input id="r-pp" type="checkbox" /> Sube de precio si se paga tarde</label>
+    <p class="muted" style="margin-bottom:.7rem">Como la cuota del condominio: un precio si pagas a tiempo y otro más alto después.</p>
+    <div class="fgrid hidden" id="r-pp-campos">
+      <label>Precio bajo hasta el día <input id="r-daylimit" type="number" min="1" max="28" placeholder="10" /></label>
+      <label>Monto a partir del día siguiente <input id="r-amountlate" type="number" min="0" step="0.01" placeholder="MXN" /></label>
     </div>
     <div class="modal__pie">
       <button class="ghost" type="button" data-cerrar>Cerrar</button>
