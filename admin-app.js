@@ -684,7 +684,8 @@ function applyCustomers(list) {
 // --- Finanzas ---
 const CATS = {
   in: ["Reserva", "Extras del huésped", "Otro ingreso"],
-  out: ["Recepción", "Limpieza", "Luz", "Gas", "Agua", "Internet", "Cuota condominio", "Mantenimiento",
+  // Sin "Agua": va incluida en la cuota de mantenimiento del condominio.
+  out: ["Recepción", "Limpieza", "Luz", "Gas", "Internet", "Cuota condominio", "Mantenimiento",
         "Jabón e insumos", "Sábanas y blancos", "Pintura", "Jardinería",
         "Desayunos", "Ida al súper", "Publicidad", "Comisiones", "Otro gasto"],
 };
