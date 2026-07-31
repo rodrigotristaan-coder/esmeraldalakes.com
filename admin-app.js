@@ -56,8 +56,9 @@ function whoOn(ds) {
   return null;
 }
 
-// Mes visible del calendario compacto (0 = el mes en curso)
+// Meses visibles del calendario (0 = el mes en curso). En pantalla chica, 1.
 let CAL_OFFSET = 0;
+const CAL_MESES = window.matchMedia("(min-width: 700px)").matches ? 2 : 1;
 
 function renderMiniCal() {
   const box = $("minical");
@@ -66,15 +67,14 @@ function renderMiniCal() {
   const Y = now.getFullYear(), M = now.getMonth();
   const todayDs = isoDay(Y, M, now.getDate());
   box.innerHTML = "";
-  for (let k = CAL_OFFSET; k < CAL_OFFSET + 1; k++) {
+  for (let k = CAL_OFFSET; k < CAL_OFFSET + CAL_MESES; k++) {
     const my = Y + Math.floor((M + k) / 12), mm = ((M + k) % 12 + 12) % 12;
     const daysIn = new Date(my, mm + 1, 0).getDate();
     let sold = 0;
     for (let d = 1; d <= daysIn; d++) if (srcFor(isoDay(my, mm, d))) sold++;
-    const t = $("cal-title");
-    if (t) t.innerHTML = `${MESES_MC[mm]} ${my}<span class="pct">${Math.round((sold / daysIn) * 100)}% ocupado</span>`;
     const sec = document.createElement("div");
     sec.className = "mc-month";
+    sec.innerHTML = `<h4>${MESES_MC[mm]} ${my}<span class="pct">${Math.round((sold / daysIn) * 100)}%</span></h4>`;
     const grid = document.createElement("div");
     grid.className = "mc-grid";
     DOWS_MC.forEach((d) => grid.insertAdjacentHTML("beforeend", `<span class="mc-dow">${d}</span>`));
@@ -105,6 +105,13 @@ function renderMiniCal() {
     sec.appendChild(grid);
     box.appendChild(sec);
   }
+  const t = $("cal-title");
+  if (t) {
+    const a = new Date(Y, M + CAL_OFFSET, 1), b = new Date(Y, M + CAL_OFFSET + CAL_MESES - 1, 1);
+    t.textContent = CAL_MESES === 1 || a.getTime() === b.getTime()
+      ? `${MESES_MC[a.getMonth()]} ${a.getFullYear()}`
+      : `${MESES_MC[a.getMonth()]} – ${MESES_MC[b.getMonth()]} ${b.getFullYear()}`;
+  }
 }
 
 function showWho(ds) {
@@ -118,7 +125,7 @@ function showWho(ds) {
 }
 
 function calMove(delta) {
-  CAL_OFFSET = Math.max(0, Math.min(23, CAL_OFFSET + delta));
+  CAL_OFFSET = Math.max(0, Math.min(24 - CAL_MESES, CAL_OFFSET + delta * CAL_MESES));
   const e = $("cal-who"); if (e) e.textContent = "";
   renderMiniCal();
 }
@@ -233,6 +240,11 @@ const escHtml = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", 
 async function loadReviews() {
   let data;
   try { data = await api("&action=reviews"); } catch { return; }
+  applyReviews(data.reviews || []);
+}
+
+function applyReviews(all) {
+  const data = { reviews: all };
   const pending = (data.reviews || []).filter((r) => r.status !== "approved");
   const approved = (data.reviews || []).filter((r) => r.status === "approved");
 
@@ -269,8 +281,14 @@ async function loadReviews() {
 async function loadCustomers() {
   let data;
   try { data = await api("&action=customers"); } catch { return; }
+  applyCustomers(data.customers || []);
+}
+
+// Igual que en finanzas: tras escribir usamos la lista que el server ya tiene en
+// memoria en vez de releer el blob (la relectura inmediata traía la copia vieja
+// y por eso los cambios de clientes "no se guardaban").
+function applyCustomers(list) {
   const box = $("customers");
-  const list = data.customers || [];
   box.innerHTML = list.length ? "" : '<p class="muted">Sin clientes todavía.</p>';
   for (const c of list) {
     const refs = (c.credits || []).filter((x) => x.type === "referral").length;
@@ -701,8 +719,8 @@ async function nightsAction(email, delta) {
   try {
     const r = await api(`&action=customer-nights&email=${encodeURIComponent(email)}&delta=${delta}`);
     if (!r.ok) throw new Error(r.error);
+    if (r.customers) applyCustomers(r.customers); else loadCustomers();
     msg(delta > 0 ? "Noche acreditada ✅" : "Noche redimida ✅");
-    loadCustomers();
   } catch { msg("Error al ajustar noches.", false); }
 }
 
@@ -712,9 +730,9 @@ async function seedCustomer() {
   try {
     const r = await api(`&action=customer-seed&email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}`);
     if (!r.ok) throw new Error(r.error);
+    if (r.customers) applyCustomers(r.customers); else loadCustomers();
     msg(`Cliente dado de alta ✅ (código ${r.refCode})`);
     $("c-name").value = ""; $("c-email").value = "";
-    loadCustomers();
   } catch { msg("Error al dar de alta.", false); }
 }
 
@@ -722,9 +740,9 @@ async function reviewAction(act, id, isPending) {
   const verb = act === "approve" ? "aprobar" : (isPending ? "rechazar" : "quitar");
   if (!confirm(`¿Seguro que quieres ${verb} esta reseña?`)) return;
   try {
-    await api(`&action=review-${act}&id=${encodeURIComponent(id)}`);
+    const r = await api(`&action=review-${act}&id=${encodeURIComponent(id)}`);
+    if (r && r.reviews) applyReviews(r.reviews); else loadReviews();
     msg(act === "approve" ? "Reseña publicada ✅" : "Reseña eliminada 🗑️");
-    loadReviews();
   } catch { msg("Error con la reseña.", false); }
 }
 

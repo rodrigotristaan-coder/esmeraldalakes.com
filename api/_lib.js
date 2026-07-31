@@ -380,7 +380,9 @@ async function seedCustomer({ email, name, sampleReservation }) {
     customers[key].reservations.push({ ...sampleReservation, at: new Date().toISOString(), sample: true });
   }
   await writeCustomers(customers);
-  return { ok: true, email: key, refCode: customers[key].refCode };
+  // Devuelve el objeto ya en memoria: quien llame NO debe releer el blob
+  // (la lectura inmediata después de escribir puede traer la copia vieja).
+  return { ok: true, email: key, refCode: customers[key].refCode, customers };
 }
 
 // --- Magic-link: códigos de 6 dígitos (Vercel Blob) ---

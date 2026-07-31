@@ -113,7 +113,8 @@
     .calnav h4 { font-family:Georgia,serif; font-size:1rem; }
     .calnav .pct { font-family:"Inter",sans-serif; font-size:.7rem; opacity:.6; font-weight:400; margin-left:.4rem; }
     .calnav button { padding:.35rem .8rem; }
-    .minical.compact { display:block; touch-action:pan-y; }
+    .minical.compact { display:grid; grid-template-columns:1fr; gap:.8rem; touch-action:pan-y; }
+    @media (min-width:700px) { .minical.compact { grid-template-columns:1fr 1fr; } }
     .minical.compact .mc-month { padding:1rem .9rem; }
     .minical.compact .mc-day { height:38px; font-size:.82rem; }
     #cal-who { font-size:.82rem; min-height:1.1rem; margin-top:.5rem; color:var(--gold); }
@@ -122,7 +123,11 @@
     .chart { width:100%; height:190px; display:block; }
     .chart .gin { fill:var(--aqua); } .chart .gout { fill:var(--rojo); }
     .chart text { fill:rgba(255,255,255,.66); font:400 9px "Inter",sans-serif; }
-    .chartlg { display:flex; gap:1rem; font-size:.75rem; opacity:.85; margin-top:.3rem; }
+    .chartlg { display:flex; gap:1rem; font-size:.75rem; opacity:.85; flex-wrap:wrap; }
+    .chartbox { background:var(--glass); border:1px solid var(--borde); border-radius:24px; padding:1rem 1.2rem 1.2rem;
+      margin:.8rem 0; -webkit-backdrop-filter:blur(12px) saturate(1.25); backdrop-filter:blur(12px) saturate(1.25); }
+    .charthead { display:flex; align-items:baseline; justify-content:space-between; gap:.8rem; flex-wrap:wrap; margin-bottom:.5rem; }
+    .charthead h3 { font-family:Georgia,serif; font-size:1.05rem; }
 
     /* ---- filtro de periodo ---- */
     .periodo { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; margin:.2rem 0 .7rem; }
@@ -171,6 +176,14 @@
       <span class="muted">los KPIs cambian con el periodo</span>
     </div>
     <div id="stats" class="stats"></div>
+
+    <div class="chartbox">
+      <div class="charthead">
+        <h3>📈 Ingresos vs gastos</h3>
+        <div class="chartlg"><span><span class="dot d"></span>Ingresos</span><span><span class="dot" style="background:var(--rojo)"></span>Gastos</span><span class="muted">Últimos 12 meses</span></div>
+      </div>
+      <svg id="f-chart" class="chart" viewBox="0 0 720 190" preserveAspectRatio="none" role="img" aria-label="Ingresos contra gastos por mes"></svg>
+    </div>
 
     <!-- Calendario + nueva reserva -->
     <details class="sec" open>
@@ -235,10 +248,6 @@
           <button id="f-cancel" class="ghost hidden" type="button">Cancelar edición</button>
         </div>
         <p class="muted">Pon el <strong>huésped</strong> para que el gasto (limpieza, desayunos, ida al súper) se le sume a su cuenta. También desde Telegram: <code>ingreso 4500 Reserva María</code> · <code>gasto 650 Limpieza</code>.</p>
-
-        <h3 class="muted" style="margin:1rem 0 .3rem">📈 Ingresos vs gastos</h3>
-        <svg id="f-chart" class="chart" viewBox="0 0 720 190" preserveAspectRatio="none" role="img" aria-label="Ingresos contra gastos por mes"></svg>
-        <div class="chartlg"><span><span class="dot d"></span>Ingresos</span><span><span class="dot" style="background:var(--rojo)"></span>Gastos</span><span class="muted">Últimos 12 meses</span></div>
 
         <div class="cols2">
           <div class="finwrap" id="f-summary"></div>

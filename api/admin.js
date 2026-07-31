@@ -59,7 +59,8 @@ module.exports = async (req, res) => {
       if (action === "review-approve") all = all.map((r) => (r.id === id ? { ...r, status: "approved" } : r));
       else all = all.filter((r) => r.id !== id);
       await writeReviews(all);
-      return res.status(200).json({ ok: true });
+      // Lista autoritativa (ya en memoria): el cliente la aplica sin releer el blob.
+      return res.status(200).json({ ok: true, reviews: all.slice().sort((a, b) => b.ts - a.ts) });
     }
 
     // --- Clientes del portal ---
@@ -82,7 +83,8 @@ module.exports = async (req, res) => {
       c.credits = c.credits || [];
       c.credits.push({ type: delta < 0 ? "redeem" : "manual", nights: delta, at: new Date().toISOString() });
       await writeCustomers(customers);
-      return res.status(200).json({ ok: true, freeNights: c.freeNights });
+      const lista = Object.values(customers).sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+      return res.status(200).json({ ok: true, freeNights: c.freeNights, customers: lista });
     }
     // --- Finanzas (ingresos y gastos) ---
     if (action === "finance-list") {
@@ -174,7 +176,8 @@ module.exports = async (req, res) => {
         : null;
       const r = await seedCustomer({ email: q.email, name: q.name, sampleReservation: sample });
       if (!r.ok) return res.status(422).json({ ok: false, error: r.reason });
-      return res.status(200).json({ ok: true, email: r.email, refCode: r.refCode });
+      const lista = Object.values(r.customers || {}).sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+      return res.status(200).json({ ok: true, email: r.email, refCode: r.refCode, customers: lista });
     }
 
     // list
