@@ -143,12 +143,28 @@ function matchDate(block, field) {
   const d = m[1];
   return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
 }
+// Airbnb exporta su iCal con un SUMMARY genérico ("Reserved", "Not available"…)
+// y NO manda el nombre del huésped. Aun así lo leemos: si algún día el feed trae
+// algo útil, aparece solo; si es genérico, se ignora y el nombre se pone a mano.
+const SUMMARY_GENERICO = /^(reserved|not available|unavailable|blocked|busy|closed|airbnb.*not available.*)$/i;
+function matchSummary(blk) {
+  const m = blk.match(/\nSUMMARY[^:\n]*:(.*)/);
+  if (!m) return null;
+  const s = m[1].replace(/\\([,;\\])/g, "$1").trim();
+  return !s || SUMMARY_GENERICO.test(s) ? null : s.slice(0, 80);
+}
+
 function parseICal(text, source) {
   const out = [];
   for (const blk of text.split("BEGIN:VEVENT").slice(1)) {
     const start = matchDate(blk, "DTSTART");
     const end = matchDate(blk, "DTEND");
-    if (start && end) out.push({ start, end, source });
+    if (start && end) {
+      const b = { start, end, source };
+      const n = matchSummary(blk);
+      if (n) b.name = n;
+      out.push(b);
+    }
   }
   return out;
 }
@@ -254,14 +270,35 @@ const writeCustomers = (o) => writeJsonObj(CUSTOMERS, o);
 // Recurrente: { id, type, concept, category, amount, day (1-28), activo }
 // Los dos viven en el MISMO blob: { movs, recurring }. Por eso writeFinance relee
 // el doc antes de escribir — si escribiera solo { movs } borraría los recurrentes.
+// `notas`: datos que ponemos a mano sobre una reserva que NO controlamos (las de
+// Airbnb llegan por iCal y no traen nombre). Van indexadas por "llegada_salida".
 async function readFinanceDoc() {
   const o = await readJsonObj(FINANCE);
   return {
     movs: Array.isArray(o.movs) ? o.movs : [],
     recurring: Array.isArray(o.recurring) ? o.recurring : [],
+    notas: o.notas && typeof o.notas === "object" && !Array.isArray(o.notas) ? o.notas : {},
   };
 }
-const writeFinanceDoc = (doc) => writeJsonObj(FINANCE, { movs: doc.movs || [], recurring: doc.recurring || [] });
+const writeFinanceDoc = (doc) =>
+  writeJsonObj(FINANCE, { movs: doc.movs || [], recurring: doc.recurring || [], notas: doc.notas || {} });
+
+// Pega las notas encima de los bloqueos: lo que ya trae el bloqueo manda,
+// la nota solo rellena lo que falta (así una reserva directa nunca se pisa).
+const notaKey = (start, end) => `${start}_${end}`;
+function aplicarNotas(blocks, notas) {
+  if (!notas) return blocks;
+  return blocks.map((b) => {
+    const n = notas[notaKey(b.start, b.end)];
+    if (!n) return b;
+    const out = { ...b };
+    for (const k of ["name", "guests", "rate", "checkinTime", "checkoutTime"]) {
+      if (out[k] === undefined && n[k] !== undefined && n[k] !== "") out[k] = n[k];
+    }
+    out.anotada = true;
+    return out;
+  });
+}
 async function readFinance() { return (await readFinanceDoc()).movs; }
 async function writeFinance(movs) {
   const doc = await readFinanceDoc();
@@ -465,4 +502,6 @@ module.exports = {
   issueCode, verifyCode, sessionCookie, clearSessionCookie, readSession, isAdminEmail,
   // finanzas
   readFinance, writeFinance, readFinanceDoc, writeFinanceDoc,
+  // notas sobre reservas que no controlamos (Airbnb)
+  notaKey, aplicarNotas,
 };

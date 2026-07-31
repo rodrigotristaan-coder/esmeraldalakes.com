@@ -1,6 +1,6 @@
 // Panel de administración (protegido con ADMIN_KEY): fechas, reseñas, clientes y finanzas.
 const crypto = require("crypto");
-const { safeEqual, readBlocks, addBlock, removeBlock, updateBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail, readSession, readFinance, writeFinance, readFinanceDoc, writeFinanceDoc } = require("./_lib");
+const { safeEqual, readBlocks, addBlock, removeBlock, updateBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail, readSession, readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, notaKey, aplicarNotas } = require("./_lib");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
@@ -30,7 +30,13 @@ module.exports = async (req, res) => {
   const upcoming = (arr, today) => arr.filter((b) => (b.end || b.start) >= today).sort((a, b) => a.start.localeCompare(b.start));
   const listsFrom = async (direct) => {
     const today = new Date().toISOString().slice(0, 10);
-    return { direct: upcoming(direct, today), all: upcoming(await getAllBlocks(direct), today) };
+    // Las notas ponen nombre a lo que llega de Airbnb (su iCal solo manda fechas)
+    let notas = {};
+    try { notas = (await readFinanceDoc()).notas; } catch { /* sin notas se ve igual, solo sin nombres */ }
+    return {
+      direct: upcoming(aplicarNotas(direct, notas), today),
+      all: upcoming(aplicarNotas(await getAllBlocks(direct), notas), today),
+    };
   };
 
   try {
@@ -59,6 +65,27 @@ module.exports = async (req, res) => {
       if (!r.ok) return res.status(422).json({ ok: false, error: r.reason });
       return res.status(200).json({ ok: true, block: r.block, ...(await listsFrom(r.blocks)) });
     }
+    // Ponerle nombre (y datos) a una reserva que llega de Airbnb: su iCal solo
+    // manda fechas, así que lo demás se anota a mano y se guarda aparte.
+    if (action === "note-set") {
+      if (!validDate(start) || !validDate(end) || end <= start) return res.status(422).json({ ok: false, error: "fechas" });
+      const doc = await readFinanceDoc();
+      const k = notaKey(start, end);
+      const nombre = String(q.name || "").trim().slice(0, 80);
+      if (!nombre && !q.guests && !q.rate) {
+        delete doc.notas[k];
+      } else {
+        const n = { name: nombre };
+        const g = parseInt(q.guests, 10);
+        if (g > 0 && g <= 20) n.guests = g;
+        const r = Math.round(Number(q.rate) * 100) / 100;
+        if (r > 0 && r <= 1000000) n.rate = r;
+        doc.notas[k] = n;
+      }
+      await writeFinanceDoc(doc);
+      return res.status(200).json({ ok: true, ...(await listsFrom(await readBlocks())) });
+    }
+
     // --- Reseñas ---
     if (action === "reviews") {
       const reviews = (await readReviews()).sort((a, b) => b.ts - a.ts);

@@ -153,6 +153,19 @@
     .callegend { display:flex; flex-wrap:wrap; gap:.5rem 1.1rem; font-size:.75rem; opacity:.85; margin-top:.7rem; }
     .dot { display:inline-block; width:.7rem; height:.7rem; border-radius:50%; margin-right:.3rem; vertical-align:-1px; }
     .dot.d { background:var(--aqua); } .dot.a { background:var(--ambar); } .dot.s { background:var(--gold); }
+    /* Marca de llegada (recepción) y salida (limpieza) en el calendario */
+    .mc-day.llega, .mc-day.sale { position:relative; }
+    .mc-day.llega::after, .mc-day.sale::after { content:""; position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
+      width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; }
+    .mc-day.llega::after { border-bottom:5px solid #06301f; }
+    .mc-day.sale::after { border-top:5px solid #06301f; }
+    .marca { display:inline-block; width:0; height:0; margin-right:.35rem; vertical-align:1px;
+      border-left:4px solid transparent; border-right:4px solid transparent; }
+    .marca--llega { border-bottom:5px solid rgba(255,255,255,.85); }
+    .marca--sale { border-top:5px solid rgba(255,255,255,.85); }
+    #hoy-dia { font-size:.84rem; color:var(--gold); min-height:1.2rem; margin-top:.55rem; }
+    .cinta__d { cursor:pointer; }
+    .cinta__d:hover { outline:1.5px solid rgba(255,255,255,.75); }
     .calnav { display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-bottom:.7rem; }
     .calnav h4 { font-family:Georgia,serif; font-size:1rem; font-weight:400; }
     .calnav button { padding:.35rem .85rem; }
@@ -262,8 +275,9 @@
       <div class="ahora">
         <p class="ahora__frase" id="hoy-frase">Cargando…</p>
         <p class="ahora__sub muted" id="hoy-sub"></p>
-        <div class="cinta" id="hoy-cinta" role="img" aria-label="Ocupación de los próximos 30 días"></div>
+        <div class="cinta" id="hoy-cinta" aria-label="Ocupación de los próximos 30 días"></div>
         <div class="cinta__ejes"><span id="hoy-eje-a"></span><span id="hoy-eje-b"></span></div>
+        <p id="hoy-dia" aria-live="polite">Pasa el cursor por un día para ver quién está y cuánto entra o sale.</p>
       </div>
 
       <div class="bloque">
@@ -298,6 +312,8 @@
           <span><i class="dot d"></i>Reserva directa</span>
           <span><i class="dot a"></i>Airbnb</span>
           <span><i class="dot s"></i>Lo que estás eligiendo</span>
+          <span><i class="marca marca--llega"></i>Llegada · recepción</span>
+          <span><i class="marca marca--sale"></i>Salida · limpieza</span>
         </div>
       </div>
 
@@ -362,7 +378,13 @@
       </div>
 
       <div class="bloque">
-        <h2>Por confirmar este mes</h2>
+        <h2>Por cada reserva</h2>
+        <span class="muted">Recepción al llegar y limpieza al salir. Se proponen solos con cada reserva, de Airbnb o directa; tú ajustas el monto y confirmas.</span>
+        <div id="res-pending"></div>
+      </div>
+
+      <div class="bloque">
+        <h2>Cada mes</h2>
         <span class="muted">Puedes ajustar el monto y la fecha antes de guardarlos.</span>
         <div id="r-pending"></div>
       </div>
@@ -481,6 +503,26 @@
     <div class="modal__pie">
       <button class="ghost" type="button" data-cerrar>Cerrar</button>
       <button id="r-add" type="button">Guardar recurrente</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Ponerle nombre a una reserva de Airbnb -->
+<dialog id="dlg-nota" aria-labelledby="n-title">
+  <div class="modal">
+    <div class="modal__head">
+      <h2 id="n-title">Datos de la reserva</h2>
+      <button class="modal__cerrar" type="button" data-cerrar aria-label="Cerrar">✕</button>
+    </div>
+    <p class="muted" style="margin-bottom:.9rem">Airbnb solo nos manda las fechas, nunca el nombre. Lo que escribas aquí se queda pegado a esas fechas en todo el panel.</p>
+    <div class="fgrid">
+      <label class="wide">Huésped <input id="n-name" type="text" placeholder="Nombre y apellido" /></label>
+      <label>Huéspedes <input id="n-guests" type="number" min="1" max="20" placeholder="cuántos" /></label>
+      <label>Precio por noche <input id="n-rate" type="number" min="0" step="0.01" placeholder="lo que paga el huésped" /></label>
+    </div>
+    <div class="modal__pie">
+      <button class="ghost" type="button" data-cerrar>Cerrar</button>
+      <button id="n-save" type="button">Guardar datos</button>
     </div>
   </div>
 </dialog>

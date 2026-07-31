@@ -33,7 +33,8 @@ let RV_PEND = 0; // reseñas esperando aprobación (para el globito del menú)
 // Cuántas cosas piden atención en cada sección
 function cuentas() {
   const rec = typeof pendientesDelMes === "function" ? pendientesDelMes().length : 0;
-  return { hoy: rec + RV_PEND, recurrentes: rec, gente: RV_PEND };
+  const res = typeof pendientesDeReservas === "function" ? pendientesDeReservas().length : 0;
+  return { hoy: rec + res + RV_PEND, recurrentes: rec + res, gente: RV_PEND };
 }
 
 function pintarMenu() {
@@ -157,6 +158,8 @@ function renderMiniCal() {
       if (s) cls.push(s);
       if (ds < todayDs) cls.push("past");
       if (ds === todayDs) cls.push("today");
+      if (BLOCKS.some((b) => b.start === ds)) cls.push("llega");
+      if (BLOCKS.some((b) => b.end === ds)) cls.push("sale");
       if (ds === SEL.start || ds === SEL.end) cls.push("sel");
       else if (SEL.start && SEL.end && ds > SEL.start && ds < SEL.end) cls.push("inrange");
       const cell = document.createElement("button");
@@ -164,11 +167,11 @@ function renderMiniCal() {
       cell.className = cls.join(" ");
       cell.textContent = d;
       const w = whoOn(ds);
-      if (w) {
-        const n = Math.round((new Date(w.b.end) - new Date(w.b.start)) / 86400000);
-        cell.title = `${w.quien} · ${fmtD(w.b.start)} → ${fmtD(w.b.end)} (${n} noche${n === 1 ? "" : "s"})`;
-        cell.addEventListener("mouseenter", () => { const e = $("cal-who"); if (e) e.textContent = "👤 " + cell.title; });
-      }
+      // El detalle del día (quién está, quién llega o sale, y cuánto entró o salió)
+      const detalle = detalleDia(ds);
+      cell.title = detalle;
+      cell.addEventListener("mouseenter", () => { const e = $("cal-who"); if (e) e.textContent = detalle; });
+      cell.addEventListener("focus", () => { const e = $("cal-who"); if (e) e.textContent = detalle; });
       if (ds >= todayDs) cell.addEventListener("click", () => (w ? showWho(ds) : pickDay(ds)));
       grid.appendChild(cell);
     }
@@ -315,13 +318,86 @@ function applyBlocks(data) {
   for (const b of all) {
     const div = document.createElement("div");
     div.className = "card";
-    div.innerHTML = `<span>${fmt(b)}${b.name ? ` · ${escHtml(b.name)}` : ""}</span><span class="muted">${b.source}</span>`;
+    const quien = b.name ? `<b>${escHtml(b.name)}</b>` : '<span class="muted">sin nombre</span>';
+    div.innerHTML = `<span style="text-align:left">${quien}<br><span class="muted">${fmt(b)} · ${escHtml(b.source)}` +
+      `${b.guests ? " · " + b.guests + " pax" : ""}${b.rate ? " · " + money(b.rate) + "/noche" : ""}</span></span>`;
+    // Las de Airbnb llegan por iCal sin nombre: aquí se les pone a mano.
+    if (b.source === "airbnb") {
+      const wrap = document.createElement("span");
+      wrap.className = "row";
+      const btn = document.createElement("button");
+      btn.className = "quiet";
+      btn.textContent = b.name ? "Editar datos" : "Poner nombre";
+      btn.addEventListener("click", () => editarNota(b));
+      wrap.appendChild(btn);
+      div.appendChild(wrap);
+    }
     a.appendChild(div);
   }
   renderHoy();
+  renderResPend(); // las reservas cambiaron: recepción y limpieza también
 }
 
 const escHtml = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
+
+// ===================== Costos por reserva =====================
+// Cada huésped cuesta recibirlo y cuesta dejar el depa limpio cuando se va.
+// Estos son los montos que se proponen; siempre se pueden ajustar antes de confirmar.
+const COSTO_RECEPCION = 100;
+const COSTO_LIMPIEZA = 400;
+
+const quienDe = (b) => b.name || (b.source === "airbnb" ? "Airbnb" : "Reserva directa");
+const conceptoRecepcion = (b) => `Recepción — ${quienDe(b)} ${fmtD(b.start)}`;
+const conceptoLimpieza = (b) => `Limpieza — ${quienDe(b)} ${fmtD(b.end)}`;
+
+// Propone recepción y limpieza de cada reserva que no esté ya registrada.
+// Ventana: de 60 días atrás a 7 adelante, para que la de mañana ya aparezca.
+function pendientesDeReservas() {
+  const hoyDs = new Date().toISOString().slice(0, 10);
+  const desde = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);
+  const hasta = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const yaHay = new Set(FIN.map((m) => (m.concept || "").trim().toLowerCase()));
+  const out = [];
+  for (const b of BLOCKS) {
+    const items = [
+      { tipo: "recepcion", date: b.start, amount: COSTO_RECEPCION, concept: conceptoRecepcion(b), etiqueta: "Recepción", categoria: "Recepción" },
+      { tipo: "limpieza", date: b.end, amount: COSTO_LIMPIEZA, concept: conceptoLimpieza(b), etiqueta: "Limpieza", categoria: "Limpieza" },
+    ];
+    for (const it of items) {
+      if (it.date < desde || it.date > hasta) continue;
+      if (yaHay.has(it.concept.trim().toLowerCase())) continue;
+      out.push({ ...it, b, futuro: it.date > hoyDs });
+    }
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// ¿Qué pasa un día concreto? Se usa en el calendario y en la cinta de Hoy.
+function dineroDelDia(ds) {
+  let ing = 0, gas = 0;
+  for (const m of FIN) {
+    if (m.date !== ds) continue;
+    const v = Number(m.amount) || 0;
+    if (m.type === "in") ing += v; else gas += v;
+  }
+  return { ing, gas };
+}
+
+function detalleDia(ds) {
+  const partes = [];
+  const w = whoOn(ds);
+  const llega = BLOCKS.filter((b) => b.start === ds);
+  const sale = BLOCKS.filter((b) => b.end === ds);
+  if (w) partes.push(`👤 ${w.quien}`);
+  for (const b of llega) partes.push(`🛬 llega ${quienDe(b)} · recepción ${money(COSTO_RECEPCION)}`);
+  for (const b of sale) partes.push(`🧹 sale ${quienDe(b)} · limpieza ${money(COSTO_LIMPIEZA)}`);
+  if (!partes.length) partes.push("libre");
+  const { ing, gas } = dineroDelDia(ds);
+  if (ing) partes.push(`entra ${money(ing)}`);
+  if (gas) partes.push(`sale ${money(gas)}`);
+  if (!ing && !gas) partes.push("sin movimientos");
+  return `${fmtD(ds)} · ${partes.join(" · ")}`;
+}
 
 // ===================== Pantalla HOY =====================
 // Responde de un vistazo: ¿quién está en el depa?, ¿qué me falta hacer?,
@@ -382,8 +458,13 @@ function renderHoy() {
       const s = srcFor(ds);
       const el = document.createElement("span");
       el.className = "cinta__d" + (s ? " " + s : "") + (i === 0 ? " hoy" : "");
-      const w = whoOn(ds);
-      el.title = `${fmtD(ds)} · ${w ? w.quien : "libre"}`;
+      el.tabIndex = 0;
+      const detalle = detalleDia(ds);
+      el.title = detalle;
+      const mostrar = () => { const e = $("hoy-dia"); if (e) e.textContent = detalle; };
+      el.addEventListener("mouseenter", mostrar);
+      el.addEventListener("focus", mostrar);
+      el.addEventListener("click", mostrar);
       cinta.appendChild(el);
     }
     const a = $("hoy-eje-a"), b = $("hoy-eje-b");
@@ -396,6 +477,13 @@ function renderHoy() {
   if (box) {
     box.innerHTML = "";
     const items = [];
+    const res = pendientesDeReservas();
+    if (res.length) {
+      const total = res.reduce((a, r) => a + r.amount, 0);
+      const quienes = [...new Set(res.map((r) => quienDe(r.b)))].join(", ");
+      items.push({ ico: "🧹", txt: `${res.length} cobro${res.length === 1 ? "" : "s"} de recepción o limpieza sin registrar`,
+        sub: `${money(total)} en total · ${quienes}`, btn: "Revisar", ir: "recurrentes" });
+    }
     const rec = pendientesDelMes();
     if (rec.length) {
       const total = rec.reduce((a, r) => a + (Number(r.amount) || 0), 0);
@@ -541,7 +629,7 @@ function applyCustomers(list) {
 // --- Finanzas ---
 const CATS = {
   in: ["Reserva", "Extras del huésped", "Otro ingreso"],
-  out: ["Limpieza", "Luz", "Gas", "Agua", "Internet", "Cuota condominio", "Mantenimiento",
+  out: ["Recepción", "Limpieza", "Luz", "Gas", "Agua", "Internet", "Cuota condominio", "Mantenimiento",
         "Jabón e insumos", "Sábanas y blancos", "Pintura", "Jardinería",
         "Desayunos", "Ida al súper", "Publicidad", "Comisiones", "Otro gasto"],
 };
@@ -858,7 +946,58 @@ function pendientesDelMes() {
   return RECUR.filter((r) => r.activo && !yaHay.has((r.concept || "").toLowerCase()));
 }
 
+// Recepción y limpieza de cada reserva, listas para confirmar (monto editable)
+function renderResPend() {
+  const box = $("res-pending");
+  if (!box) return;
+  const pend = pendientesDeReservas();
+  box.innerHTML = "";
+  if (!pend.length) {
+    box.innerHTML = '<div class="vacio"><b>Nada por confirmar</b>Las recepciones y limpiezas de las reservas recientes ya están registradas.</div>';
+    return;
+  }
+  const total = pend.reduce((a, r) => a + r.amount, 0);
+  box.insertAdjacentHTML("beforeend",
+    `<p class="muted">${pend.length} por registrar · ${money(total)} en total</p>`);
+  for (const it of pend) {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `<span style="text-align:left"><span class="tag out">${it.etiqueta.toUpperCase()}</span>` +
+      `<b>${escHtml(quienDe(it.b))}</b> <span class="muted">· ${fmtD(it.date)}` +
+      `${it.futuro ? " · aún no pasa" : ""}${it.b.source === "airbnb" ? " · Airbnb" : ""}</span></span>`;
+    const wrap = document.createElement("span");
+    wrap.className = "row";
+    const amt = document.createElement("input");
+    amt.type = "number"; amt.step = "0.01"; amt.min = "0"; amt.value = it.amount;
+    amt.style.width = "105px";
+    amt.setAttribute("aria-label", `Monto de ${it.etiqueta} de ${quienDe(it.b)}`);
+    const ok = document.createElement("button");
+    ok.textContent = "Confirmar";
+    ok.addEventListener("click", () => confirmarCostoReserva(it, parseFloat(amt.value), ok));
+    wrap.append(amt, ok);
+    div.appendChild(wrap);
+    box.appendChild(div);
+  }
+}
+
+async function confirmarCostoReserva(it, amount, btn) {
+  if (!(amount > 0)) return msg("Revisa el monto.", false);
+  if (btn) { btn.disabled = true; btn.textContent = "Guardando…"; }
+  try {
+    const res = await financeAdd({
+      type: "out", date: it.date, concept: it.concept,
+      category: it.categoria, amount, guest: it.b.name || "",
+    });
+    applyFinance(res.movs || FIN.concat(res.mov));
+    msg(`${it.etiqueta} de ${quienDe(it.b)} registrada ✅`);
+  } catch {
+    msg("Error al registrar el gasto.", false);
+    if (btn) { btn.disabled = false; btn.textContent = "Confirmar"; }
+  }
+}
+
 function renderRecurring() {
+  renderResPend();
   const pend = pendientesDelMes();
   const ym = new Date().toISOString().slice(0, 7);
   const bp = $("r-pending");
@@ -989,6 +1128,36 @@ async function reviewAction(act, id, isPending) {
   } catch { msg("Error con la reseña.", false); }
 }
 
+// --- Datos a mano sobre una reserva de Airbnb (su iCal no manda el nombre) ---
+let NOTA = null; // { start, end }
+function editarNota(b) {
+  NOTA = { start: b.start, end: b.end };
+  $("n-title").textContent = `Reserva del ${fmtD(b.start)} al ${fmtD(b.end)}`;
+  $("n-name").value = b.name || "";
+  $("n-guests").value = b.guests || "";
+  $("n-rate").value = b.rate || "";
+  abrir("dlg-nota");
+  $("n-name").focus();
+}
+
+async function guardarNota() {
+  if (!NOTA) return;
+  const qs = Object.entries({
+    start: NOTA.start, end: NOTA.end,
+    name: $("n-name").value.trim(),
+    guests: $("n-guests").value,
+    rate: $("n-rate").value,
+  }).map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join("");
+  try {
+    const r = await api("&action=note-set" + qs);
+    if (!r.ok) throw new Error(r.error);
+    cerrar("dlg-nota");
+    NOTA = null;
+    if (r.direct) applyBlocks(r); else load();
+    msg("Datos guardados ✅");
+  } catch { msg("Error al guardar los datos.", false); }
+}
+
 async function release(start, end) {
   if (!confirm(`¿Liberar ${fmtD(start)} → ${fmtD(end)}?`)) return;
   try {
@@ -1107,6 +1276,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("addblock").addEventListener("click", addBlock);
   $("canceledit").addEventListener("click", resetBlockForm);
   $("c-seed").addEventListener("click", seedCustomer);
+  $("n-save").addEventListener("click", guardarNota);
   $("f-type").addEventListener("change", fillCats);
   $("f-add").addEventListener("click", addMovFromForm);
   $("f-cancel").addEventListener("click", () => { resetMovForm(); msg("Edición cancelada."); });
