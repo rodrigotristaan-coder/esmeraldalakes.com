@@ -246,12 +246,24 @@ const readCustomers = () => readJsonObj(CUSTOMERS);
 const writeCustomers = (o) => writeJsonObj(CUSTOMERS, o);
 
 // --- Finanzas (ingresos y gastos del depa, Vercel Blob) ---
-// Movimiento: { id, type: "in"|"out", date: "YYYY-MM-DD", concept, category, amount, at }
-async function readFinance() {
+// Movimiento: { id, type: "in"|"out", date: "YYYY-MM-DD", concept, category, amount, guest?, at }
+// Recurrente: { id, type, concept, category, amount, day (1-28), activo }
+// Los dos viven en el MISMO blob: { movs, recurring }. Por eso writeFinance relee
+// el doc antes de escribir — si escribiera solo { movs } borraría los recurrentes.
+async function readFinanceDoc() {
   const o = await readJsonObj(FINANCE);
-  return Array.isArray(o.movs) ? o.movs : [];
+  return {
+    movs: Array.isArray(o.movs) ? o.movs : [],
+    recurring: Array.isArray(o.recurring) ? o.recurring : [],
+  };
 }
-const writeFinance = (movs) => writeJsonObj(FINANCE, { movs });
+const writeFinanceDoc = (doc) => writeJsonObj(FINANCE, { movs: doc.movs || [], recurring: doc.recurring || [] });
+async function readFinance() { return (await readFinanceDoc()).movs; }
+async function writeFinance(movs) {
+  const doc = await readFinanceDoc();
+  doc.movs = movs;
+  await writeFinanceDoc(doc);
+}
 
 // Código de referido tipo ESM-XXXX (alfabeto sin caracteres ambiguos)
 const REF_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -446,5 +458,5 @@ module.exports = {
   normEmail, isEmail, readCustomers, writeCustomers, upsertCustomerFromBooking, ownerOfRefCode, seedCustomer,
   issueCode, verifyCode, sessionCookie, clearSessionCookie, readSession, isAdminEmail,
   // finanzas
-  readFinance, writeFinance,
+  readFinance, writeFinance, readFinanceDoc, writeFinanceDoc,
 };

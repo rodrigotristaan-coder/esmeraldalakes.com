@@ -108,6 +108,30 @@
     table.fin th { color:var(--gold); font-size:.68rem; text-transform:uppercase; letter-spacing:.5px; }
     table.fin tr:last-child td { border-bottom:0; }
 
+    /* ---- calendario compacto: un mes a la vez ---- */
+    .calnav { display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-bottom:.6rem; }
+    .calnav h4 { font-family:Georgia,serif; font-size:1rem; }
+    .calnav .pct { font-family:"Inter",sans-serif; font-size:.7rem; opacity:.6; font-weight:400; margin-left:.4rem; }
+    .calnav button { padding:.35rem .8rem; }
+    .minical.compact { display:block; touch-action:pan-y; }
+    .minical.compact .mc-month { padding:1rem .9rem; }
+    .minical.compact .mc-day { height:38px; font-size:.82rem; }
+    #cal-who { font-size:.82rem; min-height:1.1rem; margin-top:.5rem; color:var(--gold); }
+
+    /* ---- gráfica ingresos vs gastos ---- */
+    .chart { width:100%; height:190px; display:block; }
+    .chart .gin { fill:var(--aqua); } .chart .gout { fill:var(--rojo); }
+    .chart text { fill:rgba(255,255,255,.66); font:400 9px "Inter",sans-serif; }
+    .chartlg { display:flex; gap:1rem; font-size:.75rem; opacity:.85; margin-top:.3rem; }
+
+    /* ---- filtro de periodo ---- */
+    .periodo { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; margin:.2rem 0 .7rem; }
+    .periodo select { padding:.4rem .8rem; font-size:.85rem; }
+
+    /* ---- por huésped ---- */
+    table.fin td.g { text-align:left; }
+    .mini { font-size:.72rem; padding:.3rem .7rem; }
+
     .hidden { display:none; }
 
     /* ---- desktop: aprovechar el ancho ---- */
@@ -141,16 +165,27 @@
   <div id="app" class="hidden">
     <p id="msg"></p>
 
+    <div class="periodo">
+      <label for="periodo-sel">Ver</label>
+      <select id="periodo-sel"></select>
+      <span class="muted">los KPIs cambian con el periodo</span>
+    </div>
     <div id="stats" class="stats"></div>
 
     <!-- Calendario + nueva reserva -->
     <details class="sec" open>
       <summary>📅 Calendario · nueva reserva</summary>
       <div class="body">
-        <p class="calhelp">Toca un día libre para la <strong>llegada</strong> y otro para la <strong>salida</strong> — se llenan solas en el formulario. Verde = directa · ámbar = Airbnb.</p>
+        <p class="calhelp">Toca un día libre para la <strong>llegada</strong> y otro para la <strong>salida</strong>. Toca un día ocupado (o pasa el cursor) para ver <strong>quién está</strong>. Verde = directa · ámbar = Airbnb.</p>
         <div class="calwrap">
           <div>
-            <div id="minical" class="minical"></div>
+            <div class="calnav">
+              <button id="cal-prev" class="ghost" type="button">‹</button>
+              <h4 id="cal-title"></h4>
+              <button id="cal-next" class="ghost" type="button">›</button>
+            </div>
+            <div id="minical" class="minical compact"></div>
+            <p id="cal-who"></p>
             <div class="callegend">
               <span><span class="dot d"></span>Directa</span>
               <span><span class="dot a"></span>Airbnb</span>
@@ -193,14 +228,50 @@
           <input id="f-date" type="date" />
           <input id="f-concept" type="text" placeholder="Concepto (ej. Reserva María / Luz CFE)" style="min-width:200px;flex:1" />
           <select id="f-cat"></select>
+          <input id="f-guest" type="text" placeholder="Huésped (opcional)" style="width:150px" list="guestlist" />
+          <datalist id="guestlist"></datalist>
           <input id="f-amount" type="number" min="0" step="0.01" placeholder="$ MXN" style="width:110px" />
           <button id="f-add" type="button">Agregar</button>
+          <button id="f-cancel" class="ghost hidden" type="button">Cancelar edición</button>
         </div>
-        <p class="muted">También desde Telegram: <code>ingreso 4500 Reserva María</code> · <code>gasto 650 Limpieza</code>.</p>
+        <p class="muted">Pon el <strong>huésped</strong> para que el gasto (limpieza, desayunos, ida al súper) se le sume a su cuenta. También desde Telegram: <code>ingreso 4500 Reserva María</code> · <code>gasto 650 Limpieza</code>.</p>
+
+        <h3 class="muted" style="margin:1rem 0 .3rem">📈 Ingresos vs gastos</h3>
+        <svg id="f-chart" class="chart" viewBox="0 0 720 190" preserveAspectRatio="none" role="img" aria-label="Ingresos contra gastos por mes"></svg>
+        <div class="chartlg"><span><span class="dot d"></span>Ingresos</span><span><span class="dot" style="background:var(--rojo)"></span>Gastos</span><span class="muted">Últimos 12 meses</span></div>
+
         <div class="cols2">
           <div class="finwrap" id="f-summary"></div>
           <div id="f-movs"></div>
         </div>
+      </div>
+    </details>
+
+    <!-- Recurrentes -->
+    <details class="sec">
+      <summary>🔁 Gastos recurrentes · avisos por confirmar</summary>
+      <div class="body">
+        <p class="muted">Da de alta lo que se repite cada mes (internet, luz, gas, jardín, cuota). Abajo te avisa cuáles de este mes <strong>todavía no registras</strong>; al confirmar puedes cambiar el monto y la fecha antes de que se guarde.</p>
+        <div class="row">
+          <input id="r-concept" type="text" placeholder="Concepto (ej. Internet Totalplay)" style="min-width:190px;flex:1" />
+          <select id="r-cat"></select>
+          <input id="r-amount" type="number" min="0" step="0.01" placeholder="$ MXN" style="width:110px" />
+          <label>día <input id="r-day" type="number" min="1" max="28" value="1" style="width:72px" /></label>
+          <button id="r-add" type="button">Agregar recurrente</button>
+        </div>
+        <h3 class="muted" style="margin:1rem 0 .3rem">Pendientes de este mes</h3>
+        <div id="r-pending"></div>
+        <h3 class="muted" style="margin:1rem 0 .3rem">Todos los recurrentes</h3>
+        <div id="r-list"></div>
+      </div>
+    </details>
+
+    <!-- Por huésped -->
+    <details class="sec">
+      <summary>🧾 Por huésped — cuánto pagó y cuánto costó</summary>
+      <div class="body">
+        <p class="muted">Cada movimiento con huésped se agrupa aquí. Así ves lo que dejó cada estancia después de limpieza, insumos y extras.</p>
+        <div class="finwrap" id="guest-table"></div>
       </div>
     </details>
 

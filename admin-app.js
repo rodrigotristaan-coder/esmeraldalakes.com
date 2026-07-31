@@ -45,6 +45,20 @@ function srcFor(ds) {
   return src;
 }
 
+// Quién ocupa un día (para el hover y el clic)
+function whoOn(ds) {
+  for (const b of BLOCKS) {
+    if (ds >= b.start && ds < b.end) {
+      const quien = b.name || (b.source === "airbnb" ? "Reserva de Airbnb" : "Reserva directa");
+      return { quien, b };
+    }
+  }
+  return null;
+}
+
+// Mes visible del calendario compacto (0 = el mes en curso)
+let CAL_OFFSET = 0;
+
 function renderMiniCal() {
   const box = $("minical");
   if (!box) return;
@@ -52,14 +66,15 @@ function renderMiniCal() {
   const Y = now.getFullYear(), M = now.getMonth();
   const todayDs = isoDay(Y, M, now.getDate());
   box.innerHTML = "";
-  for (let k = 0; k < 12; k++) {
-    const my = Y + Math.floor((M + k) / 12), mm = (M + k) % 12;
+  for (let k = CAL_OFFSET; k < CAL_OFFSET + 1; k++) {
+    const my = Y + Math.floor((M + k) / 12), mm = ((M + k) % 12 + 12) % 12;
     const daysIn = new Date(my, mm + 1, 0).getDate();
     let sold = 0;
     for (let d = 1; d <= daysIn; d++) if (srcFor(isoDay(my, mm, d))) sold++;
+    const t = $("cal-title");
+    if (t) t.innerHTML = `${MESES_MC[mm]} ${my}<span class="pct">${Math.round((sold / daysIn) * 100)}% ocupado</span>`;
     const sec = document.createElement("div");
     sec.className = "mc-month";
-    sec.innerHTML = `<h4>${MESES_MC[mm]} ${my}<span class="pct">${Math.round((sold / daysIn) * 100)}%</span></h4>`;
     const grid = document.createElement("div");
     grid.className = "mc-grid";
     DOWS_MC.forEach((d) => grid.insertAdjacentHTML("beforeend", `<span class="mc-dow">${d}</span>`));
@@ -78,12 +93,34 @@ function renderMiniCal() {
       cell.type = "button";
       cell.className = cls.join(" ");
       cell.textContent = d;
-      if (ds >= todayDs) cell.addEventListener("click", () => pickDay(ds));
+      const w = whoOn(ds);
+      if (w) {
+        const n = Math.round((new Date(w.b.end) - new Date(w.b.start)) / 86400000);
+        cell.title = `${w.quien} · ${fmtD(w.b.start)} → ${fmtD(w.b.end)} (${n} noche${n === 1 ? "" : "s"})`;
+        cell.addEventListener("mouseenter", () => { const e = $("cal-who"); if (e) e.textContent = "👤 " + cell.title; });
+      }
+      if (ds >= todayDs) cell.addEventListener("click", () => (w ? showWho(ds) : pickDay(ds)));
       grid.appendChild(cell);
     }
     sec.appendChild(grid);
     box.appendChild(sec);
   }
+}
+
+function showWho(ds) {
+  const w = whoOn(ds);
+  const el = $("cal-who");
+  if (!w) { if (el) el.textContent = ""; return; }
+  const n = Math.round((new Date(w.b.end) - new Date(w.b.start)) / 86400000);
+  const extras = [w.b.guests ? `${w.b.guests} pax` : null, w.b.rate ? `$${Number(w.b.rate).toLocaleString("es-MX")}/noche` : null].filter(Boolean).join(" · ");
+  if (el) el.textContent = `👤 ${w.quien} · ${fmtD(w.b.start)} → ${fmtD(w.b.end)} (${n} noche${n === 1 ? "" : "s"})${extras ? " · " + extras : ""}`;
+  msg(`Ese día está ocupado por ${w.quien}.`);
+}
+
+function calMove(delta) {
+  CAL_OFFSET = Math.max(0, Math.min(23, CAL_OFFSET + delta));
+  const e = $("cal-who"); if (e) e.textContent = "";
+  renderMiniCal();
 }
 
 function pickDay(ds) {
@@ -188,6 +225,7 @@ async function load() {
   loadReviews();
   loadCustomers();
   loadFinance();
+  loadRecurring();
 }
 
 const escHtml = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
@@ -262,8 +300,10 @@ async function loadCustomers() {
 
 // --- Finanzas ---
 const CATS = {
-  in: ["Reserva", "Otro ingreso"],
-  out: ["Limpieza", "Luz", "Agua", "Internet", "Cuota condominio", "Mantenimiento", "Insumos y blancos", "Comisiones", "Otro gasto"],
+  in: ["Reserva", "Extras del huésped", "Otro ingreso"],
+  out: ["Limpieza", "Luz", "Gas", "Agua", "Internet", "Cuota condominio", "Mantenimiento",
+        "Jabón e insumos", "Sábanas y blancos", "Pintura", "Jardinería",
+        "Desayunos", "Ida al súper", "Publicidad", "Comisiones", "Otro gasto"],
 };
 const money = (n) => (Number(n) || 0).toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 const MES_LBL = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
@@ -274,27 +314,74 @@ function fillCats() {
   $("f-cat").innerHTML = CATS[type].map((c) => `<option>${c}</option>`).join("");
 }
 
-function renderStats(movs) {
-  const now = new Date();
-  const ymNow = now.toISOString().slice(0, 7);
-  const yNow = now.toISOString().slice(0, 4);
-  let inMes = 0, outMes = 0, inYr = 0, outYr = 0;
-  for (const m of movs) {
-    const v = Number(m.amount) || 0;
-    if (m.date.slice(0, 7) === ymNow) { if (m.type === "in") inMes += v; else outMes += v; }
-    if (m.date.slice(0, 4) === yNow) { if (m.type === "in") inYr += v; else outYr += v; }
+// Periodo elegido en el filtro: "YYYY" (año completo) o "YYYY-MM" (un mes)
+let PERIODO = new Date().toISOString().slice(0, 4);
+
+function buildPeriodo(movs) {
+  const box = $("periodo-sel");
+  if (!box) return;
+  const anios = [...new Set(movs.map((m) => m.date.slice(0, 4)))].sort().reverse();
+  const yNow = new Date().toISOString().slice(0, 4);
+  if (!anios.includes(yNow)) anios.unshift(yNow);
+  const opts = [];
+  for (const y of anios) {
+    opts.push(`<option value="${y}">Todo ${y}</option>`);
+    const meses = [...new Set(movs.filter((m) => m.date.slice(0, 4) === y).map((m) => m.date.slice(0, 7)))].sort().reverse();
+    for (const ym of meses) opts.push(`<option value="${ym}">${mesLabel(ym)}</option>`);
   }
-  const utilMes = inMes - outMes, utilYr = inYr - outYr;
+  box.innerHTML = opts.join("");
+  if (![...box.options].some((o) => o.value === PERIODO)) PERIODO = box.options[0] ? box.options[0].value : yNow;
+  box.value = PERIODO;
+}
+
+function renderStats(movs) {
+  const enPeriodo = (m) => m.date.startsWith(PERIODO);
+  let ing = 0, gas = 0;
+  for (const m of movs) if (enPeriodo(m)) { const v = Number(m.amount) || 0; if (m.type === "in") ing += v; else gas += v; }
+  const util = ing - gas;
+  const margen = ing > 0 ? Math.round((util / ing) * 100) : null;
+  const noches = movs.filter((m) => enPeriodo(m) && m.type === "in" && m.category === "Reserva").length;
+  const etiqueta = PERIODO.length === 4 ? `todo ${PERIODO}` : mesLabel(PERIODO);
   $("stats").innerHTML = `
     <div class="stat"><span class="lbl">Ocupación 12 meses</span><b>${OCC ? OCC.pct + "%" : "—"}</b><span class="muted">${OCC ? OCC.sold + " noches vendidas" : ""}</span></div>
-    <div class="stat"><span class="lbl">Ingresos del mes</span><b class="pos">${money(inMes)}</b></div>
-    <div class="stat"><span class="lbl">Gastos del mes</span><b class="neg">${money(outMes)}</b></div>
-    <div class="stat"><span class="lbl">Utilidad del mes</span><b class="${utilMes >= 0 ? "pos" : "neg"}">${money(utilMes)}</b></div>
-    <div class="stat"><span class="lbl">Utilidad ${yNow}</span><b class="${utilYr >= 0 ? "pos" : "neg"}">${money(utilYr)}</b><span class="muted">${money(inYr)} in · ${money(outYr)} out</span></div>`;
+    <div class="stat"><span class="lbl">Ingresos · ${etiqueta}</span><b class="pos">${money(ing)}</b></div>
+    <div class="stat"><span class="lbl">Gastos · ${etiqueta}</span><b class="neg">${money(gas)}</b></div>
+    <div class="stat"><span class="lbl">Utilidad · ${etiqueta}</span><b class="${util >= 0 ? "pos" : "neg"}">${money(util)}</b><span class="muted">${margen === null ? "" : margen + "% de margen"}</span></div>
+    <div class="stat"><span class="lbl">Reservas cobradas</span><b>${noches}</b><span class="muted">${etiqueta}</span></div>`;
+}
+
+// Gráfica de barras: ingresos vs gastos, últimos 12 meses con movimiento
+function renderChart(movs) {
+  const svg = $("f-chart");
+  if (!svg) return;
+  const by = {};
+  for (const m of movs) {
+    const ym = m.date.slice(0, 7);
+    by[ym] = by[ym] || { in: 0, out: 0 };
+    by[ym][m.type] += Number(m.amount) || 0;
+  }
+  const meses = Object.keys(by).sort().slice(-12);
+  if (!meses.length) { svg.innerHTML = '<text x="10" y="24">Sin movimientos todavía.</text>'; return; }
+  const max = Math.max(...meses.map((ym) => Math.max(by[ym].in, by[ym].out)), 1);
+  const W = 720, H = 190, base = H - 26, alto = base - 12;
+  const paso = W / meses.length, ancho = Math.min(16, paso / 3.2);
+  let out = `<line x1="0" y1="${base}" x2="${W}" y2="${base}" stroke="rgba(255,255,255,.22)" />`;
+  meses.forEach((ym, i) => {
+    const cx = i * paso + paso / 2;
+    const hi = (by[ym].in / max) * alto, ho = (by[ym].out / max) * alto;
+    out += `<rect class="gin"  x="${cx - ancho - 1.5}" y="${base - hi}" width="${ancho}" height="${hi}" rx="2"><title>${mesLabel(ym)} · ingresos ${money(by[ym].in)}</title></rect>`;
+    out += `<rect class="gout" x="${cx + 1.5}"          y="${base - ho}" width="${ancho}" height="${ho}" rx="2"><title>${mesLabel(ym)} · gastos ${money(by[ym].out)}</title></rect>`;
+    out += `<text x="${cx}" y="${H - 8}" text-anchor="middle">${mesLabel(ym).replace(" ", "'")}</text>`;
+  });
+  svg.innerHTML = out;
 }
 
 function renderFinance(movs) {
+  buildPeriodo(movs);
   renderStats(movs);
+  renderChart(movs);
+  renderGuests(movs);
+  fillGuestList(movs);
 
   // Resumen mensual (últimos 13 meses con movimiento)
   const byMonth = {};
@@ -319,9 +406,15 @@ function renderFinance(movs) {
     const div = document.createElement("div");
     div.className = "card";
     div.innerHTML = `<span style="text-align:left"><span class="tag ${m.type}">${m.type === "in" ? "INGRESO" : "GASTO"}</span>` +
-      `<b>${escHtml(m.concept)}</b> <span class="muted">· ${fmtD(m.date)} · ${escHtml(m.category || "")}</span></span>` +
+      `<b>${escHtml(m.concept)}</b> <span class="muted">· ${fmtD(m.date)} · ${escHtml(m.category || "")}${m.guest ? " · 👤 " + escHtml(m.guest) : ""}</span></span>` +
       `<span class="row"><b class="${m.type === "in" ? "pos" : "neg"}">${m.type === "in" ? "+" : "−"}${money(m.amount)}</b></span>`;
     const wrap = div.querySelector(".row");
+    const ed = document.createElement("button");
+    ed.className = "mini";
+    ed.textContent = "✏️";
+    ed.title = "Editar este movimiento";
+    ed.addEventListener("click", () => startEditMov(m));
+    wrap.appendChild(ed);
     const dup = document.createElement("button");
     dup.textContent = "Duplicar";
     dup.title = "Repite este movimiento con fecha de hoy (útil para gastos mensuales)";
@@ -337,11 +430,53 @@ function renderFinance(movs) {
   if (movs.length > 40) box.insertAdjacentHTML("beforeend", `<p class="muted">… y ${movs.length - 40} movimientos más (siguen contando en los totales).</p>`);
 }
 
+// Sugerencias de huésped: los nombres de las reservas + los ya usados en movimientos
+function fillGuestList(movs) {
+  const dl = $("guestlist");
+  if (!dl) return;
+  const nombres = new Set();
+  for (const b of BLOCKS) if (b.name) nombres.add(b.name);
+  for (const m of movs) if (m.guest) nombres.add(m.guest);
+  dl.innerHTML = [...nombres].sort().map((n) => `<option value="${escHtml(n)}"></option>`).join("");
+}
+
+// Cuánto pagó y cuánto costó cada huésped
+function renderGuests(movs) {
+  const box = $("guest-table");
+  if (!box) return;
+  const by = {};
+  for (const m of movs) {
+    const g = (m.guest || "").trim();
+    if (!g) continue;
+    by[g] = by[g] || { in: 0, out: 0, n: 0, ultima: "" };
+    by[g][m.type] += Number(m.amount) || 0;
+    by[g].n++;
+    if (m.date > by[g].ultima) by[g].ultima = m.date;
+  }
+  const nombres = Object.keys(by).sort((a, b) => by[b].ultima.localeCompare(by[a].ultima));
+  if (!nombres.length) {
+    box.innerHTML = '<p class="muted">Todavía no hay movimientos con huésped. Escribe su nombre en el campo "Huésped" al registrar un ingreso o un gasto.</p>';
+    return;
+  }
+  let tot = { in: 0, out: 0 };
+  const filas = nombres.map((g) => {
+    const r = by[g], u = r.in - r.out;
+    tot.in += r.in; tot.out += r.out;
+    return `<tr><td class="g"><b>${escHtml(g)}</b><br><span class="muted">${fmtD(r.ultima)} · ${r.n} movimiento${r.n === 1 ? "" : "s"}</span></td>` +
+      `<td class="pos">${money(r.in)}</td><td class="neg">${money(r.out)}</td>` +
+      `<td class="${u >= 0 ? "pos" : "neg"}"><b>${money(u)}</b></td></tr>`;
+  }).join("");
+  const utot = tot.in - tot.out;
+  box.innerHTML = `<table class="fin"><tr><th>Huésped</th><th>Pagó</th><th>Costó</th><th>Dejó</th></tr>${filas}` +
+    `<tr><td class="g"><b>Total</b></td><td class="pos"><b>${money(tot.in)}</b></td><td class="neg"><b>${money(tot.out)}</b></td>` +
+    `<td class="${utot >= 0 ? "pos" : "neg"}"><b>${money(utot)}</b></td></tr></table>`;
+}
+
 // Estado local de finanzas: tras escribir usamos la lista que el server ya tiene
 // en memoria (viene en la respuesta) en vez de releer el blob — así evitamos el
 // read-after-write stale que hacía "desaparecer" el movimiento recién creado.
 let FIN = [];
-function applyFinance(movs) { FIN = Array.isArray(movs) ? movs : []; renderFinance(FIN); }
+function applyFinance(movs) { FIN = Array.isArray(movs) ? movs : []; renderFinance(FIN); renderRecurring(); }
 
 async function loadFinance() {
   try {
@@ -357,6 +492,29 @@ async function financeAdd(params) {
   return r;
 }
 
+// Edición de un movimiento: reusa el mismo formulario de alta
+let EDIT_MOV = null;
+function startEditMov(m) {
+  EDIT_MOV = m.id;
+  $("f-type").value = m.type; fillCats();
+  $("f-date").value = m.date;
+  $("f-concept").value = m.concept || "";
+  $("f-cat").value = m.category || "";
+  $("f-guest").value = m.guest || "";
+  $("f-amount").value = m.amount;
+  $("f-add").textContent = "Guardar cambios";
+  $("f-cancel").classList.remove("hidden");
+  msg(`Editando "${m.concept}" — cambia lo que quieras y guarda.`);
+  $("f-concept").focus();
+}
+function resetMovForm() {
+  EDIT_MOV = null;
+  $("f-concept").value = ""; $("f-amount").value = ""; $("f-guest").value = "";
+  $("f-date").value = new Date().toISOString().slice(0, 10);
+  $("f-add").textContent = "Agregar";
+  $("f-cancel").classList.add("hidden");
+}
+
 // Candado anti-doble-click: el put del blob tarda; sin esto el usuario re-clickea
 // y se crean movimientos duplicados (o se pisan escrituras).
 let finBusy = false;
@@ -364,16 +522,26 @@ async function addMovFromForm() {
   if (finBusy) return;
   const type = $("f-type").value, date = $("f-date").value, concept = $("f-concept").value.trim();
   const category = $("f-cat").value, amount = parseFloat($("f-amount").value);
+  const guest = $("f-guest").value.trim();
   if (!date || !concept || !(amount > 0)) return msg("Faltan datos: fecha, concepto y monto.", false);
   const btn = $("f-add");
   finBusy = true;
   if (btn) { btn.disabled = true; btn.dataset.txt = btn.textContent; btn.textContent = "Guardando…"; }
   try {
-    const r = await financeAdd({ type, date, concept, category, amount });
-    applyFinance(r.movs || FIN.concat(r.mov));
-    msg(type === "in" ? "Ingreso registrado ✅" : "Gasto registrado ✅");
-    $("f-concept").value = ""; $("f-amount").value = "";
-  } catch { msg("Error al registrar el movimiento.", false); }
+    if (EDIT_MOV) {
+      const qs = Object.entries({ id: EDIT_MOV, type, date, concept, category, guest, amount })
+        .map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join("");
+      const r = await api("&action=finance-update" + qs);
+      if (!r.ok) throw new Error(r.error);
+      applyFinance(r.movs || FIN);
+      msg("Movimiento actualizado ✅");
+    } else {
+      const r = await financeAdd({ type, date, concept, category, guest, amount });
+      applyFinance(r.movs || FIN.concat(r.mov));
+      msg(type === "in" ? "Ingreso registrado ✅" : "Gasto registrado ✅");
+    }
+    resetMovForm();
+  } catch { msg("Error al guardar el movimiento.", false); }
   finally {
     finBusy = false;
     if (btn) { btn.disabled = false; if (btn.dataset.txt) btn.textContent = btn.dataset.txt; }
@@ -411,6 +579,120 @@ async function deleteMov(m) {
     applyFinance(r.movs || FIN.filter((x) => x.id !== m.id));
     msg("Movimiento eliminado 🗑️");
   } catch { msg("Error al eliminar.", false); }
+}
+
+// --- Gastos recurrentes y avisos por confirmar ---
+let RECUR = [];
+
+async function loadRecurring() {
+  try {
+    const d = await api("&action=recurring-list");
+    RECUR = d.recurring || [];
+    renderRecurring();
+  } catch { /* el resto del panel sigue */ }
+}
+
+// Un recurrente está "pendiente" si está activo y no hay ya un movimiento
+// de este mes con ese mismo concepto.
+function pendientesDelMes() {
+  const ym = new Date().toISOString().slice(0, 7);
+  const yaHay = new Set(FIN.filter((m) => m.date.slice(0, 7) === ym).map((m) => (m.concept || "").toLowerCase()));
+  return RECUR.filter((r) => r.activo && !yaHay.has((r.concept || "").toLowerCase()));
+}
+
+function renderRecurring() {
+  const pend = pendientesDelMes();
+  const ym = new Date().toISOString().slice(0, 7);
+  const bp = $("r-pending");
+  if (bp) {
+    const total = pend.reduce((a, r) => a + (Number(r.amount) || 0), 0);
+    bp.innerHTML = pend.length
+      ? `<p class="muted">${pend.length} por registrar · ${money(total)} en total</p>`
+      : '<p class="muted">Todo lo recurrente de este mes ya está registrado ✅</p>';
+    for (const r of pend) {
+      const div = document.createElement("div");
+      div.className = "card";
+      const fecha = `${ym}-${String(r.day).padStart(2, "0")}`;
+      div.innerHTML = `<span style="text-align:left"><span class="tag ${r.type}">${r.type === "in" ? "INGRESO" : "GASTO"}</span>` +
+        `<b>${escHtml(r.concept)}</b> <span class="muted">· día ${r.day} · ${escHtml(r.category || "")}</span></span>`;
+      const wrap = document.createElement("span");
+      wrap.className = "row";
+      const amt = document.createElement("input");
+      amt.type = "number"; amt.step = "0.01"; amt.min = "0"; amt.value = r.amount; amt.style.width = "105px";
+      amt.title = "Puedes cambiar el monto antes de confirmar";
+      const dt = document.createElement("input");
+      dt.type = "date"; dt.value = fecha; dt.title = "Puedes cambiar la fecha antes de confirmar";
+      const ok = document.createElement("button");
+      ok.textContent = "Confirmar";
+      ok.addEventListener("click", () => confirmRecurring(r, parseFloat(amt.value), dt.value, ok));
+      wrap.append(amt, dt, ok);
+      div.appendChild(wrap);
+      bp.appendChild(div);
+    }
+  }
+
+  const bl = $("r-list");
+  if (!bl) return;
+  bl.innerHTML = RECUR.length ? "" : '<p class="muted">Sin recurrentes. Da de alta el primero arriba ☝️</p>';
+  for (const r of RECUR) {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `<span style="text-align:left"><b>${escHtml(r.concept)}</b> <span class="muted">· ${money(r.amount)} · día ${r.day} · ${escHtml(r.category || "")}${r.activo ? "" : " · ⏸ pausado"}</span></span>`;
+    const wrap = document.createElement("span");
+    wrap.className = "row";
+    const tg = document.createElement("button");
+    tg.className = "ghost";
+    tg.textContent = r.activo ? "Pausar" : "Reactivar";
+    tg.addEventListener("click", () => recurringAction("toggle", r.id));
+    const del = document.createElement("button");
+    del.className = "danger";
+    del.textContent = "✕";
+    del.addEventListener("click", () => recurringAction("del", r.id, r.concept));
+    wrap.append(tg, del);
+    div.appendChild(wrap);
+    bl.appendChild(div);
+  }
+}
+
+async function confirmRecurring(r, amount, date, btn) {
+  if (!(amount > 0) || !date) return msg("Revisa el monto y la fecha.", false);
+  if (btn) { btn.disabled = true; btn.textContent = "Guardando…"; }
+  try {
+    const res = await financeAdd({ type: r.type, date, concept: r.concept, category: r.category || "", amount });
+    applyFinance(res.movs || FIN.concat(res.mov));
+    renderRecurring();
+    msg(`"${r.concept}" registrado ✅`);
+  } catch {
+    msg("Error al registrar el recurrente.", false);
+    if (btn) { btn.disabled = false; btn.textContent = "Confirmar"; }
+  }
+}
+
+async function addRecurring() {
+  const concept = $("r-concept").value.trim();
+  const amount = parseFloat($("r-amount").value);
+  const category = $("r-cat").value;
+  const day = parseInt($("r-day").value, 10) || 1;
+  if (!concept || !(amount > 0)) return msg("Falta el concepto o el monto del recurrente.", false);
+  try {
+    const r = await api(`&action=recurring-add&type=out&concept=${encodeURIComponent(concept)}&category=${encodeURIComponent(category)}&amount=${amount}&day=${day}`);
+    if (!r.ok) throw new Error(r.error);
+    RECUR = r.recurring || [];
+    renderRecurring();
+    $("r-concept").value = ""; $("r-amount").value = "";
+    msg("Recurrente agregado ✅");
+  } catch { msg("Error al agregar el recurrente.", false); }
+}
+
+async function recurringAction(act, id, concepto) {
+  if (act === "del" && !confirm(`¿Quitar el recurrente "${concepto}"? Los movimientos ya registrados no se tocan.`)) return;
+  try {
+    const r = await api(`&action=recurring-${act}&id=${encodeURIComponent(id)}`);
+    if (!r.ok) throw new Error(r.error);
+    RECUR = r.recurring || [];
+    renderRecurring();
+    msg(act === "del" ? "Recurrente eliminado 🗑️" : "Recurrente actualizado ✅");
+  } catch { msg("Error con el recurrente.", false); }
 }
 
 async function nightsAction(email, delta) {
@@ -536,6 +818,24 @@ document.addEventListener("DOMContentLoaded", () => {
   $("c-seed").addEventListener("click", seedCustomer);
   $("f-type").addEventListener("change", fillCats);
   $("f-add").addEventListener("click", addMovFromForm);
+  $("f-cancel").addEventListener("click", () => { resetMovForm(); msg("Edición cancelada."); });
+  $("periodo-sel").addEventListener("change", (e) => { PERIODO = e.target.value; renderStats(FIN); });
+  $("r-add").addEventListener("click", addRecurring);
+  $("cal-prev").addEventListener("click", () => calMove(-1));
+  $("cal-next").addEventListener("click", () => calMove(1));
+  // swipe horizontal para cambiar de mes en el celular
+  (() => {
+    const box = $("minical"); if (!box) return;
+    let x0 = null;
+    box.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+    box.addEventListener("touchend", (e) => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      if (Math.abs(dx) > 45) calMove(dx < 0 ? 1 : -1);
+      x0 = null;
+    }, { passive: true });
+  })();
+  $("r-cat").innerHTML = CATS.out.map((c) => `<option>${c}</option>`).join("");
   fillCats();
   $("f-date").value = new Date().toISOString().slice(0, 10);
   $("bstart").addEventListener("change", syncSelFromInputs);
