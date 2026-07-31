@@ -541,27 +541,7 @@ section { padding: 3.2rem 1.5rem; }
 .recphoto figcaption span { display: block; font-size: 0.82rem; color: #5b6b6b; margin-top: 0.15rem; }
 @media (min-width: 601px) and (max-width: 900px) { .recs__photos { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { .recs__photos { grid-template-columns: 1fr; } .recphoto img { height: 200px; } }
-/* Puntos clave con foto (tarjeta-enlace) */
-.loc__card--photo { padding: 0; overflow: hidden; position: relative; border-radius: var(--radius-lg); }
-/* Puntos clave con el mismo formato que las recomendaciones del anfitrión */
-.loc__card--rec { padding: 0; overflow: hidden; position: relative; border-radius: var(--radius-lg); background: #fff; }
-.loc__card--rec img { width: 100%; height: 168px; object-fit: cover; display: block; transition: transform .4s ease; }
-.loc__card--rec:hover img { transform: scale(1.06); }
-.loc__card--rec h3 { margin: 0.7rem 0 0; padding: 0 0.85rem; font-size: 1rem; color: var(--emerald-dark); }
-.loc__card--rec .loc__desc { padding: 0.15rem 0.85rem 0.9rem; }
-.loc__card--photo img { width: 100%; height: 130px; object-fit: cover; display: block; transition: transform .4s ease; }
-.loc__card--photo:hover img { transform: scale(1.06); }
-.loc__card--photo .loc__ico { position: absolute; top: 8px; left: 10px; margin: 0; font-size: 1.5rem; filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
-.loc__card--photo h3, .loc__card--photo .loc__link { padding-left: 0.9rem; padding-right: 0.9rem; }
-.loc__card--photo h3 { margin-top: 0.7rem; }
-.loc__card--photo .loc__link { padding-bottom: 0.8rem; display: inline-block; }
-.loc__card .loc__desc { display: block; padding: 0.15rem 0.9rem 0; font-size: 0.82rem; color: #5b6b6b; line-height: 1.4; }
-/* Tarjeta con LOGO de marca (Burger King, Walmart, etc.): logo centrado sobre blanco */
-.loc__card--logo { padding: 0; overflow: hidden; background: #fff; border-radius: var(--radius-lg); }
-.loc__card--logo .loc__logo { width: 100%; height: 118px; object-fit: contain; padding: 16px; box-sizing: border-box; display: block; background: #fff; }
-.loc__card--logo h3, .loc__card--logo .loc__link { padding-left: 0.9rem; padding-right: 0.9rem; }
-.loc__card--logo h3 { margin-top: 0.6rem; }
-.loc__card--logo .loc__link { padding-bottom: 0.8rem; display: inline-block; }
+.loc__card .loc__desc { display: block; font-size: 0.82rem; color: #5b6b6b; line-height: 1.4; }
 
 /* ---------- Ubicación ---------- */
 .loc { background: transparent; }
@@ -580,6 +560,40 @@ section { padding: 3.2rem 1.5rem; }
 .loc__card h3 { color: var(--emerald-dark); font-size: 1.05rem; }
 
 .loc__link { color: var(--emerald); font-weight: 600; font-size: 0.9rem; }
+
+/* Tarjetas de ubicación con imagen a sangre — mismo sistema que las
+   recomendaciones del anfitrión (.recphoto): la foto ocupa la franja de arriba
+   de orilla a orilla y el texto va debajo, alineado a la izquierda.
+   ⚠️ Estas reglas TIENEN que ir después de .loc__card: misma especificidad, así
+   que si se suben, el padding de la tarjeta base las pisa y la foto vuelve a
+   verse metida con marco blanco. */
+.loc__card--photo, .loc__card--rec, .loc__card--logo {
+  padding: 0; gap: 0; overflow: hidden; position: relative;
+  align-items: stretch; text-align: left;
+  border-radius: var(--radius-lg); background: #fff;
+}
+.loc__card--photo img, .loc__card--rec img {
+  width: 100%; height: 165px; object-fit: cover; display: block; transition: transform .4s ease;
+}
+/* El logo de marca se contiene (no se recorta) pero ocupa la misma franja */
+.loc__card--logo .loc__logo {
+  width: 100%; height: 165px; object-fit: contain; padding: 20px;
+  box-sizing: border-box; display: block; background: #fff; transition: transform .4s ease;
+}
+.loc__card--photo:hover img, .loc__card--rec:hover img, .loc__card--logo:hover .loc__logo { transform: scale(1.06); }
+.loc__card--photo h3, .loc__card--rec h3, .loc__card--logo h3 {
+  margin: 0.75rem 0 0; padding: 0 0.85rem; font-size: 1rem; color: var(--emerald-dark);
+}
+.loc__card--photo .loc__desc, .loc__card--rec .loc__desc, .loc__card--logo .loc__desc {
+  padding: 0.15rem 0.85rem 0.9rem;
+}
+.loc__card--photo .loc__link, .loc__card--rec .loc__link, .loc__card--logo .loc__link {
+  padding: 0.1rem 0.85rem 0.9rem; display: inline-block;
+}
+.loc__card--photo .loc__ico {
+  position: absolute; top: 8px; left: 10px; margin: 0; font-size: 1.5rem;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.5));
+}
 
 /* ---------- Seguridad ---------- */
 .safety { background: transparent; }
@@ -873,6 +887,8 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
   .gallery__item--lg { grid-column: span 1; }
   .amen__grid, .amen__grid--sm, .loc__grid, .safety__grid { grid-template-columns: 1fr; }
   .loc__card--wide { grid-column: span 1; }
+  /* A una columna la tarjeta es ancha: la foto crece igual que en .recphoto */
+  .loc__card--photo img, .loc__card--rec img, .loc__card--logo .loc__logo { height: 200px; }
   .post { padding: 1.6rem; }
   .event-row { grid-template-columns: 1fr; gap: 0.2rem; }
   .event-row--head { display: none; }
@@ -1179,7 +1195,7 @@ details.acc > .acc__body { padding: 0.1rem 1.6rem 1.5rem; }
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
       <a class="loc__card loc__card--logo" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Oxxo+Acapulco+Diamante">
-        <img class="loc__logo" src="assets/images/logo-oxxo.png" alt="Oxxo" loading="lazy" />
+        <img class="loc__logo" src="assets/images/logo-oxxo-v2.png" alt="Oxxo" loading="lazy" />
         <h3 data-es="Oxxo · 4 min" data-en="Oxxo · 4 min"></h3>
         <span class="loc__link" data-es="Ver ruta →" data-en="Get directions →"></span>
       </a>
