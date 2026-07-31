@@ -16,6 +16,76 @@ async function api(params) {
   return r.json();
 }
 
+// ===================== Pantallas y ventanas =====================
+// El panel es una pantalla a la vez (antes era un solo scroll de 5 pantallas).
+// El menú vive en el riel de la izquierda en escritorio y en la barra de abajo
+// en celular; los dos se pintan de esta misma lista.
+const VISTAS = [
+  { id: "hoy",         nombre: "Hoy",         corto: "Hoy",     ico: "◆",  accion: { txt: "+ Nueva reserva",        mini: "+ Reserva",    fn: () => nuevaReserva() } },
+  { id: "calendario",  nombre: "Calendario",  corto: "Calend.", ico: "🗓", accion: { txt: "+ Nueva reserva",        mini: "+ Reserva",    fn: () => nuevaReserva() } },
+  { id: "dinero",      nombre: "Dinero",      corto: "Dinero",  ico: "💰", accion: { txt: "+ Registrar movimiento", mini: "+ Movimiento", fn: () => nuevoMov() } },
+  { id: "recurrentes", nombre: "Recurrentes", corto: "Recurr.", ico: "🔁", accion: { txt: "+ Nuevo recurrente",     mini: "+ Recurrente", fn: () => abrir("dlg-recurrente") } },
+  { id: "gente",       nombre: "Huéspedes",   corto: "Gente",   ico: "👤", accion: { txt: "+ Dar de alta cliente",  mini: "+ Cliente",    fn: () => abrir("dlg-cliente") } },
+];
+let VISTA = "hoy";
+let RV_PEND = 0; // reseñas esperando aprobación (para el globito del menú)
+
+// Cuántas cosas piden atención en cada sección
+function cuentas() {
+  const rec = typeof pendientesDelMes === "function" ? pendientesDelMes().length : 0;
+  return { hoy: rec + RV_PEND, recurrentes: rec, gente: RV_PEND };
+}
+
+function pintarMenu() {
+  const c = cuentas();
+  const rail = $("rail-nav"), tabs = $("tabs");
+  if (rail) {
+    rail.innerHTML = "";
+    for (const v of VISTAS) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "navlink";
+      if (v.id === VISTA) b.setAttribute("aria-current", "page");
+      b.innerHTML = `<span class="ico" aria-hidden="true">${v.ico}</span><span>${v.nombre}</span>` +
+        (c[v.id] ? `<span class="pip">${c[v.id]}</span>` : "");
+      b.addEventListener("click", () => irA(v.id));
+      rail.appendChild(b);
+    }
+  }
+  if (tabs) {
+    tabs.innerHTML = "";
+    for (const v of VISTAS) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "tab";
+      if (v.id === VISTA) b.setAttribute("aria-current", "page");
+      b.innerHTML = `<span class="ico" aria-hidden="true">${v.ico}</span><span>${v.corto}</span>` +
+        (c[v.id] ? `<span class="pip">${c[v.id]}</span>` : "");
+      b.addEventListener("click", () => irA(v.id));
+      tabs.appendChild(b);
+    }
+  }
+  const v = VISTAS.find((x) => x.id === VISTA);
+  const acc = $("rail-accion");
+  if (acc && v) { acc.textContent = v.accion.txt; acc.onclick = v.accion.fn; }
+  const fab = $("fab");
+  if (fab && v) { fab.textContent = v.accion.mini; fab.setAttribute("aria-label", v.accion.txt.replace("+ ", "")); fab.onclick = v.accion.fn; }
+}
+
+function irA(id) {
+  VISTA = id;
+  for (const v of VISTAS) {
+    const el = $("v-" + v.id);
+    if (el) el.hidden = v.id !== id;
+  }
+  pintarMenu();
+  msg("");
+  window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
+}
+
+const abrir = (id) => { const d = $(id); if (d && !d.open) d.showModal(); };
+const cerrar = (id) => { const d = $(id); if (d && d.open) d.close(); };
+
 // Fechas visibles siempre en dd-mmm-aaaa (los <input type=date> siguen en ISO)
 const MABBR = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 function fmtD(ds) {
@@ -137,7 +207,9 @@ function pickDay(ds) {
   $("bstart").value = SEL.start || "";
   $("bend").value = SEL.end || "";
   renderMiniCal();
-  if (SEL.end) msg(`Fechas elegidas: ${fmtD(SEL.start)} → ${fmtD(SEL.end)} · completa los datos y agrega ✍️`);
+  // Con las dos fechas puestas ya no hay nada más que hacer en el calendario:
+  // abrimos la ventana de reserva para completar los datos.
+  if (SEL.end) { msg(`${fmtD(SEL.start)} → ${fmtD(SEL.end)}`); nuevaReserva(); }
   else msg(`Llegada: ${fmtD(SEL.start)} — ahora toca el día de salida.`);
 }
 
@@ -214,17 +286,22 @@ function applyBlocks(data) {
     const wrap = document.createElement("span");
     wrap.className = "row";
     const edit = document.createElement("button");
-    edit.textContent = "✏️ Editar";
+    edit.className = "quiet";
+    edit.textContent = "Editar";
+    edit.setAttribute("aria-label", `Editar la reserva de ${b.name || fmt(b)}`);
     edit.addEventListener("click", () => startEdit(b));
     wrap.appendChild(edit);
     const inc = document.createElement("button");
-    inc.textContent = "💵 Ingreso";
-    inc.title = "Registrar el cobro de esta reserva en finanzas";
+    inc.className = "quiet";
+    inc.textContent = "Cobrar";
+    inc.title = "Registrar el cobro de esta reserva en Dinero";
+    inc.setAttribute("aria-label", `Registrar el cobro de ${b.name || fmt(b)}`);
     inc.addEventListener("click", () => quickIncome(b));
     wrap.appendChild(inc);
     const btn = document.createElement("button");
-    btn.className = "danger";
+    btn.className = "quiet peligro";
     btn.textContent = "Liberar";
+    btn.setAttribute("aria-label", `Liberar las fechas de ${b.name || fmt(b)}`);
     btn.addEventListener("click", () => release(b.start, b.end));
     wrap.appendChild(btn);
     div.appendChild(wrap);
@@ -241,9 +318,144 @@ function applyBlocks(data) {
     div.innerHTML = `<span>${fmt(b)}${b.name ? ` · ${escHtml(b.name)}` : ""}</span><span class="muted">${b.source}</span>`;
     a.appendChild(div);
   }
+  renderHoy();
 }
 
 const escHtml = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
+
+// ===================== Pantalla HOY =====================
+// Responde de un vistazo: ¿quién está en el depa?, ¿qué me falta hacer?,
+// ¿quién llega? La cinta muestra los próximos 30 días de un solo golpe.
+const DIA_LARGO = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const MES_LARGO = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+function fechaLarga(ds) {
+  if (!/^\d{4}-\d{2}-\d{2}/.test(ds || "")) return ds || "";
+  const [y, m, d] = ds.split("-").map(Number);
+  return `${d} de ${MES_LARGO[m - 1]}`;
+}
+const noches = (b) => Math.round((new Date(b.end) - new Date(b.start)) / 86400000);
+
+function renderHoy() {
+  const hoyDs = new Date().toISOString().slice(0, 10);
+  const f = $("hoy-fecha");
+  if (f) {
+    const d = new Date();
+    f.textContent = `${DIA_LARGO[d.getDay()]} ${d.getDate()} de ${MES_LARGO[d.getMonth()]} de ${d.getFullYear()}`;
+  }
+
+  // --- Quién está ahora / cuándo llega el siguiente ---
+  const ahora = BLOCKS.find((b) => hoyDs >= b.start && hoyDs < b.end);
+  const proximas = BLOCKS.filter((b) => b.start >= hoyDs).sort((a, b) => a.start.localeCompare(b.start));
+  const frase = $("hoy-frase"), sub = $("hoy-sub");
+  if (frase) {
+    if (ahora) {
+      const quien = ahora.name || (ahora.source === "airbnb" ? "Un huésped de Airbnb" : "Un huésped");
+      frase.innerHTML = `<b>${escHtml(quien)}</b> está en el depa.`;
+      const extras = [
+        `sale el ${fechaLarga(ahora.end)}`,
+        ahora.guests ? `${ahora.guests} huéspedes` : null,
+        `salida ${ahora.checkoutTime || "10:00"}`,
+      ].filter(Boolean).join(" · ");
+      if (sub) sub.textContent = extras;
+    } else if (proximas.length) {
+      const p = proximas[0];
+      const dias = Math.round((new Date(p.start) - new Date(hoyDs)) / 86400000);
+      const quien = p.name || (p.source === "airbnb" ? "un huésped de Airbnb" : "una reserva directa");
+      frase.innerHTML = `El depa está <b>libre</b>.`;
+      if (sub) sub.textContent = dias === 0
+        ? `Hoy llega ${quien}.`
+        : `Lo siguiente es ${quien}, ${dias === 1 ? "mañana" : `en ${dias} días`} (${fechaLarga(p.start)}).`;
+    } else {
+      frase.innerHTML = `El depa está <b>libre</b>.`;
+      if (sub) sub.textContent = "No hay reservas próximas.";
+    }
+  }
+
+  // --- Cinta: 30 días ---
+  const cinta = $("hoy-cinta");
+  if (cinta) {
+    cinta.innerHTML = "";
+    const base = new Date(hoyDs + "T12:00:00");
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(base.getTime() + i * 86400000);
+      const ds = d.toISOString().slice(0, 10);
+      const s = srcFor(ds);
+      const el = document.createElement("span");
+      el.className = "cinta__d" + (s ? " " + s : "") + (i === 0 ? " hoy" : "");
+      const w = whoOn(ds);
+      el.title = `${fmtD(ds)} · ${w ? w.quien : "libre"}`;
+      cinta.appendChild(el);
+    }
+    const a = $("hoy-eje-a"), b = $("hoy-eje-b");
+    if (a) a.textContent = "hoy";
+    if (b) b.textContent = fmtD(new Date(base.getTime() + 29 * 86400000).toISOString().slice(0, 10));
+  }
+
+  // --- Por hacer ---
+  const box = $("hoy-pend");
+  if (box) {
+    box.innerHTML = "";
+    const items = [];
+    const rec = pendientesDelMes();
+    if (rec.length) {
+      const total = rec.reduce((a, r) => a + (Number(r.amount) || 0), 0);
+      items.push({ ico: "🔁", txt: `${rec.length} gasto${rec.length === 1 ? "" : "s"} recurrente${rec.length === 1 ? "" : "s"} sin registrar`,
+        sub: `${money(total)} en total · ${rec.map((r) => r.concept).join(", ")}`, btn: "Revisar", ir: "recurrentes" });
+    }
+    if (RV_PEND) {
+      items.push({ ico: "📝", txt: `${RV_PEND} reseña${RV_PEND === 1 ? "" : "s"} esperando tu visto bueno`,
+        sub: "Nadie la ve en la landing hasta que la apruebes.", btn: "Revisar", ir: "gente" });
+    }
+    // Reservas que ya terminaron y no tienen un ingreso registrado a ese nombre
+    const cobrados = new Set(FIN.filter((m) => m.type === "in" && m.guest).map((m) => m.guest.trim().toLowerCase()));
+    const sinCobrar = BLOCKS.filter((b) => b.source !== "airbnb" && b.name && b.end <= hoyDs && !cobrados.has(b.name.trim().toLowerCase()));
+    if (sinCobrar.length) {
+      items.push({ ico: "💵", txt: `${sinCobrar.length} reserva${sinCobrar.length === 1 ? "" : "s"} terminada${sinCobrar.length === 1 ? "" : "s"} sin ingreso registrado`,
+        sub: sinCobrar.map((b) => `${b.name} (${fmtD(b.start)})`).join(", "), btn: "Ir a reservas", ir: "calendario" });
+    }
+    if (!items.length) {
+      box.innerHTML = '<div class="vacio"><b>Todo al día</b>No hay nada pendiente por ahora.</div>';
+    } else {
+      for (const it of items) {
+        const div = document.createElement("div");
+        div.className = "pend";
+        div.innerHTML = `<span class="pend__ico" aria-hidden="true">${it.ico}</span>` +
+          `<span class="pend__txt">${escHtml(it.txt)}<small>${escHtml(it.sub)}</small></span>`;
+        const b = document.createElement("button");
+        b.className = "quiet";
+        b.textContent = it.btn;
+        b.addEventListener("click", () => irA(it.ir));
+        div.appendChild(b);
+        box.appendChild(div);
+      }
+    }
+  }
+
+  // --- Próximas llegadas ---
+  const lleg = $("hoy-llegadas");
+  if (lleg) {
+    lleg.innerHTML = "";
+    const lista = proximas.slice(0, 5);
+    if (!lista.length) {
+      lleg.innerHTML = '<div class="vacio"><b>Sin llegadas próximas</b>Toca “Nueva reserva” para agendar una.</div>';
+    } else {
+      for (const b of lista) {
+        const dias = Math.round((new Date(b.start) - new Date(hoyDs)) / 86400000);
+        const n = noches(b);
+        const div = document.createElement("div");
+        div.className = "card";
+        const quien = b.name || (b.source === "airbnb" ? "Reserva de Airbnb" : "Reserva directa");
+        const cuando = dias === 0 ? "hoy" : dias === 1 ? "mañana" : `en ${dias} días`;
+        div.innerHTML = `<span style="text-align:left"><b>${escHtml(quien)}</b><br>` +
+          `<span class="muted">${fmtD(b.start)} → ${fmtD(b.end)} · ${n} noche${n === 1 ? "" : "s"}` +
+          `${b.guests ? " · " + b.guests + " pax" : ""}${b.rate ? " · " + money(b.rate) + "/noche" : ""}</span></span>` +
+          `<span class="muted num">${cuando}</span>`;
+        lleg.appendChild(div);
+      }
+    }
+  }
+  pintarMenu();
+}
 
 async function loadReviews() {
   let data;
@@ -283,6 +495,8 @@ function applyReviews(all) {
   };
   renderInto("rv-pending", pending, true);
   renderInto("rv-approved", approved, false);
+  RV_PEND = pending.length;
+  renderHoy();
 }
 
 // --- Clientes del portal ---
@@ -434,21 +648,26 @@ function renderFinance(movs) {
     div.innerHTML = `<span style="text-align:left"><span class="tag ${m.type}">${m.type === "in" ? "INGRESO" : "GASTO"}</span>` +
       `<b>${escHtml(m.concept)}</b> <span class="muted">· ${fmtD(m.date)} · ${escHtml(m.category || "")}${m.guest ? " · 👤 " + escHtml(m.guest) : ""}</span></span>` +
       `<span class="row"><b class="${m.type === "in" ? "pos" : "neg"}">${m.type === "in" ? "+" : "−"}${money(m.amount)}</b></span>`;
+    // Acciones calladas: antes eran tres botones de color en cada fila y el
+    // listado parecía un tablero de botones. Ahora el monto manda.
     const wrap = div.querySelector(".row");
     const ed = document.createElement("button");
-    ed.className = "mini";
-    ed.textContent = "✏️";
-    ed.title = "Editar este movimiento";
+    ed.className = "quiet";
+    ed.textContent = "Editar";
+    ed.setAttribute("aria-label", `Editar ${m.concept}`);
     ed.addEventListener("click", () => startEditMov(m));
     wrap.appendChild(ed);
     const dup = document.createElement("button");
-    dup.textContent = "Duplicar";
+    dup.className = "quiet";
+    dup.textContent = "Repetir";
     dup.title = "Repite este movimiento con fecha de hoy (útil para gastos mensuales)";
+    dup.setAttribute("aria-label", `Repetir ${m.concept} con fecha de hoy`);
     dup.addEventListener("click", () => duplicateMov(m));
     wrap.appendChild(dup);
     const del = document.createElement("button");
-    del.className = "danger";
-    del.textContent = "✕";
+    del.className = "quiet peligro";
+    del.textContent = "Borrar";
+    del.setAttribute("aria-label", `Borrar ${m.concept}`);
     del.addEventListener("click", () => deleteMov(m));
     wrap.appendChild(del);
     box.appendChild(div);
@@ -502,7 +721,7 @@ function renderGuests(movs) {
 // en memoria (viene en la respuesta) en vez de releer el blob — así evitamos el
 // read-after-write stale que hacía "desaparecer" el movimiento recién creado.
 let FIN = [];
-function applyFinance(movs) { FIN = Array.isArray(movs) ? movs : []; renderFinance(FIN); renderRecurring(); }
+function applyFinance(movs) { FIN = Array.isArray(movs) ? movs : []; renderFinance(FIN); renderRecurring(); renderHoy(); }
 
 async function loadFinance() {
   try {
@@ -528,16 +747,27 @@ function startEditMov(m) {
   $("f-cat").value = m.category || "";
   $("f-guest").value = m.guest || "";
   $("f-amount").value = m.amount;
+  $("mov-title").textContent = "Editar movimiento";
   $("f-add").textContent = "Guardar cambios";
   $("f-cancel").classList.remove("hidden");
-  msg(`Editando "${m.concept}" — cambia lo que quieras y guarda.`);
+  abrir("dlg-mov");
   $("f-concept").focus();
 }
+
+// Abre la ventana en blanco para capturar un ingreso o un gasto
+function nuevoMov() {
+  resetMovForm();
+  $("mov-title").textContent = "Registrar movimiento";
+  abrir("dlg-mov");
+  $("f-concept").focus();
+}
+
 function resetMovForm() {
   EDIT_MOV = null;
   $("f-concept").value = ""; $("f-amount").value = ""; $("f-guest").value = "";
   $("f-date").value = new Date().toISOString().slice(0, 10);
-  $("f-add").textContent = "Agregar";
+  $("mov-title").textContent = "Registrar movimiento";
+  $("f-add").textContent = "Guardar";
   $("f-cancel").classList.add("hidden");
 }
 
@@ -567,6 +797,7 @@ async function addMovFromForm() {
       msg(type === "in" ? "Ingreso registrado ✅" : "Gasto registrado ✅");
     }
     resetMovForm();
+    cerrar("dlg-mov"); // guardado = la ventana ya cumplió; cancelar edición no la cierra
   } catch { msg("Error al guardar el movimiento.", false); }
   finally {
     finBusy = false;
@@ -615,6 +846,7 @@ async function loadRecurring() {
     const d = await api("&action=recurring-list");
     RECUR = d.recurring || [];
     renderRecurring();
+    renderHoy();
   } catch { /* el resto del panel sigue */ }
 }
 
@@ -705,7 +937,9 @@ async function addRecurring() {
     if (!r.ok) throw new Error(r.error);
     RECUR = r.recurring || [];
     renderRecurring();
+    renderHoy();
     $("r-concept").value = ""; $("r-amount").value = "";
+    cerrar("dlg-recurrente");
     msg("Recurrente agregado ✅");
   } catch { msg("Error al agregar el recurrente.", false); }
 }
@@ -741,6 +975,7 @@ async function seedCustomer() {
     if (r.customers) applyCustomers(r.customers); else loadCustomers();
     msg(`Cliente dado de alta ✅ (código ${r.refCode})`);
     $("c-name").value = ""; $("c-email").value = "";
+    cerrar("dlg-cliente");
   } catch { msg("Error al dar de alta.", false); }
 }
 
@@ -782,15 +1017,31 @@ function blockFormQS() {
   return Object.entries(p).map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join("");
 }
 
+// Deja el formulario limpio y cierra la ventana (se usa al terminar de guardar)
 function resetBlockForm() {
   EDITING = null;
   SEL = { start: null, end: null };
   ["bstart", "bend", "b-name", "b-guests", "b-rate", "b-ref"].forEach((id) => { $(id).value = ""; });
   $("b-cit").value = "14:00"; $("b-cot").value = "10:00"; $("b-free").checked = false;
-  $("b-title").textContent = "➕ Nueva reserva directa / bloqueo";
-  $("addblock").textContent = "Agregar reserva";
+  $("b-title").textContent = "Nueva reserva";
+  $("addblock").textContent = "Guardar reserva";
   $("canceledit").classList.add("hidden");
+  cerrar("dlg-reserva");
   renderMiniCal();
+}
+
+// Abre la ventana en blanco, conservando las fechas que se hayan elegido en el calendario
+function nuevaReserva() {
+  EDITING = null;
+  ["b-name", "b-guests", "b-rate", "b-ref"].forEach((id) => { $(id).value = ""; });
+  $("b-cit").value = "14:00"; $("b-cot").value = "10:00"; $("b-free").checked = false;
+  $("bstart").value = SEL.start || "";
+  $("bend").value = SEL.end || "";
+  $("b-title").textContent = "Nueva reserva";
+  $("addblock").textContent = "Guardar reserva";
+  $("canceledit").classList.add("hidden");
+  abrir("dlg-reserva");
+  $("b-name").focus();
 }
 
 function startEdit(b) {
@@ -801,12 +1052,11 @@ function startEdit(b) {
   $("b-rate").value = b.rate || ""; $("b-ref").value = b.referredBy || "";
   $("b-cit").value = b.checkinTime || "14:00"; $("b-cot").value = b.checkoutTime || "10:00";
   $("b-free").checked = !!b.freeNight;
-  $("b-title").textContent = `✏️ Editando ${fmtD(b.start)} → ${fmtD(b.end)}`;
+  $("b-title").textContent = `Editar ${fmtD(b.start)} → ${fmtD(b.end)}`;
   $("addblock").textContent = "Guardar cambios";
   $("canceledit").classList.remove("hidden");
-  document.querySelector("details.sec").open = true; // sección del calendario
   renderMiniCal();
-  window.scrollTo({ top: $("b-title").getBoundingClientRect().top + window.scrollY - 80, behavior: "smooth" });
+  abrir("dlg-reserva");
 }
 
 async function addBlock() {
@@ -835,11 +1085,25 @@ function showLogin() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  pintarMenu();
+  irA("hoy");
+
+  // Cualquier botón con data-cerrar cierra la ventana que lo contiene.
+  // Las ventanas también se cierran con Escape (lo hace <dialog> solo).
+  document.querySelectorAll("dialog [data-cerrar]").forEach((b) => {
+    b.addEventListener("click", () => b.closest("dialog").close());
+  });
+  // Clic en el fondo oscuro = cerrar
+  document.querySelectorAll("dialog").forEach((d) => {
+    d.addEventListener("click", (e) => { if (e.target === d) d.close(); });
+  });
+
   $("enter").addEventListener("click", () => {
     KEY = $("key").value.trim();
     localStorage.setItem(KEY_STORE, KEY);
     load();
   });
+  $("key").addEventListener("keydown", (e) => { if (e.key === "Enter") $("enter").click(); });
   $("addblock").addEventListener("click", addBlock);
   $("canceledit").addEventListener("click", resetBlockForm);
   $("c-seed").addEventListener("click", seedCustomer);

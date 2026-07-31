@@ -2,40 +2,48 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Panel · Esmeralda</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <style>
-    :root { --aqua:#06d67e; --gold:#e7c66a; --ambar:#f5b301; --ink:#062c22; --rojo:#ff8f8f;
-      --glass:rgba(255,255,255,.09); --glass2:rgba(255,255,255,.13); --borde:rgba(255,255,255,.24); }
+    :root {
+      --aqua:#06d67e; --gold:#e7c66a; --ambar:#f5b301; --ink:#062c22; --rojo:#ff8f8f;
+      --glass:rgba(255,255,255,.09); --glass2:rgba(255,255,255,.13); --borde:rgba(255,255,255,.24);
+      --rail:264px;
+    }
     * { box-sizing:border-box; margin:0; }
-    body { font-family:"Inter",system-ui,sans-serif; color:#fff; min-height:100vh; padding:1rem .9rem 4rem;
+    html { -webkit-text-size-adjust:100%; }
+    body { font-family:"Inter",system-ui,sans-serif; color:#fff; min-height:100vh;
       background:linear-gradient(160deg,#052620 0%,#0a5944 55%,#0f7a5f 100%) fixed; }
-    main { max-width:1320px; margin:0 auto; }
     a { color:var(--aqua); }
+    /* Los números de dinero se alinean en columna (tabular) para poder compararlos de un vistazo */
+    .num, .stat b, table.fin td, table.fin th { font-variant-numeric:tabular-nums; }
 
-    /* ---- barra superior ---- */
-    .top { display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap; margin-bottom:1rem; }
-    .brand { font-family:Georgia,"Fraunces",serif; font-size:1.25rem; }
-    .brand .gem { color:var(--aqua); }
-    .top .row { margin:0; }
-
-    /* ---- controles ---- */
-    .row { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin:.6rem 0; }
+    /* ---------- controles base ---------- */
     button { border:0; border-radius:999px; padding:.55rem 1.05rem; font:600 .88rem "Inter",sans-serif;
-      background:var(--aqua); color:var(--ink); cursor:pointer; transition:transform .12s ease,opacity .12s ease; }
+      background:var(--aqua); color:var(--ink); cursor:pointer; transition:transform .12s ease,opacity .12s ease,background .12s ease; }
     button:hover { transform:translateY(-1px); }
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+      outline:2.5px solid var(--gold); outline-offset:2px; }
     button.danger { background:rgba(255,143,143,.9); color:#3d0d0d; }
     button.ghost { background:transparent; color:#fff; border:1.5px solid rgba(255,255,255,.45); }
+    button.ghost:hover { background:rgba(255,255,255,.1); }
+    /* Acciones de fila: calladas, para que no compitan con la acción principal */
+    button.quiet { background:transparent; color:rgba(255,255,255,.75); border:1px solid rgba(255,255,255,.2);
+      padding:.32rem .6rem; font-size:.78rem; line-height:1; }
+    button.quiet:hover { background:rgba(255,255,255,.14); color:#fff; }
+    button.quiet.peligro:hover { background:rgba(255,143,143,.25); color:#ffd9d9; border-color:rgba(255,143,143,.5); }
     input, select { padding:.55rem .9rem; border:1px solid rgba(255,255,255,.35); border-radius:999px; font:inherit;
       background:rgba(255,255,255,.93); color:var(--ink); max-width:100%; }
     input[type="checkbox"] { width:1.05rem; height:1.05rem; accent-color:var(--aqua); }
     label { font-size:.82rem; display:inline-flex; align-items:center; gap:.4rem; opacity:.95; }
+    .row { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin:.6rem 0; }
     .muted { color:rgba(255,255,255,.68); font-size:.84rem; }
-    #msg { min-height:1.2rem; font-weight:600; margin:.4rem 0 .8rem; }
+    .hidden { display:none !important; }
+    .pos { color:var(--aqua); } .neg { color:var(--rojo); }
 
-    /* ---- login ---- */
+    /* ---------- login ---------- */
     #login { max-width:420px; margin:14vh auto 0; background:var(--glass2); border:1px solid var(--borde);
       border-radius:28px; padding:1.8rem 1.5rem; text-align:center;
       -webkit-backdrop-filter:blur(18px) saturate(1.3); backdrop-filter:blur(18px) saturate(1.3); }
@@ -43,36 +51,97 @@
     #login input { width:100%; margin-bottom:.7rem; text-align:center; }
     #login button { width:100%; }
 
-    /* ---- secciones desplegables ---- */
-    details.sec { background:var(--glass); border:1px solid var(--borde); border-radius:24px; margin:.8rem 0;
-      -webkit-backdrop-filter:blur(12px) saturate(1.25); backdrop-filter:blur(12px) saturate(1.25); overflow:hidden; }
-    details.sec > summary { list-style:none; cursor:pointer; padding:1rem 1.2rem; font-family:Georgia,serif;
-      font-size:1.05rem; display:flex; align-items:center; justify-content:space-between; gap:.6rem; user-select:none; }
-    details.sec > summary::-webkit-details-marker { display:none; }
-    details.sec > summary::after { content:"+"; font-family:"Inter",sans-serif; font-weight:600; color:var(--gold);
-      border:1.5px solid var(--gold); border-radius:50%; width:1.5rem; height:1.5rem; display:inline-flex;
-      align-items:center; justify-content:center; flex:0 0 auto; transition:transform .2s ease; }
-    details.sec[open] > summary::after { content:"−"; transform:rotate(180deg); }
-    details.sec > .body { padding:0 1.2rem 1.2rem; }
+    /* ---------- armazón: riel de menú + contenido ---------- */
+    .shell { display:block; }
+    .rail { display:none; }
+    .contenido { padding:1rem .9rem 5.5rem; max-width:1180px; margin:0 auto; }
 
-    /* ---- stats ---- */
-    .stats { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:.6rem; margin:.4rem 0 .2rem; }
-    .stat { background:var(--glass2); border:1px solid var(--borde); border-radius:18px; padding:.8rem .95rem;
-      -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
-    .stat .lbl { font-size:.68rem; text-transform:uppercase; letter-spacing:.5px; color:rgba(255,255,255,.65); }
-    .stat b { display:block; font-size:1.25rem; margin-top:.15rem; }
-    .pos { color:var(--aqua); } .neg { color:var(--rojo); }
+    .rail__marca { font-family:Georgia,"Fraunces",serif; font-size:1.15rem; padding:.2rem .3rem 1.1rem; }
+    .rail__marca .gem { color:var(--aqua); }
+    .navlink { display:flex; align-items:center; gap:.6rem; width:100%; text-align:left; background:transparent;
+      color:rgba(255,255,255,.8); border:0; border-radius:14px; padding:.62rem .75rem; font:600 .92rem "Inter",sans-serif;
+      cursor:pointer; transition:background .14s ease,color .14s ease; }
+    .navlink:hover { background:rgba(255,255,255,.09); color:#fff; transform:none; }
+    .navlink[aria-current="page"] { background:var(--glass2); color:#fff; box-shadow:inset 0 0 0 1px var(--borde); }
+    .navlink .ico { font-size:1.05rem; width:1.4rem; text-align:center; flex:0 0 auto; }
+    .navlink .pip { margin-left:auto; background:var(--gold); color:#3a2c00; font-size:.68rem; font-weight:800;
+      min-width:1.25rem; height:1.25rem; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; padding:0 .35rem; }
 
-    /* ---- mini calendario interactivo ---- */
-    .calhelp { font-size:.84rem; color:rgba(255,255,255,.75); margin:.2rem 0 .8rem; }
-    .minical { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:.8rem; }
-    .mc-month { background:var(--glass2); border:1px solid var(--borde); border-radius:18px; padding:.8rem .7rem; }
-    .mc-month h4 { font-family:Georgia,serif; font-size:.9rem; text-align:center; margin-bottom:.45rem; }
+    /* ---------- barra inferior (celular) ---------- */
+    .tabs { position:fixed; left:0; right:0; bottom:0; z-index:40; display:grid; grid-template-columns:repeat(5,1fr);
+      gap:.15rem; padding:.4rem .35rem calc(.4rem + env(safe-area-inset-bottom)); background:rgba(4,33,28,.86);
+      border-top:1px solid var(--borde); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); }
+    .tab { background:transparent; border:0; border-radius:12px; color:rgba(255,255,255,.7); cursor:pointer;
+      padding:.35rem .1rem; display:flex; flex-direction:column; align-items:center; gap:.15rem;
+      font:600 .64rem "Inter",sans-serif; position:relative; }
+    .tab:hover { transform:none; }
+    .tab .ico { font-size:1.15rem; line-height:1; }
+    .tab[aria-current="page"] { color:#fff; background:var(--glass2); }
+    .tab .pip { position:absolute; top:.1rem; right:50%; margin-right:-1.15rem; background:var(--gold); color:#3a2c00;
+      font-size:.6rem; font-weight:800; min-width:1rem; height:1rem; border-radius:999px;
+      display:inline-flex; align-items:center; justify-content:center; padding:0 .25rem; }
+
+    /* ---------- botón flotante (celular) ----------
+       En escritorio la acción principal vive en el riel; en celular el riel no
+       existe, así que sin esto no habría forma de crear nada desde el teléfono. */
+    .fab { position:fixed; right:.9rem; z-index:45; bottom:calc(4.6rem + env(safe-area-inset-bottom));
+      box-shadow:0 10px 26px rgba(0,0,0,.4); padding:.8rem 1.25rem; font-size:.92rem; }
+    @media (min-width:940px) { .fab { display:none; } }
+
+    /* ---------- encabezado de pantalla ---------- */
+    .vhead { display:flex; align-items:flex-end; justify-content:space-between; gap:.8rem; flex-wrap:wrap;
+      margin:.2rem 0 1rem; }
+    .vhead h1 { font-family:Georgia,serif; font-size:1.5rem; font-weight:400; letter-spacing:.2px; }
+    .vhead p { margin-top:.15rem; }
+    #msg { min-height:1.1rem; font-weight:600; font-size:.88rem; margin:0 0 .8rem; }
+
+    /* ---------- bloques ---------- */
+    .bloque { background:var(--glass); border:1px solid var(--borde); border-radius:22px; padding:1.1rem 1.2rem 1.2rem;
+      margin:0 0 1rem; -webkit-backdrop-filter:blur(12px) saturate(1.25); backdrop-filter:blur(12px) saturate(1.25); }
+    .bloque > h2 { font-family:Georgia,serif; font-size:1.05rem; font-weight:400; margin-bottom:.2rem; }
+    .bloque > h2 + .muted { margin-bottom:.7rem; display:block; }
+    .bloque--plano { background:transparent; border:0; padding:0; -webkit-backdrop-filter:none; backdrop-filter:none; }
+
+    /* ---------- HOY: la cinta de ocupación (elemento firma) ---------- */
+    .ahora { background:var(--glass2); border:1px solid var(--borde); border-radius:22px; padding:1.1rem 1.2rem 1rem; margin-bottom:1rem;
+      -webkit-backdrop-filter:blur(14px) saturate(1.3); backdrop-filter:blur(14px) saturate(1.3); }
+    .ahora__frase { font-family:Georgia,serif; font-size:1.32rem; line-height:1.35; font-weight:400; }
+    .ahora__frase b { color:var(--aqua); font-weight:400; }
+    .ahora__sub { margin-top:.3rem; }
+    .cinta { display:flex; gap:2px; margin-top:1rem; align-items:flex-end; height:44px; }
+    .cinta__d { flex:1 1 0; min-width:0; height:100%; border-radius:3px; background:rgba(255,255,255,.1); position:relative; }
+    .cinta__d.dir { background:var(--aqua); }
+    .cinta__d.abb { background:var(--ambar); }
+    .cinta__d.hoy { box-shadow:0 0 0 2px #fff; z-index:1; }
+    .cinta__ejes { display:flex; justify-content:space-between; font-size:.68rem; color:rgba(255,255,255,.55); margin-top:.35rem; }
+
+    /* ---------- pendientes ---------- */
+    .pend { display:flex; align-items:center; gap:.75rem; padding:.7rem .3rem; border-bottom:1px solid rgba(255,255,255,.12); }
+    .pend:last-child { border-bottom:0; }
+    .pend__ico { font-size:1.2rem; flex:0 0 auto; }
+    .pend__txt { flex:1 1 auto; font-size:.92rem; }
+    .pend__txt small { display:block; color:rgba(255,255,255,.6); font-size:.78rem; margin-top:.1rem; }
+    .vacio { text-align:center; padding:1.6rem 1rem; color:rgba(255,255,255,.72); font-size:.9rem; }
+    .vacio b { display:block; font-family:Georgia,serif; font-size:1.05rem; color:#fff; font-weight:400; margin-bottom:.25rem; }
+
+    /* ---------- stats ---------- */
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:.6rem; margin:.2rem 0; }
+    .stat { background:var(--glass2); border:1px solid var(--borde); border-radius:18px; padding:.8rem .95rem; }
+    .stat .lbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.5px; color:rgba(255,255,255,.65); }
+    .stat b { display:block; font-size:1.3rem; margin-top:.15rem; }
+    .stat .muted { font-size:.74rem; }
+
+    /* ---------- calendario ---------- */
+    .calhelp { font-size:.84rem; color:rgba(255,255,255,.75); margin:.1rem 0 .8rem; }
+    .minical { display:grid; grid-template-columns:1fr; gap:.8rem; touch-action:pan-y; }
+    @media (min-width:760px) { .minical { grid-template-columns:1fr 1fr; } }
+    .mc-month { background:var(--glass2); border:1px solid var(--borde); border-radius:18px; padding:1rem .9rem; }
+    .mc-month h4 { font-family:Georgia,serif; font-size:.95rem; font-weight:400; text-align:center; margin-bottom:.5rem; }
     .mc-month h4 .pct { font-family:"Inter",sans-serif; font-size:.68rem; opacity:.6; font-weight:400; margin-left:.3rem; }
     .mc-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:2.5px; }
     .mc-dow { font-size:.6rem; font-weight:600; opacity:.55; text-align:center; padding-bottom:.25rem; }
-    .mc-day { height:30px; min-width:0; display:flex; align-items:center; justify-content:center; font-size:.72rem;
-      border-radius:7px; background:rgba(255,255,255,.07); cursor:pointer; border:0; padding:0; color:#eaf6f0; font-weight:400; transform:none; }
+    .mc-day { height:38px; min-width:0; display:flex; align-items:center; justify-content:center; font-size:.82rem;
+      border-radius:8px; background:rgba(255,255,255,.07); cursor:pointer; border:0; padding:0; color:#eaf6f0; font-weight:400; transform:none; }
     .mc-day:hover { outline:1.5px solid rgba(255,255,255,.6); transform:none; }
     .mc-day.dir { background:var(--aqua); color:var(--ink); font-weight:600; }
     .mc-day.abb { background:var(--ambar); color:#3a2c00; font-weight:600; }
@@ -84,244 +153,356 @@
     .callegend { display:flex; flex-wrap:wrap; gap:.5rem 1.1rem; font-size:.75rem; opacity:.85; margin-top:.7rem; }
     .dot { display:inline-block; width:.7rem; height:.7rem; border-radius:50%; margin-right:.3rem; vertical-align:-1px; }
     .dot.d { background:var(--aqua); } .dot.a { background:var(--ambar); } .dot.s { background:var(--gold); }
+    .calnav { display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-bottom:.7rem; }
+    .calnav h4 { font-family:Georgia,serif; font-size:1rem; font-weight:400; }
+    .calnav button { padding:.35rem .85rem; }
+    #cal-who { font-size:.82rem; min-height:1.1rem; margin-top:.6rem; color:var(--gold); }
 
-    /* ---- formulario reserva ---- */
-    .form-res { background:var(--glass2); border:1px solid var(--borde); border-radius:18px; padding:1rem; margin-top:1rem; }
-    .form-res h3 { font-family:Georgia,serif; font-size:1rem; margin-bottom:.6rem; color:var(--gold); }
-    .fgrid { display:grid; grid-template-columns:1fr 1fr; gap:.55rem; }
-    .fgrid .wide { grid-column:1 / -1; }
-    .fgrid label { display:flex; flex-direction:column; align-items:stretch; gap:.25rem; font-size:.75rem; }
-    .fgrid input { width:100%; }
-
-    /* ---- tarjetas de listas ---- */
+    /* ---------- tarjetas de lista ---------- */
     .card { background:var(--glass2); border:1px solid var(--borde); border-radius:16px; padding:.75rem .95rem;
       margin:.5rem 0; display:flex; justify-content:space-between; align-items:center; gap:.7rem; flex-wrap:wrap; font-size:.9rem; }
     .card .row { margin:0; }
-    .tag { display:inline-block; font-size:.66rem; font-weight:700; border-radius:999px; padding:.14rem .55rem; margin-right:.4rem; }
+    .tag { display:inline-block; font-size:.64rem; font-weight:700; border-radius:999px; padding:.14rem .55rem; margin-right:.4rem; letter-spacing:.3px; }
     .tag.in { background:rgba(6,214,126,.25); color:#8effcd; } .tag.out { background:rgba(255,143,143,.22); color:#ffc4c4; }
 
-    /* ---- tabla finanzas ---- */
+    /* ---------- tablas ---------- */
     .finwrap { overflow-x:auto; }
-    table.fin { width:100%; border-collapse:collapse; font-size:.86rem; margin:.6rem 0; min-width:430px; }
+    table.fin { width:100%; border-collapse:collapse; font-size:.86rem; margin:.5rem 0 0; min-width:430px; }
     table.fin th, table.fin td { padding:.5rem .7rem; text-align:right; border-bottom:1px solid rgba(255,255,255,.14); }
-    table.fin th:first-child, table.fin td:first-child { text-align:left; }
-    table.fin th { color:var(--gold); font-size:.68rem; text-transform:uppercase; letter-spacing:.5px; }
+    table.fin th:first-child, table.fin td:first-child, table.fin td.g { text-align:left; }
+    table.fin th { color:var(--gold); font-size:.66rem; text-transform:uppercase; letter-spacing:.5px; font-weight:600; }
     table.fin tr:last-child td { border-bottom:0; }
 
-    /* ---- calendario compacto: un mes a la vez ---- */
-    .calnav { display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-bottom:.6rem; }
-    .calnav h4 { font-family:Georgia,serif; font-size:1rem; }
-    .calnav .pct { font-family:"Inter",sans-serif; font-size:.7rem; opacity:.6; font-weight:400; margin-left:.4rem; }
-    .calnav button { padding:.35rem .8rem; }
-    .minical.compact { display:grid; grid-template-columns:1fr; gap:.8rem; touch-action:pan-y; }
-    @media (min-width:700px) { .minical.compact { grid-template-columns:1fr 1fr; } }
-    .minical.compact .mc-month { padding:1rem .9rem; }
-    .minical.compact .mc-day { height:38px; font-size:.82rem; }
-    #cal-who { font-size:.82rem; min-height:1.1rem; margin-top:.5rem; color:var(--gold); }
-
-    /* ---- gráfica ingresos vs gastos ---- */
+    /* ---------- gráfica ---------- */
     .chart { width:100%; height:190px; display:block; }
     .chart .gin { fill:var(--aqua); } .chart .gout { fill:var(--rojo); }
     .chart text { fill:rgba(255,255,255,.66); font:400 9px "Inter",sans-serif; }
     .chartlg { display:flex; gap:1rem; font-size:.75rem; opacity:.85; flex-wrap:wrap; }
-    .chartbox { background:var(--glass); border:1px solid var(--borde); border-radius:24px; padding:1rem 1.2rem 1.2rem;
-      margin:.8rem 0; -webkit-backdrop-filter:blur(12px) saturate(1.25); backdrop-filter:blur(12px) saturate(1.25); }
     .charthead { display:flex; align-items:baseline; justify-content:space-between; gap:.8rem; flex-wrap:wrap; margin-bottom:.5rem; }
-    .charthead h3 { font-family:Georgia,serif; font-size:1.05rem; }
 
-    /* ---- filtro de periodo ---- */
-    .periodo { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; margin:.2rem 0 .7rem; }
-    .periodo select { padding:.4rem .8rem; font-size:.85rem; }
+    /* ---------- ventanas (modales) ---------- */
+    /* margin:auto es lo que centra un <dialog>; el reset de arriba (* {margin:0})
+       se lo quita, así que hay que devolvérselo o la ventana se pega arriba a la izquierda. */
+    dialog { border:0; padding:0; background:transparent; color:#fff;
+      width:min(96vw,620px); max-height:88vh; margin:auto; overflow:visible; }
+    dialog .modal { max-height:88vh; overflow-y:auto; }
+    dialog::backdrop { background:rgba(3,20,17,.62); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+    .modal { background:linear-gradient(165deg,#0a4335 0%,#0c5744 100%); border:1px solid var(--borde);
+      border-radius:26px; padding:1.3rem 1.35rem 1.4rem; box-shadow:0 24px 60px rgba(0,0,0,.45); }
+    .modal__head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:.9rem; }
+    .modal__head h2 { font-family:Georgia,serif; font-size:1.2rem; font-weight:400; }
+    .modal__cerrar { background:transparent; color:rgba(255,255,255,.75); border:1px solid rgba(255,255,255,.25);
+      border-radius:50%; width:2rem; height:2rem; padding:0; font-size:1rem; line-height:1; flex:0 0 auto; }
+    .modal__cerrar:hover { background:rgba(255,255,255,.14); color:#fff; }
+    .modal__pie { display:flex; gap:.5rem; justify-content:flex-end; flex-wrap:wrap; margin-top:1.1rem; }
+    .fgrid { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; }
+    .fgrid .wide { grid-column:1 / -1; }
+    .fgrid label { display:flex; flex-direction:column; align-items:stretch; gap:.25rem; font-size:.74rem;
+      text-transform:uppercase; letter-spacing:.4px; color:rgba(255,255,255,.7); }
+    .fgrid input, .fgrid select { width:100%; }
+    .fgrid label.check { flex-direction:row; align-items:center; justify-content:flex-start; gap:.55rem;
+      text-transform:none; letter-spacing:0; font-size:.9rem; color:#fff; }
+    .fgrid label.check input { width:1.15rem; flex:0 0 auto; }
+    @media (max-width:520px) { .fgrid { grid-template-columns:1fr; } }
 
-    /* ---- por huésped ---- */
-    table.fin td.g { text-align:left; }
-    .mini { font-size:.72rem; padding:.3rem .7rem; }
-
-    .hidden { display:none; }
-
-    /* ---- desktop: aprovechar el ancho ---- */
-    @media (min-width: 980px) {
-      body { padding:1.6rem 2.2rem 5rem; }
-      .cols2 { display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; align-items:start; }
-      .calwrap { display:grid; grid-template-columns:minmax(0,2.2fr) minmax(300px,1fr); gap:1.2rem; align-items:start; }
-      .form-res { margin-top:0; position:sticky; top:1rem; }
-      .fgrid { grid-template-columns:1fr 1fr; }
+    /* ---------- escritorio ---------- */
+    @media (min-width:940px) {
+      .tabs { display:none; }
+      .shell { display:grid; grid-template-columns:var(--rail) minmax(0,1fr); }
+      .rail { display:block; position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto;
+        padding:1.4rem 1rem; border-right:1px solid var(--borde); background:rgba(4,33,28,.34);
+        -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+      .rail__nav { display:flex; flex-direction:column; gap:.2rem; }
+      .rail__pie { margin-top:1.4rem; padding-top:1rem; border-top:1px solid rgba(255,255,255,.16);
+        display:flex; flex-direction:column; gap:.5rem; align-items:flex-start; }
+      .rail__accion { width:100%; margin-top:1.1rem; }
+      .contenido { padding:1.8rem 2.4rem 3rem; max-width:1240px; margin:0; }
+      .calwrap { display:grid; grid-template-columns:minmax(0,1fr); gap:1.2rem; align-items:start; }
     }
+    @media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important; } }
   </style>
 </head>
 <body>
-<main>
-  <div class="top">
-    <span class="brand"><span class="gem">◆</span> Esmeralda · Panel</span>
-    <span class="row">
-      <a class="muted" href="/">← landing</a>
-      <a id="cal-open" href="#" target="_blank" rel="noopener"><button class="ghost" type="button">🗓 Vista completa</button></a>
-      <button id="logout" class="danger hidden" type="button">Salir</button>
-    </span>
-  </div>
 
-  <div id="login">
-    <h1>🔐 Panel privado</h1>
-    <input id="key" type="password" placeholder="Contraseña del panel" />
-    <button id="enter" type="button">Entrar</button>
-    <p class="muted" style="margin-top:.9rem">O sin contraseña: <a href="/portal">código por correo (magic link)</a> con tu email de admin.</p>
-  </div>
+<!-- ===================== LOGIN ===================== -->
+<div id="login">
+  <h1><span style="color:var(--aqua)">◆</span> Esmeralda · Panel</h1>
+  <input id="key" type="password" placeholder="Contraseña del panel" autocomplete="current-password" />
+  <button id="enter" type="button">Entrar</button>
+</div>
 
-  <div id="app" class="hidden">
-    <p id="msg"></p>
+<!-- ===================== PANEL ===================== -->
+<div id="app" class="hidden">
+<div class="shell">
 
-    <div class="periodo">
-      <label for="periodo-sel">Ver</label>
-      <select id="periodo-sel"></select>
-      <span class="muted">los KPIs cambian con el periodo</span>
+  <!-- riel de menú (escritorio) -->
+  <aside class="rail">
+    <div class="rail__marca"><span class="gem">◆</span> Esmeralda</div>
+    <nav class="rail__nav" id="rail-nav" aria-label="Secciones del panel"></nav>
+    <button class="rail__accion" id="rail-accion" type="button">+ Nueva reserva</button>
+    <div class="rail__pie">
+      <a id="cal-open" href="#" target="_blank" rel="noopener" class="muted">🗓 Calendario completo</a>
+      <a class="muted" href="/">← Ver la landing</a>
+      <button id="logout" class="ghost hidden" type="button">Salir</button>
     </div>
-    <div id="stats" class="stats"></div>
+  </aside>
 
-    <div class="chartbox">
-      <div class="charthead">
-        <h3>📈 Ingresos vs gastos</h3>
-        <div class="chartlg"><span><span class="dot d"></span>Ingresos</span><span><span class="dot" style="background:var(--rojo)"></span>Gastos</span><span class="muted">Últimos 12 meses</span></div>
-      </div>
-      <svg id="f-chart" class="chart" viewBox="0 0 720 190" preserveAspectRatio="none" role="img" aria-label="Ingresos contra gastos por mes"></svg>
-    </div>
+  <main class="contenido">
+    <p id="msg" role="status" aria-live="polite"></p>
 
-    <!-- Calendario + nueva reserva -->
-    <details class="sec" open>
-      <summary>📅 Calendario · nueva reserva</summary>
-      <div class="body">
-        <p class="calhelp">Toca un día libre para la <strong>llegada</strong> y otro para la <strong>salida</strong>. Toca un día ocupado (o pasa el cursor) para ver <strong>quién está</strong>. Verde = directa · ámbar = Airbnb.</p>
-        <div class="calwrap">
-          <div>
-            <div class="calnav">
-              <button id="cal-prev" class="ghost" type="button">‹</button>
-              <h4 id="cal-title"></h4>
-              <button id="cal-next" class="ghost" type="button">›</button>
-            </div>
-            <div id="minical" class="minical compact"></div>
-            <p id="cal-who"></p>
-            <div class="callegend">
-              <span><span class="dot d"></span>Directa</span>
-              <span><span class="dot a"></span>Airbnb</span>
-              <span><span class="dot s"></span>Selección</span>
-              <span>◻ Hoy (borde blanco)</span>
-            </div>
-          </div>
-          <div class="form-res">
-            <h3 id="b-title">➕ Nueva reserva directa / bloqueo</h3>
-            <div class="fgrid">
-              <label>Llegada <input id="bstart" type="date" /></label>
-              <label>Salida <input id="bend" type="date" /></label>
-              <label class="wide">Huésped responsable <input id="b-name" type="text" placeholder="Nombre y apellido" /></label>
-              <label>Huéspedes <input id="b-guests" type="number" min="1" max="6" placeholder="máx 6" /></label>
-              <label>$ por noche <input id="b-rate" type="number" min="0" step="0.01" placeholder="MXN" /></label>
-              <label>Check-in <input id="b-cit" type="time" value="14:00" /></label>
-              <label>Check-out <input id="b-cot" type="time" value="10:00" /></label>
-              <label class="wide">Recomendado / referido por <input id="b-ref" type="text" placeholder="Nombre o código ESM-" /></label>
-              <label class="wide" style="flex-direction:row"><input id="b-free" type="checkbox" /> 🌙 usa noche abonada</label>
-            </div>
-            <div class="row" style="margin-top:.8rem">
-              <button id="addblock" type="button">Agregar reserva</button>
-              <button id="canceledit" class="ghost hidden" type="button">Cancelar edición</button>
-            </div>
-            <p class="muted" style="margin-top:.5rem">Solo las fechas son obligatorias (bloqueo simple). Todo aparece en el calendario, el feed y el pantallazo.</p>
-          </div>
+    <!-- ---------- HOY ---------- -->
+    <section class="view" id="v-hoy">
+      <div class="vhead">
+        <div>
+          <h1>Hoy</h1>
+          <p class="muted" id="hoy-fecha"></p>
         </div>
       </div>
-    </details>
 
-    <!-- Finanzas -->
-    <details class="sec" open>
-      <summary>💰 Finanzas — ingresos y gastos</summary>
-      <div class="body">
-        <div class="row">
-          <select id="f-type">
-            <option value="in">➕ Ingreso</option>
-            <option value="out">➖ Gasto</option>
-          </select>
-          <input id="f-date" type="date" />
-          <input id="f-concept" type="text" placeholder="Concepto (ej. Reserva María / Luz CFE)" style="min-width:200px;flex:1" />
-          <select id="f-cat"></select>
-          <input id="f-guest" type="text" placeholder="Huésped (opcional)" style="width:150px" list="guestlist" />
-          <datalist id="guestlist"></datalist>
-          <input id="f-amount" type="number" min="0" step="0.01" placeholder="$ MXN" style="width:110px" />
-          <button id="f-add" type="button">Agregar</button>
-          <button id="f-cancel" class="ghost hidden" type="button">Cancelar edición</button>
-        </div>
-        <p class="muted">Pon el <strong>huésped</strong> para que el gasto (limpieza, desayunos, ida al súper) se le sume a su cuenta. También desde Telegram: <code>ingreso 4500 Reserva María</code> · <code>gasto 650 Limpieza</code>.</p>
+      <div class="ahora">
+        <p class="ahora__frase" id="hoy-frase">Cargando…</p>
+        <p class="ahora__sub muted" id="hoy-sub"></p>
+        <div class="cinta" id="hoy-cinta" role="img" aria-label="Ocupación de los próximos 30 días"></div>
+        <div class="cinta__ejes"><span id="hoy-eje-a"></span><span id="hoy-eje-b"></span></div>
+      </div>
 
-        <div class="cols2">
-          <div class="finwrap" id="f-summary"></div>
-          <div id="f-movs"></div>
+      <div class="bloque">
+        <h2>Por hacer</h2>
+        <div id="hoy-pend"></div>
+      </div>
+
+      <div class="bloque">
+        <h2>Próximas llegadas</h2>
+        <div id="hoy-llegadas"></div>
+      </div>
+    </section>
+
+    <!-- ---------- CALENDARIO ---------- -->
+    <section class="view" id="v-calendario" hidden>
+      <div class="vhead">
+        <div>
+          <h1>Calendario</h1>
+          <p class="muted">Toca un día libre para la llegada y otro para la salida: se abre la ventana de nueva reserva con las fechas puestas.</p>
         </div>
       </div>
-    </details>
 
-    <!-- Recurrentes -->
-    <details class="sec">
-      <summary>🔁 Gastos recurrentes · avisos por confirmar</summary>
-      <div class="body">
-        <p class="muted">Da de alta lo que se repite cada mes (internet, luz, gas, jardín, cuota). Abajo te avisa cuáles de este mes <strong>todavía no registras</strong>; al confirmar puedes cambiar el monto y la fecha antes de que se guarde.</p>
-        <div class="row">
-          <input id="r-concept" type="text" placeholder="Concepto (ej. Internet Totalplay)" style="min-width:190px;flex:1" />
-          <select id="r-cat"></select>
-          <input id="r-amount" type="number" min="0" step="0.01" placeholder="$ MXN" style="width:110px" />
-          <label>día <input id="r-day" type="number" min="1" max="28" value="1" style="width:72px" /></label>
-          <button id="r-add" type="button">Agregar recurrente</button>
+      <div class="bloque">
+        <div class="calnav">
+          <button id="cal-prev" class="ghost" type="button" aria-label="Meses anteriores">‹</button>
+          <h4 id="cal-title"></h4>
+          <button id="cal-next" class="ghost" type="button" aria-label="Meses siguientes">›</button>
         </div>
-        <h3 class="muted" style="margin:1rem 0 .3rem">Pendientes de este mes</h3>
-        <div id="r-pending"></div>
-        <h3 class="muted" style="margin:1rem 0 .3rem">Todos los recurrentes</h3>
-        <div id="r-list"></div>
+        <div id="minical" class="minical"></div>
+        <p id="cal-who" aria-live="polite"></p>
+        <div class="callegend">
+          <span><i class="dot d"></i>Reserva directa</span>
+          <span><i class="dot a"></i>Airbnb</span>
+          <span><i class="dot s"></i>Lo que estás eligiendo</span>
+        </div>
       </div>
-    </details>
 
-    <!-- Por huésped -->
-    <details class="sec">
-      <summary>🧾 Por huésped — cuánto pagó y cuánto costó</summary>
-      <div class="body">
-        <p class="muted">Cada movimiento con huésped se agrupa aquí. Así ves lo que dejó cada estancia después de limpieza, insumos y extras.</p>
+      <div class="bloque">
+        <h2>Reservas directas</h2>
+        <span class="muted">Las que tú administras: editar, cobrar o liberar.</span>
+        <div id="direct"></div>
+      </div>
+
+      <div class="bloque">
+        <h2>Todas las fechas ocupadas</h2>
+        <span class="muted">Incluye lo que llega de Airbnb (solo lectura).</span>
+        <div id="all"></div>
+      </div>
+    </section>
+
+    <!-- ---------- DINERO ---------- -->
+    <section class="view" id="v-dinero" hidden>
+      <div class="vhead">
+        <div>
+          <h1>Dinero</h1>
+          <p class="muted">Ingresos y gastos del departamento.</p>
+        </div>
+        <label class="muted">Ver <select id="periodo-sel"></select></label>
+      </div>
+
+      <div class="stats" id="stats"></div>
+
+      <div class="bloque">
+        <div class="charthead">
+          <h2>Ingresos vs gastos</h2>
+          <span class="chartlg"><span><i class="dot d"></i>Ingresos</span><span><i class="dot" style="background:var(--rojo)"></i>Gastos</span><span class="muted">Últimos 12 meses</span></span>
+        </div>
+        <svg id="f-chart" class="chart" viewBox="0 0 720 190" preserveAspectRatio="none" role="img" aria-label="Ingresos contra gastos por mes"></svg>
+      </div>
+
+      <div class="bloque">
+        <h2>Mes por mes</h2>
+        <div class="finwrap" id="f-summary"></div>
+      </div>
+
+      <div class="bloque">
+        <h2>Movimientos</h2>
+        <span class="muted">Los últimos 40. Toca un movimiento para editarlo.</span>
+        <div id="f-movs"></div>
+      </div>
+
+      <div class="bloque">
+        <h2>Por huésped</h2>
+        <span class="muted">Cuánto pagó cada uno y cuánto costó atenderlo.</span>
         <div class="finwrap" id="guest-table"></div>
       </div>
-    </details>
+    </section>
 
-    <!-- Reservas directas -->
-    <details class="sec">
-      <summary>🟢 Reservas directas — editar · cobrar · liberar</summary>
-      <div class="body" id="direct"></div>
-    </details>
-
-    <!-- Todas las fechas -->
-    <details class="sec">
-      <summary>🗓 Todas las fechas ocupadas (incluye Airbnb)</summary>
-      <div class="body" id="all"></div>
-    </details>
-
-    <!-- Clientes -->
-    <details class="sec">
-      <summary>👤 Clientes del portal</summary>
-      <div class="body">
-        <p class="muted">Se dan de alta solos al confirmar su primera reserva ("Pago recibido" en Telegram). Aquí puedes sembrar uno a mano, acreditar o redimir noches.</p>
-        <div class="row">
-          <input id="c-name" type="text" placeholder="Nombre" />
-          <input id="c-email" type="email" placeholder="correo@ejemplo.com" />
-          <button id="c-seed" type="button">Dar de alta</button>
+    <!-- ---------- RECURRENTES ---------- -->
+    <section class="view" id="v-recurrentes" hidden>
+      <div class="vhead">
+        <div>
+          <h1>Recurrentes</h1>
+          <p class="muted">Lo que se repite cada mes: internet, luz, gas, cuota, jardinería.</p>
         </div>
+      </div>
+
+      <div class="bloque">
+        <h2>Por confirmar este mes</h2>
+        <span class="muted">Puedes ajustar el monto y la fecha antes de guardarlos.</span>
+        <div id="r-pending"></div>
+      </div>
+
+      <div class="bloque">
+        <h2>Todos los recurrentes</h2>
+        <div id="r-list"></div>
+      </div>
+    </section>
+
+    <!-- ---------- GENTE ---------- -->
+    <section class="view" id="v-gente" hidden>
+      <div class="vhead">
+        <div>
+          <h1>Huéspedes</h1>
+          <p class="muted">Clientes del portal y reseñas que esperan tu visto bueno.</p>
+        </div>
+      </div>
+
+      <div class="bloque">
+        <h2>Reseñas por aprobar</h2>
+        <div id="rv-pending"></div>
+      </div>
+
+      <div class="bloque">
+        <h2>Clientes del portal</h2>
+        <span class="muted">Se dan de alta solos al confirmar su primera reserva. Aquí puedes sembrar uno a mano o ajustar sus noches gratis.</span>
         <div id="customers"></div>
       </div>
-    </details>
 
-    <!-- Reseñas -->
-    <details class="sec">
-      <summary>📝 Reseñas — aprobar y publicar</summary>
-      <div class="body">
-        <h3 class="muted" style="margin:.4rem 0">Pendientes</h3>
-        <div id="rv-pending"></div>
-        <h3 class="muted" style="margin:.9rem 0 .4rem">Publicadas</h3>
+      <div class="bloque">
+        <h2>Reseñas publicadas</h2>
         <div id="rv-approved"></div>
       </div>
-    </details>
+    </section>
+  </main>
+</div>
+
+<!-- acción principal y menú en celular -->
+<button class="fab" id="fab" type="button"></button>
+<nav class="tabs" id="tabs" aria-label="Secciones del panel"></nav>
+</div>
+
+<!-- ===================== VENTANAS ===================== -->
+
+<!-- Nueva reserva / editar -->
+<dialog id="dlg-reserva" aria-labelledby="b-title">
+  <div class="modal">
+    <div class="modal__head">
+      <h2 id="b-title">Nueva reserva</h2>
+      <button class="modal__cerrar" type="button" data-cerrar aria-label="Cerrar">✕</button>
+    </div>
+    <div class="fgrid">
+      <label>Llegada <input id="bstart" type="date" /></label>
+      <label>Salida <input id="bend" type="date" /></label>
+      <label class="wide">Huésped responsable <input id="b-name" type="text" placeholder="Nombre y apellido" /></label>
+      <label>Huéspedes <input id="b-guests" type="number" min="1" max="6" placeholder="máx 6" /></label>
+      <label>Precio por noche <input id="b-rate" type="number" min="0" step="0.01" placeholder="MXN" /></label>
+      <label>Check-in <input id="b-cit" type="time" value="14:00" /></label>
+      <label>Check-out <input id="b-cot" type="time" value="10:00" /></label>
+      <label class="wide">Recomendado por <input id="b-ref" type="text" placeholder="Nombre o código ESM-" /></label>
+      <label class="wide check"><input id="b-free" type="checkbox" /> Usa una noche abonada</label>
+    </div>
+    <div class="modal__pie">
+      <button id="canceledit" class="ghost hidden" type="button">Cancelar edición</button>
+      <button class="ghost" type="button" data-cerrar>Cerrar</button>
+      <button id="addblock" type="button">Guardar reserva</button>
+    </div>
   </div>
-</main>
+</dialog>
+
+<!-- Movimiento de dinero -->
+<dialog id="dlg-mov" aria-labelledby="mov-title">
+  <div class="modal">
+    <div class="modal__head">
+      <h2 id="mov-title">Registrar movimiento</h2>
+      <button class="modal__cerrar" type="button" data-cerrar aria-label="Cerrar">✕</button>
+    </div>
+    <div class="fgrid">
+      <label>Tipo
+        <select id="f-type">
+          <option value="in">Ingreso (entra dinero)</option>
+          <option value="out">Gasto (sale dinero)</option>
+        </select>
+      </label>
+      <label>Fecha <input id="f-date" type="date" /></label>
+      <label class="wide">Concepto <input id="f-concept" type="text" placeholder="Reserva María / Luz CFE" /></label>
+      <label>Categoría <select id="f-cat"></select></label>
+      <label>Monto <input id="f-amount" type="number" min="0" step="0.01" placeholder="MXN" /></label>
+      <label class="wide">Huésped (opcional)
+        <input id="f-guest" type="text" list="guestlist" placeholder="Con quién va este movimiento" />
+      </label>
+      <datalist id="guestlist"></datalist>
+    </div>
+    <div class="modal__pie">
+      <button id="f-cancel" class="ghost hidden" type="button">Cancelar edición</button>
+      <button class="ghost" type="button" data-cerrar>Cerrar</button>
+      <button id="f-add" type="button">Guardar</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Nuevo recurrente -->
+<dialog id="dlg-recurrente" aria-labelledby="rec-title">
+  <div class="modal">
+    <div class="modal__head">
+      <h2 id="rec-title">Nuevo gasto recurrente</h2>
+      <button class="modal__cerrar" type="button" data-cerrar aria-label="Cerrar">✕</button>
+    </div>
+    <div class="fgrid">
+      <label class="wide">Concepto <input id="r-concept" type="text" placeholder="Internet Totalplay" /></label>
+      <label>Categoría <select id="r-cat"></select></label>
+      <label>Monto <input id="r-amount" type="number" min="0" step="0.01" placeholder="MXN" /></label>
+      <label>Día del mes <input id="r-day" type="number" min="1" max="28" value="1" /></label>
+    </div>
+    <div class="modal__pie">
+      <button class="ghost" type="button" data-cerrar>Cerrar</button>
+      <button id="r-add" type="button">Guardar recurrente</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Alta de cliente -->
+<dialog id="dlg-cliente" aria-labelledby="cli-title">
+  <div class="modal">
+    <div class="modal__head">
+      <h2 id="cli-title">Dar de alta un cliente</h2>
+      <button class="modal__cerrar" type="button" data-cerrar aria-label="Cerrar">✕</button>
+    </div>
+    <div class="fgrid">
+      <label class="wide">Nombre <input id="c-name" type="text" placeholder="Nombre y apellido" /></label>
+      <label class="wide">Correo <input id="c-email" type="email" placeholder="correo@ejemplo.com" /></label>
+    </div>
+    <div class="modal__pie">
+      <button class="ghost" type="button" data-cerrar>Cerrar</button>
+      <button id="c-seed" type="button">Dar de alta</button>
+    </div>
+  </div>
+</dialog>
+
 <script src="/admin-app.js" defer></script>
 </body>
 </html>
