@@ -197,6 +197,11 @@ module.exports = async (req, res) => {
       if (destino.dayLimit === undefined || destino.amountLate === undefined) {
         delete destino.dayLimit; delete destino.amountLate;
       }
+      // Cobro de monto variable que corresponde al consumo del mes anterior (gas)
+      if (q.periodoAnterior !== undefined) {
+        if (q.periodoAnterior === "1" || q.periodoAnterior === "true") destino.periodoAnterior = true;
+        else delete destino.periodoAnterior;
+      }
       return destino;
     };
 

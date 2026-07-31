@@ -541,9 +541,9 @@ function renderHoy() {
     }
     const rec = pendientesDelMes();
     if (rec.length) {
-      const total = rec.reduce((a, r) => a + montoHoy(r).monto, 0);
+      const total = rec.reduce((a, x) => a + montoPropuesto(x), 0);
       items.push({ ico: "🔁", txt: `${rec.length} gasto${rec.length === 1 ? "" : "s"} recurrente${rec.length === 1 ? "" : "s"} sin registrar`,
-        sub: `${money(total)} en total · ${rec.map((r) => r.concept).join(", ")}`, btn: "Revisar", ir: "recurrentes" });
+        sub: `${money(total)} en total · ${rec.map((x) => x.concept).join(", ")}`, btn: "Revisar", ir: "recurrentes" });
     }
     if (RV_PEND) {
       items.push({ ico: "📝", txt: `${RV_PEND} reseña${RV_PEND === 1 ? "" : "s"} esperando tu visto bueno`,
@@ -682,13 +682,24 @@ function applyCustomers(list) {
 }
 
 // --- Finanzas ---
+// Categorías agrupadas: con esta cantidad, una lista plana no se puede leer.
+// Sin "Agua": va incluida en la cuota de mantenimiento del condominio.
 const CATS = {
-  in: ["Reserva", "Extras del huésped", "Otro ingreso"],
-  // Sin "Agua": va incluida en la cuota de mantenimiento del condominio.
-  out: ["Recepción", "Limpieza", "Luz", "Gas", "Internet", "Cuota condominio", "Mantenimiento",
-        "Jabón e insumos", "Sábanas y blancos", "Pintura", "Jardinería",
-        "Desayunos", "Ida al súper", "Publicidad", "Comisiones", "Otro gasto"],
+  in: [
+    { grupo: "Huéspedes", cats: ["Reserva", "Extras del huésped"] },
+    { grupo: "Otros", cats: ["Devolución", "Otro ingreso"] },
+  ],
+  out: [
+    { grupo: "Condominio", cats: ["Cuota condominio", "Cuota extraordinaria"] },
+    { grupo: "Servicios", cats: ["Luz", "Gas", "Internet"] },
+    { grupo: "Huéspedes", cats: ["Recepción", "Limpieza", "Desayunos", "Ida al súper"] },
+    { grupo: "Mantenimiento y reparaciones", cats: ["Electricidad", "Plomería", "Carpintería", "Pintura", "Aire acondicionado", "Cerrajería", "Jardinería", "Reparaciones"] },
+    { grupo: "Mejoras y equipamiento", cats: ["Muebles", "Electrodomésticos", "Menaje de cocina", "Blancos y sábanas", "Decoración", "Mejoras al depa"] },
+    { grupo: "Insumos", cats: ["Jabón y limpieza", "Papel y desechables", "Herramientas y ferretería"] },
+    { grupo: "Otros", cats: ["Publicidad", "Comisiones", "Otro gasto"] },
+  ],
 };
+const catsPlanas = (tipo) => CATS[tipo].flatMap((g) => g.cats);
 const money = (n) => (Number(n) || 0).toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 // Versión corta para las barras de la gráfica: $24k, $7.9k, $640
 function moneyCorto(n) {
@@ -702,9 +713,22 @@ function moneyCorto(n) {
 const MES_LBL = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 const mesLabel = (ym) => `${MES_LBL[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
 
-function fillCats() {
+// `extra`: la categoría que ya trae un movimiento viejo. Si ya no está en la
+// lista (se renombró o se quitó), se agrega arriba para no cambiársela sin
+// querer al editarlo — pasó con "Insumos y blancos", que ya no existe.
+function opcionesCat(tipo, extra) {
+  const planas = catsPlanas(tipo);
+  const grupos = CATS[tipo].map((g) =>
+    `<optgroup label="${escHtml(g.grupo)}">` + g.cats.map((c) => `<option>${escHtml(c)}</option>`).join("") + "</optgroup>"
+  ).join("");
+  const e = String(extra || "").trim();
+  return (e && !planas.includes(e) ? `<optgroup label="La que ya tenía"><option>${escHtml(e)}</option></optgroup>` : "") + grupos;
+}
+
+function fillCats(extra) {
   const type = $("f-type").value;
-  $("f-cat").innerHTML = CATS[type].map((c) => `<option>${c}</option>`).join("");
+  $("f-cat").innerHTML = opcionesCat(type, extra);
+  if (extra) $("f-cat").value = extra;
 }
 
 // Periodo elegido en el filtro: "YYYY" (año completo) o "YYYY-MM" (un mes)
@@ -899,10 +923,9 @@ async function financeAdd(params) {
 let EDIT_MOV = null;
 function startEditMov(m) {
   EDIT_MOV = m.id;
-  $("f-type").value = m.type; fillCats();
+  $("f-type").value = m.type; fillCats(m.category || "");
   $("f-date").value = m.date;
   $("f-concept").value = m.concept || "";
-  $("f-cat").value = m.category || "";
   $("f-guest").value = m.guest || "";
   $("f-amount").value = m.amount;
   $("mov-title").textContent = "Editar movimiento";
@@ -1008,12 +1031,46 @@ async function loadRecurring() {
   } catch { /* el resto del panel sigue */ }
 }
 
-// Un recurrente está "pendiente" si está activo y no hay ya un movimiento
-// de este mes con ese mismo concepto.
+const mesAnteriorYm = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7); };
+const ultimoDiaDe = (ym) => { const [y, m] = ym.split("-").map(Number); return `${ym}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`; };
+
+// Monto sugerido para un cobro variable: lo último que se pagó por ese concepto.
+// El gas ronda los $80 sin huéspedes, pero sube con la ocupación y el uso de la
+// cocina, así que proponer el último real es más útil que un fijo.
+function sugeridoPara(r) {
+  const base = (r.concept || "").trim().toLowerCase();
+  if (!base) return r.amount;
+  const previos = FIN
+    .filter((m) => (m.concept || "").trim().toLowerCase().startsWith(base))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  return previos.length ? (Number(previos[0].amount) || r.amount) : r.amount;
+}
+
+// Qué se le propone al confirmar un recurrente.
+// `periodoAnterior`: el cobro es el consumo del mes pasado (el gas se factura al
+// cierre y a veces llega a inicios del siguiente). Se pide a inicios de mes, se
+// fecha al último día del mes anterior y el concepto lleva el periodo, para no
+// confundir el gas de julio con el de agosto.
+function datosPendiente(r) {
+  if (r.periodoAnterior) {
+    const prev = mesAnteriorYm();
+    return { r, concept: `${r.concept} — ${mesLabel(prev)}`, date: ultimoDiaDe(prev), periodo: mesLabel(prev), variable: true };
+  }
+  const ym = new Date().toISOString().slice(0, 7);
+  return { r, concept: r.concept, date: `${ym}-${String(r.day).padStart(2, "0")}`, periodo: null, variable: false };
+}
+
+// Un recurrente está "pendiente" si está activo y todavía no se registró.
 function pendientesDelMes() {
   const ym = new Date().toISOString().slice(0, 7);
-  const yaHay = new Set(FIN.filter((m) => m.date.slice(0, 7) === ym).map((m) => (m.concept || "").toLowerCase()));
-  return RECUR.filter((r) => r.activo && !yaHay.has((r.concept || "").toLowerCase()));
+  const norm = (s) => String(s || "").trim().toLowerCase();
+  const esteMes = new Set(FIN.filter((m) => m.date.slice(0, 7) === ym).map((m) => norm(m.concept)));
+  const enTodo = new Set(FIN.map((m) => norm(m.concept)));
+  return RECUR.filter((r) => r.activo).map(datosPendiente).filter((x) =>
+    // Los de periodo anterior van fechados en el mes pasado; buscarlos solo en
+    // el mes en curso los volvería a pedir para siempre.
+    x.variable ? !enTodo.has(norm(x.concept)) : !esteMes.has(norm(x.concept))
+  );
 }
 
 // Recepción y limpieza de cada reserva, listas para confirmar (monto editable)
@@ -1087,36 +1144,42 @@ function textoProntoPago(r) {
   return `${money(r.amount)} hasta el día ${r.dayLimit} · ${money(r.amountLate)} después (faltan ${faltan} día${faltan === 1 ? "" : "s"})`;
 }
 
+// Lo que se propone cobrar: si el monto cambia cada mes (gas), el último real;
+// si tiene pronto pago, el que toque según el día.
+const montoPropuesto = (x) => (x.variable ? sugeridoPara(x.r) : montoHoy(x.r).monto);
+
 function renderRecurring() {
   renderResPend();
   const pend = pendientesDelMes();
-  const ym = new Date().toISOString().slice(0, 7);
   const bp = $("r-pending");
   if (bp) {
-    const total = pend.reduce((a, r) => a + montoHoy(r).monto, 0);
+    const total = pend.reduce((a, x) => a + montoPropuesto(x), 0);
     bp.innerHTML = pend.length
       ? `<p class="muted">${pend.length} por registrar · ${money(total)} en total</p>`
       : '<p class="muted">Todo lo recurrente de este mes ya está registrado ✅</p>';
-    for (const r of pend) {
+    for (const x of pend) {
+      const r = x.r;
       const div = document.createElement("div");
       const pp = montoHoy(r);
-      const aviso = textoProntoPago(r);
-      div.className = "card" + (pp.tarde || pp.faltan === 0 ? " urgente" : "");
-      const fecha = `${ym}-${String(r.day).padStart(2, "0")}`;
+      const aviso = x.variable ? "" : textoProntoPago(r);
+      div.className = "card" + (!x.variable && (pp.tarde || pp.faltan === 0) ? " urgente" : "");
       div.innerHTML = `<span style="text-align:left"><span class="tag ${r.type}">${r.type === "in" ? "INGRESO" : "GASTO"}</span>` +
-        `<b>${escHtml(r.concept)}</b> <span class="muted">· día ${r.day} · ${escHtml(r.category || "")}</span>` +
-        (aviso ? `<br><span class="${pp.tarde || pp.faltan === 0 ? "aviso-pp" : "muted"}">${escHtml(aviso)}</span>` : "") +
+        `<b>${escHtml(x.concept)}</b> <span class="muted">· ${x.variable ? `consumo de ${escHtml(x.periodo)}` : `día ${r.day}`} · ${escHtml(r.category || "")}</span>` +
+        (x.variable
+          ? `<br><span class="muted">El monto cambia cada mes: revisa el recibo. Se propone ${money(montoPropuesto(x))} (lo último que se pagó).</span>`
+          : (aviso ? `<br><span class="${pp.tarde || pp.faltan === 0 ? "aviso-pp" : "muted"}">${escHtml(aviso)}</span>` : "")) +
         `</span>`;
       const wrap = document.createElement("span");
       wrap.className = "row";
       const amt = document.createElement("input");
-      amt.type = "number"; amt.step = "0.01"; amt.min = "0"; amt.value = pp.monto; amt.style.width = "105px";
+      amt.type = "number"; amt.step = "0.01"; amt.min = "0"; amt.value = montoPropuesto(x); amt.style.width = "105px";
       amt.title = "Puedes cambiar el monto antes de confirmar";
+      amt.setAttribute("aria-label", `Monto de ${x.concept}`);
       const dt = document.createElement("input");
-      dt.type = "date"; dt.value = fecha; dt.title = "Puedes cambiar la fecha antes de confirmar";
+      dt.type = "date"; dt.value = x.date; dt.title = "Puedes cambiar la fecha antes de confirmar";
       const ok = document.createElement("button");
       ok.textContent = "Confirmar";
-      ok.addEventListener("click", () => confirmRecurring(r, parseFloat(amt.value), dt.value, ok));
+      ok.addEventListener("click", () => confirmRecurring(x, parseFloat(amt.value), dt.value, ok));
       wrap.append(amt, dt, ok);
       div.appendChild(wrap);
       bp.appendChild(div);
@@ -1153,14 +1216,17 @@ function renderRecurring() {
   }
 }
 
-async function confirmRecurring(r, amount, date, btn) {
+async function confirmRecurring(x, amount, date, btn) {
+  const r = x.r;
   if (!(amount > 0) || !date) return msg("Revisa el monto y la fecha.", false);
   if (btn) { btn.disabled = true; btn.textContent = "Guardando…"; }
   try {
-    const res = await financeAdd({ type: r.type, date, concept: r.concept, category: r.category || "", amount });
+    // Se guarda con el concepto que incluye el periodo (ej. "Gas — jul 2026"),
+    // que es justo lo que después evita que se vuelva a pedir.
+    const res = await financeAdd({ type: r.type, date, concept: x.concept, category: r.category || "", amount });
     applyFinance(res.movs || FIN.concat(res.mov));
     renderRecurring();
-    msg(`"${r.concept}" registrado ✅`);
+    msg(`"${x.concept}" registrado ✅`);
   } catch {
     msg("Error al registrar el recurrente.", false);
     if (btn) { btn.disabled = false; btn.textContent = "Confirmar"; }
@@ -1174,7 +1240,9 @@ function nuevoRecurrente() {
   EDIT_REC = null;
   $("rec-title").textContent = "Nuevo gasto recurrente";
   $("r-concept").value = ""; $("r-amount").value = ""; $("r-day").value = "1";
+  $("r-cat").innerHTML = opcionesCat("out");
   $("r-pp").checked = false; $("r-daylimit").value = ""; $("r-amountlate").value = "";
+  $("r-var").checked = false;
   $("r-pp-campos").classList.add("hidden");
   $("r-add").textContent = "Guardar recurrente";
   abrir("dlg-recurrente");
@@ -1185,9 +1253,11 @@ function editarRecurrente(r) {
   EDIT_REC = r.id;
   $("rec-title").textContent = "Editar recurrente";
   $("r-concept").value = r.concept || "";
+  $("r-cat").innerHTML = opcionesCat("out", r.category || "");
   $("r-cat").value = r.category || "";
   $("r-amount").value = r.amount;
   $("r-day").value = r.day || 1;
+  $("r-var").checked = !!r.periodoAnterior;
   const tienePP = !!(r.dayLimit && r.amountLate);
   $("r-pp").checked = tienePP;
   $("r-daylimit").value = tienePP ? r.dayLimit : "";
@@ -1211,7 +1281,8 @@ async function addRecurring() {
     return msg("Para el precio que sube: pon hasta qué día vale el precio bajo y cuánto cuesta después.", false);
   }
   const qs = `&concept=${encodeURIComponent(concept)}&category=${encodeURIComponent(category)}` +
-    `&amount=${amount}&day=${day}&dayLimit=${usaPP ? dayLimit : ""}&amountLate=${usaPP ? amountLate : ""}`;
+    `&amount=${amount}&day=${day}&dayLimit=${usaPP ? dayLimit : ""}&amountLate=${usaPP ? amountLate : ""}` +
+    `&periodoAnterior=${$("r-var").checked ? "1" : "0"}`;
   try {
     const r = EDIT_REC
       ? await api(`&action=recurring-update&id=${encodeURIComponent(EDIT_REC)}` + qs)
@@ -1440,7 +1511,7 @@ document.addEventListener("DOMContentLoaded", () => {
       x0 = null;
     }, { passive: true });
   })();
-  $("r-cat").innerHTML = CATS.out.map((c) => `<option>${c}</option>`).join("");
+  $("r-cat").innerHTML = opcionesCat("out");
   fillCats();
   $("f-date").value = new Date().toISOString().slice(0, 10);
   $("bstart").addEventListener("change", syncSelFromInputs);

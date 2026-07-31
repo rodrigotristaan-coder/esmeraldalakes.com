@@ -514,7 +514,10 @@
       <label>Monto <input id="r-amount" type="number" min="0" step="0.01" placeholder="MXN" /></label>
       <label>Día del mes <input id="r-day" type="number" min="1" max="28" value="1" /></label>
     </div>
-    <label class="check" style="margin:1rem 0 .2rem"><input id="r-pp" type="checkbox" /> Sube de precio si se paga tarde</label>
+    <label class="check" style="margin:1rem 0 .2rem"><input id="r-var" type="checkbox" /> El monto cambia cada mes y es el consumo del mes anterior</label>
+    <p class="muted" style="margin-bottom:.7rem">Como el gas: se factura al cierre del mes y a veces llega a inicios del siguiente. A principio de cada mes te lo pide, ya fechado al mes que corresponde, y te propone lo último que pagaste.</p>
+
+    <label class="check" style="margin:.2rem 0"><input id="r-pp" type="checkbox" /> Sube de precio si se paga tarde</label>
     <p class="muted" style="margin-bottom:.7rem">Como la cuota del condominio: un precio si pagas a tiempo y otro más alto después.</p>
     <div class="fgrid hidden" id="r-pp-campos">
       <label>Precio bajo hasta el día <input id="r-daylimit" type="number" min="1" max="28" placeholder="10" /></label>
