@@ -1051,26 +1051,69 @@ function sugeridoPara(r) {
 // cierre y a veces llega a inicios del siguiente). Se pide a inicios de mes, se
 // fecha al último día del mes anterior y el concepto lleva el periodo, para no
 // confundir el gas de julio con el de agosto.
+const normC = (s) => String(s || "").trim().toLowerCase();
+const mesesEntre = (a, b) => {
+  const [ay, am] = a.split("-").map(Number), [by, bm] = b.split("-").map(Number);
+  return (by - ay) * 12 + (bm - am);
+};
+// Movimientos que pertenecen a un recurrente: el concepto exacto, o el mismo con
+// el periodo pegado ("Luz — 05-may-2026 a 07-jul-2026"). Se compara así y no con
+// "empieza con" para que "Gas" no se lleve por delante a "Gasolina".
+function movsDe(r) {
+  const base = normC(r.concept);
+  return FIN.filter((m) => { const c = normC(m.concept); return c === base || c.startsWith(base + " —"); })
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+// Periodo que cubre el recibo: cierra al final del mes pasado y abarca tantos
+// meses como diga la frecuencia (la luz de CFE es bimestral).
+function periodoDe(r) {
+  const prev = mesAnteriorYm();
+  const hasta = ultimoDiaDe(prev);
+  const d = new Date(prev + "-01T12:00:00");
+  d.setMonth(d.getMonth() - ((r.cadaMeses || 1) - 1));
+  return { desde: d.toISOString().slice(0, 10), hasta };
+}
+
 function datosPendiente(r) {
+  const cada = r.cadaMeses || 1;
+  // Recibo que cubre varios meses (luz bimestral): las fechas reales no cuadran
+  // con meses de calendario (la última fue del 5-may al 7-jul), así que se
+  // proponen y Rodrigo las corrige al confirmar.
+  if (cada > 1) {
+    const p = periodoDe(r);
+    return { r, cada, variable: true, rango: p, date: p.hasta,
+      concept: `${r.concept} — ${fmtD(p.desde)} a ${fmtD(p.hasta)}`,
+      periodo: `${fmtD(p.desde)} a ${fmtD(p.hasta)}` };
+  }
   if (r.periodoAnterior) {
     const prev = mesAnteriorYm();
-    return { r, concept: `${r.concept} — ${mesLabel(prev)}`, date: ultimoDiaDe(prev), periodo: mesLabel(prev), variable: true };
+    return { r, cada, variable: true, date: ultimoDiaDe(prev),
+      concept: `${r.concept} — ${mesLabel(prev)}`, periodo: mesLabel(prev) };
   }
   const ym = new Date().toISOString().slice(0, 7);
-  return { r, concept: r.concept, date: `${ym}-${String(r.day).padStart(2, "0")}`, periodo: null, variable: false };
+  return { r, cada, variable: false, date: `${ym}-${String(r.day).padStart(2, "0")}`, concept: r.concept, periodo: null };
 }
 
 // Un recurrente está "pendiente" si está activo y todavía no se registró.
 function pendientesDelMes() {
-  const ym = new Date().toISOString().slice(0, 7);
-  const norm = (s) => String(s || "").trim().toLowerCase();
-  const esteMes = new Set(FIN.filter((m) => m.date.slice(0, 7) === ym).map((m) => norm(m.concept)));
-  const enTodo = new Set(FIN.map((m) => norm(m.concept)));
-  return RECUR.filter((r) => r.activo).map(datosPendiente).filter((x) =>
-    // Los de periodo anterior van fechados en el mes pasado; buscarlos solo en
-    // el mes en curso los volvería a pedir para siempre.
-    x.variable ? !enTodo.has(norm(x.concept)) : !esteMes.has(norm(x.concept))
-  );
+  const hoyDs = new Date().toISOString().slice(0, 10);
+  const ym = hoyDs.slice(0, 7);
+  const esteMes = new Set(FIN.filter((m) => m.date.slice(0, 7) === ym).map((m) => normC(m.concept)));
+  const enTodo = new Set(FIN.map((m) => normC(m.concept)));
+  return RECUR.filter((r) => r.activo).map(datosPendiente).filter((x) => {
+    // Cada varios meses: toca cuando el último registrado ya tiene esa
+    // antigüedad. Se mide por fecha y no por concepto, porque el periodo se
+    // edita al confirmar y el texto deja de coincidir.
+    if (x.cada > 1) {
+      const ult = movsDe(x.r)[0];
+      return !ult || mesesEntre(ult.date, hoyDs) >= x.cada;
+    }
+    // Los de mes anterior van fechados en el mes pasado; buscarlos solo en el
+    // mes en curso los volvería a pedir para siempre.
+    if (x.variable) return !enTodo.has(normC(x.concept));
+    return !esteMes.has(normC(x.concept));
+  });
 }
 
 // Recepción y limpieza de cada reserva, listas para confirmar (monto editable)
@@ -1164,9 +1207,9 @@ function renderRecurring() {
       const aviso = x.variable ? "" : textoProntoPago(r);
       div.className = "card" + (!x.variable && (pp.tarde || pp.faltan === 0) ? " urgente" : "");
       div.innerHTML = `<span style="text-align:left"><span class="tag ${r.type}">${r.type === "in" ? "INGRESO" : "GASTO"}</span>` +
-        `<b>${escHtml(x.concept)}</b> <span class="muted">· ${x.variable ? `consumo de ${escHtml(x.periodo)}` : `día ${r.day}`} · ${escHtml(r.category || "")}</span>` +
+        `<b>${escHtml(x.concept)}</b> <span class="muted">· ${x.variable ? (x.rango ? `periodo ${escHtml(x.periodo)}` : `consumo de ${escHtml(x.periodo)}`) : `día ${r.day}`} · ${escHtml(r.category || "")}</span>` +
         (x.variable
-          ? `<br><span class="muted">El monto cambia cada mes: revisa el recibo. Se propone ${money(montoPropuesto(x))} (lo último que se pagó).</span>`
+          ? `<br><span class="muted">${x.rango ? "Ajusta las fechas reales del recibo y el monto" : "El monto cambia cada mes: revisa el recibo"}. Se propone ${money(montoPropuesto(x))} (lo último que se pagó).</span>`
           : (aviso ? `<br><span class="${pp.tarde || pp.faltan === 0 ? "aviso-pp" : "muted"}">${escHtml(aviso)}</span>` : "")) +
         `</span>`;
       const wrap = document.createElement("span");
@@ -1175,11 +1218,30 @@ function renderRecurring() {
       amt.type = "number"; amt.step = "0.01"; amt.min = "0"; amt.value = montoPropuesto(x); amt.style.width = "105px";
       amt.title = "Puedes cambiar el monto antes de confirmar";
       amt.setAttribute("aria-label", `Monto de ${x.concept}`);
+      // Recibo de varios meses: se capturan las fechas reales que trae el recibo
+      let desde = null, hasta = null;
+      if (x.rango) {
+        desde = document.createElement("input");
+        desde.type = "date"; desde.value = x.rango.desde;
+        desde.title = "Desde qué día cubre el recibo";
+        desde.setAttribute("aria-label", `Inicio del periodo de ${r.concept}`);
+        hasta = document.createElement("input");
+        hasta.type = "date"; hasta.value = x.rango.hasta;
+        hasta.title = "Hasta qué día cubre el recibo";
+        hasta.setAttribute("aria-label", `Fin del periodo de ${r.concept}`);
+        wrap.append(desde, hasta);
+      }
       const dt = document.createElement("input");
-      dt.type = "date"; dt.value = x.date; dt.title = "Puedes cambiar la fecha antes de confirmar";
+      dt.type = "date"; dt.value = x.date; dt.title = "Fecha con la que se guarda el gasto";
       const ok = document.createElement("button");
       ok.textContent = "Confirmar";
-      ok.addEventListener("click", () => confirmRecurring(x, parseFloat(amt.value), dt.value, ok));
+      ok.addEventListener("click", () => {
+        // Si cambió el periodo, el concepto se rearma con las fechas reales
+        const conPeriodo = desde && hasta && desde.value && hasta.value
+          ? { ...x, concept: `${r.concept} — ${fmtD(desde.value)} a ${fmtD(hasta.value)}` }
+          : x;
+        confirmRecurring(conPeriodo, parseFloat(amt.value), dt.value, ok);
+      });
       wrap.append(amt, dt, ok);
       div.appendChild(wrap);
       bp.appendChild(div);
@@ -1242,7 +1304,7 @@ function nuevoRecurrente() {
   $("r-concept").value = ""; $("r-amount").value = ""; $("r-day").value = "1";
   $("r-cat").innerHTML = opcionesCat("out");
   $("r-pp").checked = false; $("r-daylimit").value = ""; $("r-amountlate").value = "";
-  $("r-var").checked = false;
+  $("r-var").checked = false; $("r-cada").value = "1";
   $("r-pp-campos").classList.add("hidden");
   $("r-add").textContent = "Guardar recurrente";
   abrir("dlg-recurrente");
@@ -1258,6 +1320,7 @@ function editarRecurrente(r) {
   $("r-amount").value = r.amount;
   $("r-day").value = r.day || 1;
   $("r-var").checked = !!r.periodoAnterior;
+  $("r-cada").value = String(r.cadaMeses || 1);
   const tienePP = !!(r.dayLimit && r.amountLate);
   $("r-pp").checked = tienePP;
   $("r-daylimit").value = tienePP ? r.dayLimit : "";
@@ -1282,7 +1345,7 @@ async function addRecurring() {
   }
   const qs = `&concept=${encodeURIComponent(concept)}&category=${encodeURIComponent(category)}` +
     `&amount=${amount}&day=${day}&dayLimit=${usaPP ? dayLimit : ""}&amountLate=${usaPP ? amountLate : ""}` +
-    `&periodoAnterior=${$("r-var").checked ? "1" : "0"}`;
+    `&periodoAnterior=${$("r-var").checked ? "1" : "0"}&cadaMeses=${$("r-cada").value}`;
   try {
     const r = EDIT_REC
       ? await api(`&action=recurring-update&id=${encodeURIComponent(EDIT_REC)}` + qs)
