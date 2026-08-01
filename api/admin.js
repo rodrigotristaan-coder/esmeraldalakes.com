@@ -83,12 +83,20 @@ module.exports = async (req, res) => {
       if (!validDate(start) || !validDate(end) || end <= start) return res.status(422).json({ ok: false, error: "fechas" });
       const k = notaKey(start, end);
       const nombre = String(q.name || "").trim().slice(0, 80);
-      const borra = !nombre && !q.guests && !q.rate;
+      const borra = !nombre && !q.guests && !q.rate && !q.pagoHuesped && !q.pagoAnfitrion;
       const nueva = { name: nombre };
       const g = parseInt(q.guests, 10);
       if (g > 0 && g <= 20) nueva.guests = g;
       const rr = Math.round(Number(q.rate) * 100) / 100;
       if (rr > 0 && rr <= 1000000) nueva.rate = rr;
+      // Reservas de plataforma: lo que pagó el huésped y lo que nos depositaron.
+      // La diferencia es lo que se queda la plataforma.
+      const ph = Math.round(Number(q.pagoHuesped) * 100) / 100;
+      if (ph > 0 && ph <= 1000000) nueva.pagoHuesped = ph;
+      const pa = Math.round(Number(q.pagoAnfitrion) * 100) / 100;
+      if (pa > 0 && pa <= 1000000) nueva.pagoAnfitrion = pa;
+      const plat = String(q.plataforma || "").trim().slice(0, 20);
+      if (plat) nueva.plataforma = plat;
       const out = await mutarFinanzas(
         (doc) => { if (borra) delete doc.notas[k]; else doc.notas[k] = nueva; },
         (doc) => (borra ? !doc.notas[k] : !!(doc.notas[k] && doc.notas[k].name === nombre))

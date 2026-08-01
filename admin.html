@@ -275,6 +275,11 @@
 
 <!-- ===================== PANEL ===================== -->
 <div id="app" class="hidden">
+<div id="nueva-version" class="hidden" style="position:fixed;left:0;right:0;top:0;z-index:60;background:var(--gold);color:#3a2c00;
+     padding:.6rem 1rem;display:flex;gap:.8rem;align-items:center;justify-content:center;flex-wrap:wrap;font-weight:600;font-size:.9rem">
+  <span>Hay una versión nueva del panel.</span>
+  <button type="button" id="recargar" style="background:#3a2c00;color:var(--gold);padding:.35rem .9rem">Recargar</button>
+</div>
 <div class="shell">
 
   <!-- riel de menú (escritorio) -->
@@ -287,6 +292,7 @@
       <a id="cal-open" href="#" target="_blank" rel="noopener" class="muted">🗓 Calendario completo</a>
       <a class="muted" href="/">← Ver la landing</a>
       <button id="logout" class="ghost hidden" type="button">Salir</button>
+      <span class="muted" id="ver" style="font-size:.7rem;opacity:.5"></span>
     </div>
   </aside>
 
@@ -394,6 +400,12 @@
         <h2>Movimientos</h2>
         <span class="muted">Los últimos 40. Toca un movimiento para editarlo.</span>
         <div id="f-movs"></div>
+      </div>
+
+      <div class="bloque">
+        <h2>Lo que te cuestan las plataformas</h2>
+        <span class="muted">Lo que pagó el huésped contra lo que te depositaron. La diferencia es la comisión.</span>
+        <div class="finwrap" id="plataformas"></div>
       </div>
 
       <div class="bloque">
@@ -578,8 +590,11 @@
     <div class="fgrid">
       <label class="wide">Huésped <input id="n-name" type="text" placeholder="Nombre y apellido" /></label>
       <label>Huéspedes <input id="n-guests" type="number" min="1" max="20" placeholder="cuántos" /></label>
-      <label>Precio por noche <input id="n-rate" type="number" min="0" step="0.01" placeholder="lo que paga el huésped" /></label>
+      <label>Plataforma <input id="n-plat" type="text" placeholder="Airbnb" /></label>
+      <label>Lo que pagó el huésped <input id="n-bruto" type="number" min="0" step="0.01" placeholder="total en la plataforma" /></label>
+      <label>Lo que te depositaron <input id="n-neto" type="number" min="0" step="0.01" placeholder="tu pago" /></label>
     </div>
+    <p id="n-comision" class="muted" style="margin-top:.7rem"></p>
     <div class="modal__pie">
       <button class="ghost" type="button" data-cerrar>Cerrar</button>
       <button id="n-save" type="button">Guardar datos</button>
@@ -630,6 +645,6 @@
   </div>
 </dialog>
 
-<script src="/admin-app.js" defer></script>
+<script src="/admin-app.js?v=20260801-1" defer></script>
 </body>
 </html>

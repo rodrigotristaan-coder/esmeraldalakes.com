@@ -1,6 +1,20 @@
 // Lógica del panel de administración (cliente).
 const $ = (id) => document.getElementById(id);
 
+// Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
+// Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
+// navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
+const VERSION = "20260801-1";
+
+// Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
+async function revisarVersion() {
+  try {
+    const html = await fetch("/admin.html", { cache: "no-store" }).then((r) => r.text());
+    const m = html.match(/admin-app\.js\?v=([\w.-]+)/);
+    if (m && m[1] && m[1] !== VERSION) $("nueva-version").classList.remove("hidden");
+  } catch { /* sin conexión: no molestamos */ }
+}
+
 // El depa está en Acapulco: "hoy" se calcula en su huso, no en UTC ni en el del
 // navegador. Con toISOString() la fecha saltaba al día siguiente a partir de las
 // 18:00 hora local, y el panel mostraba mañana como si ya fuera hoy.
@@ -845,6 +859,7 @@ function renderFinance(movs) {
   renderStats(movs);
   renderChart(movs);
   renderGuests(movs);
+  renderPlataformas();
   fillGuestList(movs);
 
   // Resumen mensual (últimos 13 meses con movimiento)
@@ -927,6 +942,33 @@ function fillGuestList(movs) {
   for (const b of BLOCKS) if (b.name) nombres.add(b.name);
   for (const m of movs) if (m.guest) nombres.add(m.guest);
   dl.innerHTML = [...nombres].sort().map((n) => `<option value="${escHtml(n)}"></option>`).join("");
+}
+
+// Cuánto se queda cada plataforma. Sale de las reservas donde capturaste los dos
+// montos: lo que pagó el huésped y lo que te depositaron.
+function renderPlataformas() {
+  const box = $("plataformas");
+  if (!box) return;
+  const conDatos = [...BLOCKS, ...PASADAS].filter((b) => b.pagoHuesped > 0 && b.pagoAnfitrion > 0);
+  if (!conDatos.length) {
+    box.innerHTML = '<p class="muted">Todavía no capturas los montos de ninguna reserva de plataforma. ' +
+      'Ve a Calendario → Todas las fechas ocupadas → "Poner nombre" y llena lo que pagó el huésped y lo que te depositaron.</p>';
+    return;
+  }
+  let tb = 0, tn = 0;
+  const filas = conDatos.sort((a, b) => b.start.localeCompare(a.start)).map((b) => {
+    const com = b.pagoHuesped - b.pagoAnfitrion;
+    const pct = Math.round((com / b.pagoHuesped) * 100);
+    tb += b.pagoHuesped; tn += b.pagoAnfitrion;
+    return `<tr><td class="g"><b>${escHtml(quienDe(b))}</b><br><span class="muted">${fmtD(b.start)} · ${escHtml(b.plataforma || (b.source === "airbnb" ? "Airbnb" : "directa"))}</span></td>` +
+      `<td>${money(b.pagoHuesped)}</td><td class="pos">${money(b.pagoAnfitrion)}</td>` +
+      `<td class="neg"><b>${money(com)}</b><br><span class="muted">${pct}%</span></td></tr>`;
+  }).join("");
+  const tc = tb - tn;
+  const tpct = tb > 0 ? Math.round((tc / tb) * 100) : 0;
+  box.innerHTML = `<table class="fin"><tr><th>Reserva</th><th>Pagó el huésped</th><th>Te depositaron</th><th>Se quedó la plataforma</th></tr>${filas}` +
+    `<tr><td class="g"><b>Total</b></td><td><b>${money(tb)}</b></td><td class="pos"><b>${money(tn)}</b></td>` +
+    `<td class="neg"><b>${money(tc)}</b><br><span class="muted">${tpct}% de todo lo que pagaron</span></td></tr></table>`;
 }
 
 // Cuánto pagó y cuánto costó cada huésped
@@ -1562,9 +1604,24 @@ function editarNota(b) {
   $("n-title").textContent = `Reserva del ${fmtD(b.start)} al ${fmtD(b.end)}`;
   $("n-name").value = b.name || "";
   $("n-guests").value = b.guests || "";
-  $("n-rate").value = b.rate || "";
+  $("n-plat").value = b.plataforma || (b.source === "airbnb" ? "Airbnb" : "");
+  $("n-bruto").value = b.pagoHuesped || "";
+  $("n-neto").value = b.pagoAnfitrion || "";
+  pintarComision();
   abrir("dlg-nota");
   $("n-name").focus();
+}
+
+// Comisión de la plataforma, en vivo mientras escribes
+function pintarComision() {
+  const bruto = parseFloat($("n-bruto").value), neto = parseFloat($("n-neto").value);
+  const el = $("n-comision");
+  if (!(bruto > 0) || !(neto > 0)) { el.textContent = "Pon los dos montos y te digo cuánto se queda la plataforma."; return; }
+  const com = bruto - neto;
+  const pct = Math.round((com / bruto) * 100);
+  el.innerHTML = com >= 0
+    ? `La plataforma se queda <b class="neg">${money(com)}</b> de ${money(bruto)} — el <b>${pct}%</b>. A ti te llegan ${money(neto)}.`
+    : `Te depositaron más de lo que pagó el huésped. Revisa los montos.`;
 }
 
 async function guardarNota() {
@@ -1573,7 +1630,9 @@ async function guardarNota() {
     start: NOTA.start, end: NOTA.end,
     name: $("n-name").value.trim(),
     guests: $("n-guests").value,
-    rate: $("n-rate").value,
+    plataforma: $("n-plat").value.trim(),
+    pagoHuesped: $("n-bruto").value,
+    pagoAnfitrion: $("n-neto").value,
   }).map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join("");
   try {
     const r = await api("&action=note-set" + qs);
@@ -1705,9 +1764,14 @@ document.addEventListener("DOMContentLoaded", () => {
   $("c-seed").addEventListener("click", seedCustomer);
   $("n-save").addEventListener("click", guardarNota);
   $("fi-save").addEventListener("click", guardarFicha);
+  $("n-bruto").addEventListener("input", pintarComision);
+  $("n-neto").addEventListener("input", pintarComision);
+  $("ver").textContent = "v" + VERSION;
+  $("recargar").addEventListener("click", () => location.reload());
+  revisarVersion();
   const sincronizar = async (btn) => {
     if (btn) { btn.disabled = true; btn.dataset.t = btn.textContent; btn.textContent = "Sincronizando…"; }
-    try { await load(); msg("Datos actualizados desde el servidor ✅"); }
+    try { await load(); await revisarVersion(); msg("Datos actualizados desde el servidor ✅"); }
     catch { msg("No se pudo sincronizar.", false); }
     finally { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.t || "↻ Sincronizar"; } }
   };
