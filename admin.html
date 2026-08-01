@@ -591,10 +591,18 @@
       <label class="wide">Huésped <input id="n-name" type="text" placeholder="Nombre y apellido" /></label>
       <label>Huéspedes <input id="n-guests" type="number" min="1" max="20" placeholder="cuántos" /></label>
       <label>Plataforma <input id="n-plat" type="text" placeholder="Airbnb" /></label>
-      <label>Lo que pagó el huésped <input id="n-bruto" type="number" min="0" step="0.01" placeholder="total en la plataforma" /></label>
-      <label>Lo que te depositaron <input id="n-neto" type="number" min="0" step="0.01" placeholder="tu pago" /></label>
     </div>
-    <p id="n-comision" class="muted" style="margin-top:.7rem"></p>
+    <p class="muted" style="margin:1rem 0 .5rem">Copia el desglose de Airbnb (pestaña “El huésped pagó”). Con eso separo lo que se queda la plataforma de lo que es impuesto.</p>
+    <div class="fgrid">
+      <label>Tarifa del alojamiento <input id="n-tarifa" type="number" min="0" step="0.01" placeholder="ej. 1,200 × 4 = 4,800" /></label>
+      <label>Comisión por servicio al huésped <input id="n-comh" type="number" min="0" step="0.01" placeholder="0 si no aparece" /></label>
+      <label>Impuestos de ocupación <input id="n-imp" type="number" min="0" step="0.01" placeholder="los que cobró al huésped" /></label>
+      <label>Lo que te depositaron <input id="n-neto" type="number" min="0" step="0.01" placeholder="tu pago" /></label>
+      <label class="wide">Retenciones de impuestos (ISR + IVA)
+        <input id="n-ret" type="number" min="0" step="0.01" placeholder="se estima solo: 20% de la tarifa" />
+      </label>
+    </div>
+    <div id="n-comision" class="muted" style="margin-top:.8rem"></div>
     <div class="modal__pie">
       <button class="ghost" type="button" data-cerrar>Cerrar</button>
       <button id="n-save" type="button">Guardar datos</button>
@@ -645,6 +653,6 @@
   </div>
 </dialog>
 
-<script src="/admin-app.js?v=20260801-1" defer></script>
+<script src="/admin-app.js?v=20260801-2" defer></script>
 </body>
 </html>

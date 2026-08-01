@@ -318,7 +318,7 @@ function aplicarNotas(blocks, notas) {
     const n = notas[notaKey(b.start, b.end)];
     if (!n) return b;
     const out = { ...b };
-    for (const k of ["name", "guests", "rate", "checkinTime", "checkoutTime", "pagoHuesped", "pagoAnfitrion", "plataforma"]) {
+    for (const k of ["name", "guests", "rate", "checkinTime", "checkoutTime", "pagoHuesped", "pagoAnfitrion", "plataforma", "tarifa", "comHuesped", "impuestos", "retenciones"]) {
       if (out[k] === undefined && n[k] !== undefined && n[k] !== "") out[k] = n[k];
     }
     out.anotada = true;

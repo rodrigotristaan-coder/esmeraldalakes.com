@@ -83,7 +83,7 @@ module.exports = async (req, res) => {
       if (!validDate(start) || !validDate(end) || end <= start) return res.status(422).json({ ok: false, error: "fechas" });
       const k = notaKey(start, end);
       const nombre = String(q.name || "").trim().slice(0, 80);
-      const borra = !nombre && !q.guests && !q.rate && !q.pagoHuesped && !q.pagoAnfitrion;
+      const borra = !nombre && !q.guests && !q.tarifa && !q.pagoAnfitrion;
       const nueva = { name: nombre };
       const g = parseInt(q.guests, 10);
       if (g > 0 && g <= 20) nueva.guests = g;
@@ -97,6 +97,12 @@ module.exports = async (req, res) => {
       if (pa > 0 && pa <= 1000000) nueva.pagoAnfitrion = pa;
       const plat = String(q.plataforma || "").trim().slice(0, 20);
       if (plat) nueva.plataforma = plat;
+      // Desglose tal como lo muestra Airbnb, para poder separar lo que se queda
+      // la plataforma de lo que es impuesto (que va al gobierno, no a Airbnb).
+      for (const k of ["tarifa", "comHuesped", "impuestos", "retenciones"]) {
+        const v = Math.round(Number(q[k]) * 100) / 100;
+        if (v >= 0 && v <= 1000000 && q[k] !== undefined && q[k] !== "") nueva[k] = v;
+      }
       const out = await mutarFinanzas(
         (doc) => { if (borra) delete doc.notas[k]; else doc.notas[k] = nueva; },
         (doc) => (borra ? !doc.notas[k] : !!(doc.notas[k] && doc.notas[k].name === nombre))

@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260801-1";
+const VERSION = "20260801-2";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -949,26 +949,26 @@ function fillGuestList(movs) {
 function renderPlataformas() {
   const box = $("plataformas");
   if (!box) return;
-  const conDatos = [...BLOCKS, ...PASADAS].filter((b) => b.pagoHuesped > 0 && b.pagoAnfitrion > 0);
+  const conDatos = [...BLOCKS, ...PASADAS].map((b) => ({ b, d: desglosar(b) })).filter((x) => x.d);
   if (!conDatos.length) {
     box.innerHTML = '<p class="muted">Todavía no capturas los montos de ninguna reserva de plataforma. ' +
       'Ve a Calendario → Todas las fechas ocupadas → "Poner nombre" y llena lo que pagó el huésped y lo que te depositaron.</p>';
     return;
   }
-  let tb = 0, tn = 0;
-  const filas = conDatos.sort((a, b) => b.start.localeCompare(a.start)).map((b) => {
-    const com = b.pagoHuesped - b.pagoAnfitrion;
-    const pct = Math.round((com / b.pagoHuesped) * 100);
-    tb += b.pagoHuesped; tn += b.pagoAnfitrion;
+  let tp = 0, ta = 0, tg = 0, tn = 0;
+  const filas = conDatos.sort((x, y) => y.b.start.localeCompare(x.b.start)).map(({ b, d }) => {
+    tp += d.pagoHuesped; ta += d.airbnb; tg += d.gobierno; tn += d.neto;
     return `<tr><td class="g"><b>${escHtml(quienDe(b))}</b><br><span class="muted">${fmtD(b.start)} · ${escHtml(b.plataforma || (b.source === "airbnb" ? "Airbnb" : "directa"))}</span></td>` +
-      `<td>${money(b.pagoHuesped)}</td><td class="pos">${money(b.pagoAnfitrion)}</td>` +
-      `<td class="neg"><b>${money(com)}</b><br><span class="muted">${pct}%</span></td></tr>`;
+      `<td>${money(d.pagoHuesped)}</td>` +
+      `<td class="neg">${money(d.airbnb)}<br><span class="muted">${Math.round((d.airbnb / d.pagoHuesped) * 100)}%</span></td>` +
+      `<td>${money(d.gobierno)}</td>` +
+      `<td class="pos"><b>${money(d.neto)}</b></td></tr>`;
   }).join("");
-  const tc = tb - tn;
-  const tpct = tb > 0 ? Math.round((tc / tb) * 100) : 0;
-  box.innerHTML = `<table class="fin"><tr><th>Reserva</th><th>Pagó el huésped</th><th>Te depositaron</th><th>Se quedó la plataforma</th></tr>${filas}` +
-    `<tr><td class="g"><b>Total</b></td><td><b>${money(tb)}</b></td><td class="pos"><b>${money(tn)}</b></td>` +
-    `<td class="neg"><b>${money(tc)}</b><br><span class="muted">${tpct}% de todo lo que pagaron</span></td></tr></table>`;
+  box.innerHTML = `<table class="fin"><tr><th>Reserva</th><th>Pagó el huésped</th><th>Plataforma</th><th>Impuestos</th><th>Te llegó</th></tr>${filas}` +
+    `<tr><td class="g"><b>Total</b></td><td><b>${money(tp)}</b></td>` +
+    `<td class="neg"><b>${money(ta)}</b><br><span class="muted">${tp ? Math.round((ta / tp) * 100) : 0}%</span></td>` +
+    `<td><b>${money(tg)}</b></td><td class="pos"><b>${money(tn)}</b></td></tr></table>` +
+    '<p class="muted" style="margin-top:.6rem">Los impuestos de ocupación y las retenciones de ISR e IVA no se los queda la plataforma: van al gobierno y los pagarías igual con reserva directa.</p>';
 }
 
 // Cuánto pagó y cuánto costó cada huésped
@@ -1605,23 +1605,49 @@ function editarNota(b) {
   $("n-name").value = b.name || "";
   $("n-guests").value = b.guests || "";
   $("n-plat").value = b.plataforma || (b.source === "airbnb" ? "Airbnb" : "");
-  $("n-bruto").value = b.pagoHuesped || "";
+  $("n-tarifa").value = b.tarifa || "";
+  $("n-comh").value = b.comHuesped !== undefined ? b.comHuesped : "";
+  $("n-imp").value = b.impuestos !== undefined ? b.impuestos : "";
+  $("n-ret").value = b.retenciones !== undefined ? b.retenciones : "";
   $("n-neto").value = b.pagoAnfitrion || "";
   pintarComision();
   abrir("dlg-nota");
   $("n-name").focus();
 }
 
-// Comisión de la plataforma, en vivo mientras escribes
+// Separa lo que se queda la plataforma de lo que es impuesto.
+// OJO: los impuestos de ocupación y las retenciones de ISR/IVA NO son de Airbnb,
+// van al gobierno. Meterlos en "comisión" infla el número y engaña.
+function desglosar(b) {
+  const tarifa = Number(b.tarifa) || 0;
+  const comH = Number(b.comHuesped) || 0;
+  const imp = Number(b.impuestos) || 0;
+  const neto = Number(b.pagoAnfitrion) || 0;
+  if (!tarifa || !neto) return null;
+  // Si no se capturaron, se estiman: en México Airbnb retiene 4% de ISR y 16% de IVA
+  const ret = b.retenciones !== undefined && b.retenciones !== "" ? Number(b.retenciones) : Math.round(tarifa * 0.20 * 100) / 100;
+  const pagoHuesped = tarifa + comH + imp;
+  const comAnfitrion = Math.max(0, tarifa - neto - ret);   // lo que Airbnb te descuenta a ti
+  const airbnb = comH + comAnfitrion;
+  const gobierno = imp + ret;
+  return { tarifa, comH, imp, ret, neto, pagoHuesped, comAnfitrion, airbnb, gobierno };
+}
+
 function pintarComision() {
-  const bruto = parseFloat($("n-bruto").value), neto = parseFloat($("n-neto").value);
   const el = $("n-comision");
-  if (!(bruto > 0) || !(neto > 0)) { el.textContent = "Pon los dos montos y te digo cuánto se queda la plataforma."; return; }
-  const com = bruto - neto;
-  const pct = Math.round((com / bruto) * 100);
-  el.innerHTML = com >= 0
-    ? `La plataforma se queda <b class="neg">${money(com)}</b> de ${money(bruto)} — el <b>${pct}%</b>. A ti te llegan ${money(neto)}.`
-    : `Te depositaron más de lo que pagó el huésped. Revisa los montos.`;
+  const d = desglosar({
+    tarifa: $("n-tarifa").value, comHuesped: $("n-comh").value, impuestos: $("n-imp").value,
+    retenciones: $("n-ret").value, pagoAnfitrion: $("n-neto").value,
+  });
+  if (!d) { el.textContent = "Pon al menos la tarifa y lo que te depositaron."; return; }
+  const pctA = Math.round((d.airbnb / d.pagoHuesped) * 100);
+  const pctG = Math.round((d.gobierno / d.pagoHuesped) * 100);
+  el.innerHTML =
+    `El huésped pagó <b>${money(d.pagoHuesped)}</b>.<br>` +
+    `· <b class="neg">${money(d.airbnb)}</b> se los queda la plataforma (${pctA}%)<br>` +
+    `· <b>${money(d.gobierno)}</b> son impuestos y retenciones que van al gobierno (${pctG}%)<br>` +
+    `· <b class="pos">${money(d.neto)}</b> te llegaron a ti` +
+    ($("n-ret").value ? "" : `<br><span style="opacity:.75">Las retenciones se estimaron en ${money(d.ret)} (4% de ISR + 16% de IVA sobre la tarifa). Si tu recibo dice otra cosa, escríbelo.</span>`);
 }
 
 async function guardarNota() {
@@ -1631,7 +1657,10 @@ async function guardarNota() {
     name: $("n-name").value.trim(),
     guests: $("n-guests").value,
     plataforma: $("n-plat").value.trim(),
-    pagoHuesped: $("n-bruto").value,
+    tarifa: $("n-tarifa").value,
+    comHuesped: $("n-comh").value,
+    impuestos: $("n-imp").value,
+    retenciones: $("n-ret").value,
     pagoAnfitrion: $("n-neto").value,
   }).map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join("");
   try {
@@ -1764,8 +1793,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("c-seed").addEventListener("click", seedCustomer);
   $("n-save").addEventListener("click", guardarNota);
   $("fi-save").addEventListener("click", guardarFicha);
-  $("n-bruto").addEventListener("input", pintarComision);
-  $("n-neto").addEventListener("input", pintarComision);
+  ["n-tarifa", "n-comh", "n-imp", "n-ret", "n-neto"].forEach((id) => $(id).addEventListener("input", pintarComision));
   $("ver").textContent = "v" + VERSION;
   $("recargar").addEventListener("click", () => location.reload());
   revisarVersion();
