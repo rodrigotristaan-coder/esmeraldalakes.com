@@ -1,5 +1,13 @@
 // Lógica del panel de administración (cliente).
 const $ = (id) => document.getElementById(id);
+
+// El depa está en Acapulco: "hoy" se calcula en su huso, no en UTC ni en el del
+// navegador. Con toISOString() la fecha saltaba al día siguiente a partir de las
+// 18:00 hora local, y el panel mostraba mañana como si ya fuera hoy.
+const TZ_MX = "America/Mexico_City";
+const hoyMx = () => new Date().toLocaleDateString("en-CA", { timeZone: TZ_MX });
+// Suma días a un YYYY-MM-DD anclando al mediodía para que el huso no lo mueva.
+const masDias = (ds, n) => new Date(new Date(ds + "T12:00:00Z").getTime() + n * 86400000).toISOString().slice(0, 10);
 const KEY_STORE = "esmeralda_admin_key";
 let KEY = localStorage.getItem(KEY_STORE) || "";
 
@@ -134,9 +142,11 @@ const CAL_MESES = window.matchMedia("(min-width: 700px)").matches ? 2 : 1;
 function renderMiniCal() {
   const box = $("minical");
   if (!box) return;
-  const now = new Date();
-  const Y = now.getFullYear(), M = now.getMonth();
-  const todayDs = isoDay(Y, M, now.getDate());
+  // El mes que abre el calendario y el día marcado como "hoy" salen de la fecha
+  // de Acapulco, no de la del navegador ni de UTC.
+  const todayDs = hoyMx();
+  const [Y, Mnum] = todayDs.split("-").map(Number);
+  const M = Mnum - 1;
   box.innerHTML = "";
   for (let k = CAL_OFFSET; k < CAL_OFFSET + CAL_MESES; k++) {
     const my = Y + Math.floor((M + k) / 12), mm = ((M + k) % 12 + 12) % 12;
@@ -225,8 +235,8 @@ function syncSelFromInputs() {
 // Ocupación de los próximos 365 días a partir de los bloqueos (noches vendidas / totales)
 let OCC = null;
 function calcOccupancy(blocks) {
-  const today = new Date().toISOString().slice(0, 10);
-  const end = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
+  const today = hoyMx();
+  const end = masDias(today, 365);
   let sold = 0;
   for (const b of blocks) {
     const s = b.start > today ? b.start : today;
@@ -408,9 +418,9 @@ const conceptoLimpieza = (b) => `Limpieza — ${quienDe(b)} ${fmtD(b.end)}`;
 // Propone recepción y limpieza de cada reserva que no esté ya registrada.
 // Ventana: de 60 días atrás a 7 adelante, para que la de mañana ya aparezca.
 function pendientesDeReservas() {
-  const hoyDs = new Date().toISOString().slice(0, 10);
-  const desde = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);
-  const hasta = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const hoyDs = hoyMx();
+  const desde = masDias(hoyDs, -60);
+  const hasta = masDias(hoyDs, 7);
   const yaHay = new Set(FIN.map((m) => (m.concept || "").trim().toLowerCase()));
   const out = [];
   for (const b of BLOCKS) {
@@ -467,11 +477,12 @@ function fechaLarga(ds) {
 const noches = (b) => Math.round((new Date(b.end) - new Date(b.start)) / 86400000);
 
 function renderHoy() {
-  const hoyDs = new Date().toISOString().slice(0, 10);
+  const hoyDs = hoyMx();
   const f = $("hoy-fecha");
   if (f) {
-    const d = new Date();
-    f.textContent = `${DIA_LARGO[d.getDay()]} ${d.getDate()} de ${MES_LARGO[d.getMonth()]} de ${d.getFullYear()}`;
+    const [y, m, dd] = hoyDs.split("-").map(Number);
+    const d = new Date(Date.UTC(y, m - 1, dd));
+    f.textContent = `${DIA_LARGO[d.getUTCDay()]} ${dd} de ${MES_LARGO[m - 1]} de ${y}`;
   }
 
   // --- Quién está ahora / cuándo llega el siguiente ---
@@ -506,10 +517,8 @@ function renderHoy() {
   const cinta = $("hoy-cinta");
   if (cinta) {
     cinta.innerHTML = "";
-    const base = new Date(hoyDs + "T12:00:00");
     for (let i = 0; i < 30; i++) {
-      const d = new Date(base.getTime() + i * 86400000);
-      const ds = d.toISOString().slice(0, 10);
+      const ds = masDias(hoyDs, i);
       const s = srcFor(ds);
       const el = document.createElement("span");
       el.className = "cinta__d" + (s ? " " + s : "") + (i === 0 ? " hoy" : "");
@@ -524,7 +533,7 @@ function renderHoy() {
     }
     const a = $("hoy-eje-a"), b = $("hoy-eje-b");
     if (a) a.textContent = "hoy";
-    if (b) b.textContent = fmtD(new Date(base.getTime() + 29 * 86400000).toISOString().slice(0, 10));
+    if (b) b.textContent = fmtD(masDias(hoyDs, 29));
   }
 
   // --- Por hacer ---
@@ -732,13 +741,13 @@ function fillCats(extra) {
 }
 
 // Periodo elegido en el filtro: "YYYY" (año completo) o "YYYY-MM" (un mes)
-let PERIODO = new Date().toISOString().slice(0, 4);
+let PERIODO = hoyMx().slice(0, 4);
 
 function buildPeriodo(movs) {
   const box = $("periodo-sel");
   if (!box) return;
   const anios = [...new Set(movs.map((m) => m.date.slice(0, 4)))].sort().reverse();
-  const yNow = new Date().toISOString().slice(0, 4);
+  const yNow = hoyMx().slice(0, 4);
   if (!anios.includes(yNow)) anios.unshift(yNow);
   const opts = [];
   for (const y of anios) {
@@ -946,7 +955,7 @@ function nuevoMov() {
 function resetMovForm() {
   EDIT_MOV = null;
   $("f-concept").value = ""; $("f-amount").value = ""; $("f-guest").value = "";
-  $("f-date").value = new Date().toISOString().slice(0, 10);
+  $("f-date").value = hoyMx();
   $("mov-title").textContent = "Registrar movimiento";
   $("f-add").textContent = "Guardar";
   $("f-cancel").classList.add("hidden");
@@ -1000,7 +1009,7 @@ async function quickIncome(b) {
 }
 
 async function duplicateMov(m) {
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyMx();
   if (!confirm(`¿Repetir "${m.concept}" (${money(m.amount)}) con fecha de hoy?`)) return;
   try {
     const r = await financeAdd({ type: m.type, date: hoy, concept: m.concept, category: m.category || "", amount: m.amount });
@@ -1031,7 +1040,7 @@ async function loadRecurring() {
   } catch { /* el resto del panel sigue */ }
 }
 
-const mesAnteriorYm = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7); };
+const mesAnteriorYm = () => { const [y, m] = hoyMx().split("-").map(Number); const d = new Date(Date.UTC(y, m - 2, 1)); return d.toISOString().slice(0, 7); };
 const ultimoDiaDe = (ym) => { const [y, m] = ym.split("-").map(Number); return `${ym}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`; };
 
 // Monto sugerido para un cobro variable: lo último que se pagó por ese concepto.
@@ -1091,13 +1100,13 @@ function datosPendiente(r) {
     return { r, cada, variable: true, date: ultimoDiaDe(prev),
       concept: `${r.concept} — ${mesLabel(prev)}`, periodo: mesLabel(prev) };
   }
-  const ym = new Date().toISOString().slice(0, 7);
+  const ym = hoyMx().slice(0, 7);
   return { r, cada, variable: false, date: `${ym}-${String(r.day).padStart(2, "0")}`, concept: r.concept, periodo: null };
 }
 
 // Un recurrente está "pendiente" si está activo y todavía no se registró.
 function pendientesDelMes() {
-  const hoyDs = new Date().toISOString().slice(0, 10);
+  const hoyDs = hoyMx();
   const ym = hoyDs.slice(0, 7);
   const esteMes = new Set(FIN.filter((m) => m.date.slice(0, 7) === ym).map((m) => normC(m.concept)));
   const enTodo = new Set(FIN.map((m) => normC(m.concept)));
@@ -1169,7 +1178,7 @@ async function confirmarCostoReserva(it, amount, btn) {
 // ¿Cuánto cuesta HOY este recurrente? Si tiene pronto pago y ya se pasó el día
 // límite, cuesta el monto con recargo.
 function montoHoy(r, diaRef) {
-  const dia = diaRef || new Date().getDate();
+  const dia = diaRef || Number(hoyMx().slice(8, 10));
   if (r.dayLimit && r.amountLate && dia > r.dayLimit) {
     return { monto: r.amountLate, tarde: true, faltan: 0 };
   }
@@ -1576,7 +1585,7 @@ document.addEventListener("DOMContentLoaded", () => {
   })();
   $("r-cat").innerHTML = opcionesCat("out");
   fillCats();
-  $("f-date").value = new Date().toISOString().slice(0, 10);
+  $("f-date").value = hoyMx();
   $("bstart").addEventListener("change", syncSelFromInputs);
   $("bend").addEventListener("change", syncSelFromInputs);
   $("logout").addEventListener("click", async () => {

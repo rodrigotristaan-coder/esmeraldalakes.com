@@ -4,6 +4,14 @@
 const crypto = require("crypto");
 const { put, list } = require("@vercel/blob");
 
+// El depa está en Acapulco. Calcular "hoy" con toISOString() da la fecha en UTC,
+// así que a partir de las 18:00 hora local el sistema se adelantaba un día:
+// un huésped que salía hoy aparecía como que ya se había ido.
+const TZ = "America/Mexico_City";
+const hoyMx = () => new Date().toLocaleDateString("en-CA", { timeZone: TZ });
+// Suma días a un YYYY-MM-DD anclando al mediodía, para que el huso no lo mueva.
+const masDias = (ds, n) => new Date(new Date(ds + "T12:00:00Z").getTime() + n * 86400000).toISOString().slice(0, 10);
+
 const FILE = "blocks.json";
 const REVIEWS = "reviews.json";
 const CUSTOMERS = "customers.json";
@@ -522,4 +530,6 @@ module.exports = {
   readFinance, writeFinance, readFinanceDoc, writeFinanceDoc,
   // notas sobre reservas que no controlamos (Airbnb)
   notaKey, aplicarNotas,
+  // fechas en hora de Acapulco (no UTC)
+  hoyMx, masDias,
 };

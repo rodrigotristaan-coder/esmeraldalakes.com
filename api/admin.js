@@ -1,6 +1,6 @@
 // Panel de administración (protegido con ADMIN_KEY): fechas, reseñas, clientes y finanzas.
 const crypto = require("crypto");
-const { safeEqual, readBlocks, addBlock, removeBlock, updateBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail, readSession, readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, notaKey, aplicarNotas } = require("./_lib");
+const { safeEqual, readBlocks, addBlock, removeBlock, updateBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail, readSession, readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, notaKey, aplicarNotas, hoyMx } = require("./_lib");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
@@ -34,7 +34,7 @@ module.exports = async (req, res) => {
   const pasadas = (arr, today) => arr.filter((b) => (b.end || b.start) < today)
     .sort((a, b) => b.start.localeCompare(a.start)).slice(0, 80);
   const listsFrom = async (direct) => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = hoyMx();
     // Las notas ponen nombre a lo que llega de Airbnb (su iCal solo manda fechas)
     let notas = {};
     try { notas = (await readFinanceDoc()).notas; } catch { /* sin notas se ve igual, solo sin nombres */ }

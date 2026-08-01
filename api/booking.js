@@ -1,6 +1,6 @@
 // Función serverless: recibe la solicitud de reserva, valida, re-chequea
 // disponibilidad y notifica al anfitrión por Telegram con un link de confirmación.
-const { getAllBlocks, rangeOverlaps } = require("./_lib");
+const { getAllBlocks, rangeOverlaps, hoyMx } = require("./_lib");
 
 const esc = (s = "") =>
   String(s)
@@ -98,7 +98,7 @@ async function notifyN8n(b, nights) {
   const url = process.env.N8N_BOOKING_WEBHOOK;
   if (!url) return;
   const payload = {
-    fecha: new Date().toISOString().slice(0, 10),
+    fecha: hoyMx(),
     name: b.name, email: b.email, phone: b.phone || "",
     checkin: b.checkin, checkout: b.checkout, nights,
     guests: b.guests, message: b.message || "", country: b.country || "", lang: b.lang || "es",

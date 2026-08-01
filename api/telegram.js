@@ -2,7 +2,7 @@
 // comandos del anfitrión (/calendario, /ingreso, /gasto).
 // Solo actúa sobre el grupo/chat configurado y verifica el secreto del webhook.
 const crypto = require("crypto");
-const { addBlock, upsertCustomerFromBooking, readFinance, writeFinance, getAllBlocks } = require("./_lib");
+const { addBlock, upsertCustomerFromBooking, readFinance, writeFinance, getAllBlocks, hoyMx } = require("./_lib");
 const { sendCalendarPhoto, occupancy, todayAcapulco, ymd } = require("./_calimg");
 
 async function tg(method, body) {
@@ -30,7 +30,7 @@ async function financeCommand(chatId, text) {
     await tg("sendMessage", { chat_id: chatId, text: "Monto inválido. Ejemplo: /ingreso 4500 Reserva María" });
     return;
   }
-  const date = new Date(Date.now() - 6 * 3600e3).toISOString().slice(0, 10); // hoy en Acapulco
+  const date = hoyMx(); // hoy en Acapulco (antes era un -6h a mano)
   const movs = await readFinance();
   movs.push({
     id: crypto.randomBytes(5).toString("hex"), type, date, concept,
