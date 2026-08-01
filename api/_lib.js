@@ -332,6 +332,33 @@ async function writeFinance(movs) {
   await writeFinanceDoc(doc);
 }
 
+// Guarda un cambio en el documento de finanzas y COMPRUEBA que quedó.
+//
+// El blob es eventualmente consistente: dos escrituras seguidas pueden pisarse
+// porque la segunda lee una copia vieja del documento. Pasó de verdad el
+// 31-jul-2026: se registró un gasto de luz y, en el mismo segundo, tres altas de
+// recurrentes; las altas leyeron el documento sin el gasto y lo borraron al
+// guardar.
+//
+// `aplicar(doc)`  muta el documento y devuelve lo que haga falta (o {error}).
+// `quedo(doc)`    dice si el cambio ya se ve al releer.
+// Si no se ve, se reintenta aplicando el cambio sobre lo MÁS FRESCO que haya.
+async function mutarFinanzas(aplicar, quedo) {
+  let ultimo = null;
+  for (let intento = 0; intento < 4; intento++) {
+    const doc = await readFinanceDoc();
+    const r = aplicar(doc);
+    if (r && r.error) return { error: r.error };
+    await writeFinanceDoc(doc);
+    const check = await readFinanceDoc();
+    ultimo = check;
+    if (quedo(check)) return { doc: check, r };
+    await new Promise((s) => setTimeout(s, 150 * (intento + 1)));
+  }
+  console.error("mutarFinanzas: el cambio no se pudo confirmar tras 4 intentos");
+  return { doc: ultimo, error: "no-se-guardo" };
+}
+
 // Código de referido tipo ESM-XXXX (alfabeto sin caracteres ambiguos)
 const REF_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 function genRefCode(existing) {
@@ -527,7 +554,7 @@ module.exports = {
   normEmail, isEmail, readCustomers, writeCustomers, upsertCustomerFromBooking, ownerOfRefCode, seedCustomer,
   issueCode, verifyCode, sessionCookie, clearSessionCookie, readSession, isAdminEmail,
   // finanzas
-  readFinance, writeFinance, readFinanceDoc, writeFinanceDoc,
+  readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, mutarFinanzas,
   // notas sobre reservas que no controlamos (Airbnb)
   notaKey, aplicarNotas,
   // fechas en hora de Acapulco (no UTC)

@@ -325,7 +325,9 @@ function applyBlocks(data) {
   const all = data.all || [];
   const a = $("all");
   a.innerHTML = all.length ? "" : '<p class="muted">Sin fechas ocupadas.</p>';
-  for (const b of all) {
+  const TOPE_ALL = 12;
+  const verAll = a.dataset.todos === "1";
+  for (const b of (verAll ? all : all.slice(0, TOPE_ALL))) {
     const div = document.createElement("div");
     div.className = "card";
     const quien = b.name ? `<b>${escHtml(b.name)}</b>` : '<span class="muted">sin nombre</span>';
@@ -363,6 +365,7 @@ function applyBlocks(data) {
     }
     a.appendChild(div);
   }
+  recortar(a, all.length, TOPE_ALL, "fechas", () => applyBlocks(data));
   PASADAS = data.pasadas || [];
   renderPasadas();
   renderHoy();
@@ -377,10 +380,15 @@ function renderPasadas() {
   if (!box) return;
   box.innerHTML = "";
   if (!PASADAS.length) {
-    box.innerHTML = '<div class="vacio"><b>Sin estancias anteriores</b>Aquí van apareciendo los huéspedes conforme terminan su estancia.</div>';
+    box.innerHTML = '<div class="vacio"><b>Sin estancias anteriores</b>' +
+      'Aquí caen las reservas cuya fecha de salida ya pasó, con lo que dejó cada huésped. ' +
+      'Está vacío porque todas las reservas guardadas siguen vigentes. ' +
+      'Si quieres ver aquí a huéspedes de antes, agrégalos en Calendario con sus fechas reales.</div>';
     return;
   }
-  for (const b of PASADAS) {
+  const TOPE_PAS = 10;
+  const verPas = box.dataset.todos === "1";
+  for (const b of (verPas ? PASADAS : PASADAS.slice(0, TOPE_PAS))) {
     const n = noches(b);
     // Lo que dejó: los movimientos que lleven su nombre
     const g = (b.name || "").trim().toLowerCase();
@@ -401,6 +409,19 @@ function renderPasadas() {
         : '<span class="muted">sin movimientos a su nombre</span>');
     box.appendChild(div);
   }
+  recortar(box, PASADAS.length, TOPE_PAS, "estancias", renderPasadas);
+}
+
+// Corta una lista larga y deja un botón para desplegar el resto. Sin esto, con
+// el tiempo cada sección se vuelve un scroll infinito.
+function recortar(box, total, mostrados, etiqueta, repintar) {
+  if (total <= mostrados) return;
+  const b = document.createElement("button");
+  b.className = "vermas";
+  const abierto = box.dataset.todos === "1";
+  b.textContent = abierto ? `Mostrar solo ${mostrados}` : `Ver ${total - mostrados} ${etiqueta} más`;
+  b.addEventListener("click", () => { box.dataset.todos = abierto ? "0" : "1"; repintar(); });
+  box.appendChild(b);
 }
 
 const escHtml = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
@@ -640,7 +661,7 @@ function applyReviews(all) {
       del.className = "danger";
       del.textContent = isPending ? "Rechazar" : "Quitar";
       del.addEventListener("click", () => reviewAction("reject", r.id, isPending));
-      wrap.appendChild(del);
+      acciones.appendChild(del);
       div.appendChild(wrap);
       box.appendChild(div);
     }
@@ -830,40 +851,60 @@ function renderFinance(movs) {
       }).join("") + `</table>`
     : '<p class="muted">Sin movimientos todavía. Agrega el primero arriba ☝️</p>';
 
-  // Movimientos (últimos 40)
+  // Movimientos: renglones finos, no burbujas. Se muestran 25 y el resto se
+  // despliega bajo demanda, para que la lista no crezca sin control.
   const box = $("f-movs");
   box.innerHTML = "";
-  for (const m of movs.slice(0, 40)) {
+  box.className = "lista";
+  const TOPE = 25;
+  const verTodos = box.dataset.todos === "1";
+  const visibles = verTodos ? movs : movs.slice(0, TOPE);
+  for (const m of visibles) {
     const div = document.createElement("div");
-    div.className = "card";
+    div.className = "fila";
     div.innerHTML = `<span style="text-align:left"><span class="tag ${m.type}">${m.type === "in" ? "INGRESO" : "GASTO"}</span>` +
       `<b>${escHtml(m.concept)}</b> <span class="muted">· ${fmtD(m.date)} · ${escHtml(m.category || "")}${m.guest ? " · 👤 " + escHtml(m.guest) : ""}</span></span>` +
       `<span class="row"><b class="${m.type === "in" ? "pos" : "neg"}">${m.type === "in" ? "+" : "−"}${money(m.amount)}</b></span>`;
     // Acciones calladas: antes eran tres botones de color en cada fila y el
     // listado parecía un tablero de botones. Ahora el monto manda.
     const wrap = div.querySelector(".row");
+    const acciones = document.createElement("span");
+    acciones.className = "row acciones";
     const ed = document.createElement("button");
     ed.className = "quiet";
     ed.textContent = "Editar";
     ed.setAttribute("aria-label", `Editar ${m.concept}`);
     ed.addEventListener("click", () => startEditMov(m));
-    wrap.appendChild(ed);
+    acciones.appendChild(ed);
     const dup = document.createElement("button");
     dup.className = "quiet";
     dup.textContent = "Repetir";
     dup.title = "Repite este movimiento con fecha de hoy (útil para gastos mensuales)";
     dup.setAttribute("aria-label", `Repetir ${m.concept} con fecha de hoy`);
     dup.addEventListener("click", () => duplicateMov(m));
-    wrap.appendChild(dup);
+    acciones.appendChild(dup);
     const del = document.createElement("button");
     del.className = "quiet peligro";
     del.textContent = "Borrar";
     del.setAttribute("aria-label", `Borrar ${m.concept}`);
     del.addEventListener("click", () => deleteMov(m));
-    wrap.appendChild(del);
+    acciones.appendChild(del);
+    wrap.appendChild(acciones);
     box.appendChild(div);
   }
-  if (movs.length > 40) box.insertAdjacentHTML("beforeend", `<p class="muted">… y ${movs.length - 40} movimientos más (siguen contando en los totales).</p>`);
+  if (!verTodos && movs.length > TOPE) {
+    const b2 = document.createElement("button");
+    b2.className = "vermas";
+    b2.textContent = `Ver los ${movs.length - TOPE} movimientos restantes`;
+    b2.addEventListener("click", () => { box.dataset.todos = "1"; renderFinance(FIN); });
+    box.appendChild(b2);
+  } else if (verTodos && movs.length > TOPE) {
+    const b2 = document.createElement("button");
+    b2.className = "vermas";
+    b2.textContent = "Mostrar solo los últimos 25";
+    b2.addEventListener("click", () => { box.dataset.todos = "0"; renderFinance(FIN); });
+    box.appendChild(b2);
+  }
 }
 
 // Sugerencias de huésped: los nombres de las reservas + los ya usados en movimientos
@@ -881,24 +922,35 @@ function renderGuests(movs) {
   const box = $("guest-table");
   if (!box) return;
   const by = {};
+  // Siembra con TODOS los huéspedes que tienen reserva (vigente o pasada). Antes
+  // solo salían los que tuvieran movimientos etiquetados, así que un huésped al
+  // que aún no se le registraba nada no existía en esta tabla.
+  for (const bl of [...BLOCKS, ...PASADAS]) {
+    const g = (bl.name || "").trim();
+    if (!g) continue;
+    by[g] = by[g] || { in: 0, out: 0, n: 0, ultima: "", soloReserva: true };
+    if (bl.start > by[g].ultima) by[g].ultima = bl.start;
+  }
   for (const m of movs) {
     const g = (m.guest || "").trim();
     if (!g) continue;
     by[g] = by[g] || { in: 0, out: 0, n: 0, ultima: "" };
     by[g][m.type] += Number(m.amount) || 0;
     by[g].n++;
+    by[g].soloReserva = false;
     if (m.date > by[g].ultima) by[g].ultima = m.date;
   }
   const nombres = Object.keys(by).sort((a, b) => by[b].ultima.localeCompare(by[a].ultima));
   if (!nombres.length) {
-    box.innerHTML = '<p class="muted">Todavía no hay movimientos con huésped. Escribe su nombre en el campo "Huésped" al registrar un ingreso o un gasto.</p>';
+    box.innerHTML = '<p class="muted">Aquí sale cada huésped con lo que pagó y lo que costó atenderlo. Se arma con las reservas que tienen nombre y con los movimientos donde llenas el campo "Huésped".</p>';
     return;
   }
   let tot = { in: 0, out: 0 };
   const filas = nombres.map((g) => {
     const r = by[g], u = r.in - r.out;
     tot.in += r.in; tot.out += r.out;
-    return `<tr><td class="g"><b>${escHtml(g)}</b><br><span class="muted">${fmtD(r.ultima)} · ${r.n} movimiento${r.n === 1 ? "" : "s"}</span></td>` +
+    const detalle = r.soloReserva ? "sin movimientos a su nombre todavía" : `${r.n} movimiento${r.n === 1 ? "" : "s"}`;
+    return `<tr><td class="g"><b>${escHtml(g)}</b><br><span class="muted">${fmtD(r.ultima)} · ${detalle}</span></td>` +
       `<td class="pos">${money(r.in)}</td><td class="neg">${money(r.out)}</td>` +
       `<td class="${u >= 0 ? "pos" : "neg"}"><b>${money(u)}</b></td></tr>`;
   }).join("");
@@ -1590,6 +1642,14 @@ document.addEventListener("DOMContentLoaded", () => {
   $("canceledit").addEventListener("click", resetBlockForm);
   $("c-seed").addEventListener("click", seedCustomer);
   $("n-save").addEventListener("click", guardarNota);
+  const sincronizar = async (btn) => {
+    if (btn) { btn.disabled = true; btn.dataset.t = btn.textContent; btn.textContent = "Sincronizando…"; }
+    try { await load(); msg("Datos actualizados desde el servidor ✅"); }
+    catch { msg("No se pudo sincronizar.", false); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.t || "↻ Sincronizar"; } }
+  };
+  $("sync").addEventListener("click", (e) => sincronizar(e.currentTarget));
+  $("sync-movil").addEventListener("click", (e) => sincronizar(e.currentTarget));
   $("r-pp").addEventListener("change", (e) => $("r-pp-campos").classList.toggle("hidden", !e.target.checked));
   $("f-type").addEventListener("change", fillCats);
   $("f-add").addEventListener("click", addMovFromForm);
