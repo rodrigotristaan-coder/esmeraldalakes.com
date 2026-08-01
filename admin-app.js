@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260801-4";
+const VERSION = "20260801-5";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -102,8 +102,36 @@ function irA(id) {
     if (el) el.hidden = v.id !== id;
   }
   pintarMenu();
+  prepararPlegables();
   msg("");
   window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
+}
+
+// Bloques plegables en celular: los marcados con data-cerrado arrancan cerrados
+// y el título los abre. En escritorio no aplica (sobra el espacio).
+const esCelular = () => window.matchMedia("(max-width: 939px)").matches;
+function prepararPlegables() {
+  document.querySelectorAll(".bloque[data-plegable]").forEach((b) => {
+    const h = b.querySelector("h2");
+    if (!h || h.dataset.listo) return;
+    h.dataset.listo = "1";
+    h.setAttribute("role", "button");
+    h.setAttribute("tabindex", "0");
+    const alternar = () => {
+      if (!esCelular()) return;
+      b.dataset.tocado = "1";
+      const cerrado = b.classList.toggle("plegado");
+      h.setAttribute("aria-expanded", String(!cerrado));
+    };
+    h.addEventListener("click", alternar);
+    h.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternar(); } });
+  });
+  // estado inicial: solo en celular, y solo la primera vez
+  document.querySelectorAll(".bloque[data-cerrado]").forEach((b) => {
+    if (b.dataset.tocado) return;
+    b.classList.toggle("plegado", esCelular());
+    b.querySelector("h2")?.setAttribute("aria-expanded", String(!esCelular()));
+  });
 }
 
 const abrir = (id) => { const d = $(id); if (d && !d.open) d.showModal(); };
@@ -1782,6 +1810,8 @@ function showLogin() {
 document.addEventListener("DOMContentLoaded", () => {
   pintarMenu();
   irA("hoy");
+  prepararPlegables();
+  window.addEventListener("resize", prepararPlegables);
 
   // Cualquier botón con data-cerrar cierra la ventana que lo contiene.
   // Las ventanas también se cierran con Escape (lo hace <dialog> solo).

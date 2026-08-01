@@ -102,6 +102,21 @@
     .bloque > h2 + .muted { margin-bottom:.7rem; display:block; }
     .bloque--plano { background:transparent; border:0; padding:0; -webkit-backdrop-filter:none; backdrop-filter:none; }
 
+    /* ---------- bloques plegables (solo celular) ----------
+       En el teléfono cada pantalla era un scroll largo de bloques apilados.
+       Ahora los que no se ocupan al entrar vienen cerrados y se abren tocando. */
+    .bloque__toggle { display:none; }
+    @media (max-width:939px) {
+      .bloque[data-plegable] > h2 { cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:.6rem; }
+      .bloque[data-plegable] > h2::after { content:"–"; font-family:"Inter",sans-serif; color:var(--gold); font-weight:600;
+        border:1.5px solid var(--gold); border-radius:50%; width:1.5rem; height:1.5rem; flex:0 0 auto;
+        display:inline-flex; align-items:center; justify-content:center; font-size:1rem; line-height:1; }
+      .bloque.plegado > h2::after { content:"+"; }
+      .bloque.plegado > *:not(h2) { display:none; }
+      .bloque.plegado { padding-bottom:1.1rem; }
+      .bloque { padding:1rem 1rem 1.1rem; }
+    }
+
     /* ---------- HOY: la cinta de ocupación (elemento firma) ---------- */
     .ahora { background:var(--glass2); border:1px solid var(--borde); border-radius:22px; padding:1.1rem 1.2rem 1rem; margin-bottom:1rem;
       -webkit-backdrop-filter:blur(14px) saturate(1.3); backdrop-filter:blur(14px) saturate(1.3); }
@@ -319,12 +334,12 @@
         <p id="hoy-dia" aria-live="polite">Pasa el cursor por un día para ver quién está y cuánto entra o sale.</p>
       </div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable>
         <h2>Por hacer</h2>
         <div id="hoy-pend"></div>
       </div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable data-cerrado>
         <h2>Próximas llegadas</h2>
         <div id="hoy-llegadas"></div>
       </div>
@@ -356,13 +371,13 @@
         </div>
       </div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable>
         <h2>Reservas directas</h2>
         <span class="muted">Las que tú administras: editar, cobrar o liberar.</span>
         <div id="direct"></div>
       </div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable data-cerrado>
         <h2>Todas las fechas ocupadas</h2>
         <span class="muted">Incluye lo que llega de Airbnb (solo lectura).</span>
         <div id="all"></div>
@@ -381,7 +396,7 @@
 
       <div class="stats" id="stats"></div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable data-cerrado>
         <div class="charthead">
           <h2>Ingresos vs gastos</h2>
           <span class="chartlg"><span><i class="dot d"></i>Ingresos</span><span><i class="dot" style="background:var(--rojo)"></i>Gastos</span><span class="muted">Últimos 12 meses</span></span>
@@ -391,24 +406,24 @@
         <svg id="f-chart" class="chart" viewBox="0 0 720 210" role="img" aria-label="Ingresos contra gastos por mes"></svg>
       </div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable data-cerrado>
         <h2>Mes por mes</h2>
         <div class="finwrap" id="f-summary"></div>
       </div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable>
         <h2>Movimientos</h2>
         <span class="muted">Los últimos 40. Toca un movimiento para editarlo.</span>
         <div id="f-movs"></div>
       </div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable data-cerrado>
         <h2>Lo que te cuestan las plataformas</h2>
         <span class="muted">Lo que pagó el huésped contra lo que te depositaron. La diferencia es la comisión.</span>
         <div class="finwrap" id="plataformas"></div>
       </div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable data-cerrado>
         <h2>Por huésped</h2>
         <span class="muted">Cuánto pagó cada uno y cuánto costó atenderlo.</span>
         <div class="finwrap" id="guest-table"></div>
@@ -424,19 +439,19 @@
         </div>
       </div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable>
         <h2>Por cada reserva</h2>
         <span class="muted">Recepción al llegar y limpieza al salir. Se proponen solos con cada reserva, de Airbnb o directa; tú ajustas el monto y confirmas.</span>
         <div id="res-pending"></div>
       </div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable>
         <h2>Por confirmar</h2>
         <span class="muted">Lo que toca pagar en este periodo y todavía no registras.</span>
         <div id="r-pending"></div>
       </div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable data-cerrado>
         <h2>Los que tienes dados de alta</h2>
         <span class="muted">Cada cuánto se cobra y cuánto cuesta. Aquí se editan, se pausan o se quitan.</span>
         <div id="r-list"></div>
@@ -452,24 +467,24 @@
         </div>
       </div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable>
         <h2>Reseñas por aprobar</h2>
         <div id="rv-pending"></div>
       </div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable data-cerrado>
         <h2>Huéspedes anteriores</h2>
         <span class="muted">Estancias que ya terminaron, de la más reciente hacia atrás, con lo que dejó cada una.</span>
         <div id="pasadas"></div>
       </div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable data-cerrado>
         <h2>Clientes del portal</h2>
         <span class="muted">Se dan de alta solos al confirmar su primera reserva. Aquí puedes sembrar uno a mano o ajustar sus noches gratis.</span>
         <div id="customers"></div>
       </div>
 
-      <div class="bloque">
+      <div class="bloque" data-plegable data-cerrado>
         <h2>Reseñas publicadas</h2>
         <div id="rv-approved"></div>
       </div>
@@ -653,6 +668,6 @@
   </div>
 </dialog>
 
-<script src="/admin-app.js?v=20260801-4" defer></script>
+<script src="/admin-app.js?v=20260801-5" defer></script>
 </body>
 </html>
