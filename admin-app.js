@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260801-2";
+const VERSION = "20260801-3";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -347,8 +347,10 @@ function applyBlocks(data) {
     const quien = b.name ? `<b>${escHtml(b.name)}</b>` : '<span class="muted">sin nombre</span>';
     div.innerHTML = `<span style="text-align:left">${quien}<br><span class="muted">${fmt(b)} · ${escHtml(b.source)}` +
       `${b.guests ? " · " + b.guests + " pax" : ""}${b.rate ? " · " + money(b.rate) + "/noche" : ""}</span></span>`;
-    // Las de Airbnb llegan por iCal sin nombre: aquí se les pone a mano.
-    if (b.source === "airbnb") {
+    // Datos que ponemos a mano: el nombre (Airbnb no lo manda) y el desglose de
+    // cobro. Va en TODAS las reservas, no solo las de Airbnb: las estancias
+    // pasadas de plataforma hay que crearlas a mano y quedan como directas.
+    {
       const wrap = document.createElement("span");
       wrap.className = "row";
       // Airbnb sí manda el link a la reserva y los últimos 4 del teléfono:
@@ -372,7 +374,8 @@ function applyBlocks(data) {
       }
       const btn = document.createElement("button");
       btn.className = "quiet";
-      btn.textContent = b.name ? "Editar datos" : "Poner nombre";
+      btn.textContent = !b.name && b.source === "airbnb" ? "Poner nombre" : "Datos de cobro";
+      btn.title = "Nombre, plataforma y desglose de lo que pagó el huésped";
       btn.addEventListener("click", () => editarNota(b));
       wrap.appendChild(btn);
       div.appendChild(wrap);
@@ -421,6 +424,14 @@ function renderPasadas() {
       (ing || gas
         ? `<span class="muted num">pagó <b class="pos">${money(ing)}</b> · costó <b class="neg">${money(gas)}</b> · dejó <b class="${dejo >= 0 ? "pos" : "neg"}">${money(dejo)}</b></span>`
         : '<span class="muted">sin movimientos a su nombre</span>');
+    const wrap = document.createElement("span");
+    wrap.className = "row";
+    const btn = document.createElement("button");
+    btn.className = "quiet";
+    btn.textContent = "Datos de cobro";
+    btn.addEventListener("click", () => editarNota(b));
+    wrap.appendChild(btn);
+    div.appendChild(wrap);
     box.appendChild(div);
   }
   recortar(box, PASADAS.length, TOPE_PAS, "estancias", renderPasadas);
