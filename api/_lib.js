@@ -344,19 +344,29 @@ async function writeFinance(movs) {
 // `quedo(doc)`    dice si el cambio ya se ve al releer.
 // Si no se ve, se reintenta aplicando el cambio sobre lo MÁS FRESCO que haya.
 async function mutarDoc(leer, escribir, aplicar, quedo, etiqueta) {
-  let ultimo = null;
-  for (let intento = 0; intento < 4; intento++) {
-    const doc = await leer();
-    const r = aplicar(doc);
-    if (r && r.error) return { error: r.error };
-    await escribir(doc);
+  const doc = await leer();
+  const r = aplicar(doc);
+  if (r && r.error) return { error: r.error };
+  await escribir(doc);
+
+  // Se verifica LEYENDO, nunca volviendo a escribir.
+  //
+  // El primer intento de arreglo reescribía cuando la verificación fallaba, y
+  // resultó peor: cada reintento manda una copia construida sobre una base
+  // distinta, esas copias llegan desordenadas al almacenamiento y una vieja
+  // puede pisar a una nueva. Se comprobó el 1-ago-2026: de dos altas seguidas,
+  // la primera sobrevivió y la segunda desapareció, y las dos "fallaron".
+  //
+  // El blob solo tarda en propagar; con esperar alcanza. Si aun así no se ve,
+  // se devuelve el documento que sí tenemos en memoria y un aviso — sin
+  // reescribir, porque reescribir es lo que rompe.
+  for (let i = 0; i < 6; i++) {
+    await new Promise((s) => setTimeout(s, 200 * (i + 1)));
     const check = await leer();
-    ultimo = check;
     if (quedo(check)) return { doc: check, r };
-    await new Promise((s) => setTimeout(s, 150 * (intento + 1)));
   }
-  console.error(etiqueta + ": el cambio no se pudo confirmar tras 4 intentos");
-  return { doc: ultimo, error: "no-se-guardo" };
+  console.error(etiqueta + ": escrito, pero no se pudo confirmar leyendo");
+  return { doc, r, aviso: "sin-confirmar" };
 }
 
 const mutarFinanzas = (aplicar, quedo) =>

@@ -198,7 +198,7 @@ module.exports = async (req, res) => {
       );
       if (out.error) return res.status(500).json({ ok: false, error: out.error });
       const sorted = out.doc.movs.slice().sort((a, b) => (b.date + b.at).localeCompare(a.date + a.at));
-      return res.status(200).json({ ok: true, mov, movs: sorted });
+      return res.status(200).json({ ok: true, mov, movs: sorted, aviso: out.aviso });
     }
     // Editar un movimiento existente (solo los campos que vengan).
     if (action === "finance-update") {
@@ -275,7 +275,7 @@ module.exports = async (req, res) => {
         (doc) => doc.recurring.some((r) => r.id === nuevo.id)
       );
       if (outR.error) return res.status(500).json({ ok: false, error: outR.error });
-      return res.status(200).json({ ok: true, recurring: outR.doc.recurring });
+      return res.status(200).json({ ok: true, recurring: outR.doc.recurring, aviso: outR.aviso });
     }
     // Editar un recurrente (antes solo se podía borrar y volver a crear)
     if (action === "recurring-update") {
