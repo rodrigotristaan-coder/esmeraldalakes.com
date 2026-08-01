@@ -690,18 +690,30 @@ function applyCustomers(list) {
     const resv = (c.reservations || []).length;
     const div = document.createElement("div");
     div.className = "card";
+    const estado = [
+      c.phone ? `📞 ${escHtml(c.phone)}` : null,
+      c.reglamento ? `📜 reglamento aceptado ${fmtD((c.reglamento.at || "").slice(0, 10))}` : '<span style="opacity:.7">📜 sin aceptar reglamento</span>',
+      c.ineVerificada ? `🪪 INE revisada ${fmtD(c.ineVerificada)}` : (c.ineUrl ? "🪪 INE en Drive, sin revisar" : null),
+    ].filter(Boolean).join(" · ");
     div.innerHTML =
       `<span style="text-align:left"><b>${escHtml(c.name || "(sin nombre)")}</b> <span class="muted">${escHtml(c.email)}</span><br>` +
-      `<span class="muted">🎟 ${escHtml(c.refCode || "—")} · 🌙 ${c.freeNights || 0} noches gratis · 👥 ${refs} referidos · 📅 ${resv} reservas</span></span>`;
+      `<span class="muted">🎟 ${escHtml(c.refCode || "—")} · 🌙 ${c.freeNights || 0} noches gratis · 👥 ${refs} referidos · 📅 ${resv} reservas</span>` +
+      (estado ? `<br><span class="muted">${estado}</span>` : "") + `</span>`;
     const wrap = document.createElement("span");
     wrap.className = "row";
+    const ficha = document.createElement("button");
+    ficha.className = "quiet";
+    ficha.textContent = "Ficha";
+    ficha.addEventListener("click", () => abrirFicha(c));
+    wrap.appendChild(ficha);
     const plus = document.createElement("button");
+    plus.className = "quiet";
     plus.textContent = "+1 noche";
     plus.addEventListener("click", () => nightsAction(c.email, 1));
     wrap.appendChild(plus);
     if ((c.freeNights || 0) > 0) {
       const redeem = document.createElement("button");
-      redeem.className = "danger";
+      redeem.className = "quiet peligro";
       redeem.textContent = "Redimir 1";
       redeem.addEventListener("click", () => nightsAction(c.email, -1));
       wrap.appendChild(redeem);
@@ -1470,6 +1482,56 @@ async function nightsAction(email, delta) {
   } catch { msg("Error al ajustar noches.", false); }
 }
 
+// --- Ficha del cliente (contacto, notas y enlace a su INE en Drive) ---
+let FICHA = null;
+function abrirFicha(c) {
+  FICHA = c.email;
+  $("fi-title").textContent = c.name || c.email;
+  $("fi-name").value = c.name || "";
+  $("fi-phone").value = c.phone || "";
+  $("fi-ine").value = c.ineUrl || "";
+  $("fi-ineok").checked = !!c.ineVerificada;
+  $("fi-notes").value = c.notes || "";
+  // Lo que ha dejado: se cruza con los movimientos a su nombre
+  const g = (c.name || "").trim().toLowerCase();
+  let ing = 0, gas = 0;
+  if (g) for (const m of FIN) {
+    if ((m.guest || "").trim().toLowerCase() !== g) continue;
+    const v = Number(m.amount) || 0;
+    if (m.type === "in") ing += v; else gas += v;
+  }
+  const estancias = (c.reservations || []).length;
+  $("fi-resumen").innerHTML =
+    `${escHtml(c.email)} · código <b>${escHtml(c.refCode || "—")}</b><br>` +
+    `${estancias} estancia${estancias === 1 ? "" : "s"} · pagó <b class="pos">${money(ing)}</b> · costó <b class="neg">${money(gas)}</b> · dejó <b class="${ing - gas >= 0 ? "pos" : "neg"}">${money(ing - gas)}</b>` +
+    (c.reglamento
+      ? `<br>📜 Aceptó el reglamento (versión ${escHtml(c.reglamento.version || "—")}) el ${fmtD((c.reglamento.at || "").slice(0, 10))} como “${escHtml(c.reglamento.nombre || "")}”.`
+      : `<br>📜 Todavía no acepta el reglamento. Lo hace desde su portal.`) +
+    (c.ineUrl ? `<br>🪪 <a href="${escHtml(c.ineUrl)}" target="_blank" rel="noopener">Abrir su INE en Drive ↗</a>` : "");
+  abrir("dlg-ficha");
+  $("fi-phone").focus();
+}
+
+async function guardarFicha() {
+  if (!FICHA) return;
+  const qs = Object.entries({
+    email: FICHA,
+    name: $("fi-name").value.trim(),
+    phone: $("fi-phone").value.trim(),
+    ineUrl: $("fi-ine").value.trim(),
+    notes: $("fi-notes").value.trim(),
+    ineOk: $("fi-ineok").checked ? "1" : "0",
+  }).map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join("");
+  try {
+    const r = await api("&action=customer-update" + qs);
+    if (!r.ok) throw new Error(r.error);
+    applyCustomers(r.customers || []);
+    cerrar("dlg-ficha");
+    FICHA = null;
+    msg("Ficha guardada ✅");
+  } catch { msg("Error al guardar la ficha.", false); }
+}
+
 async function seedCustomer() {
   const name = $("c-name").value.trim(), email = $("c-email").value.trim();
   if (!email) return msg("Falta el correo del cliente.", false);
@@ -1642,6 +1704,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("canceledit").addEventListener("click", resetBlockForm);
   $("c-seed").addEventListener("click", seedCustomer);
   $("n-save").addEventListener("click", guardarNota);
+  $("fi-save").addEventListener("click", guardarFicha);
   const sincronizar = async (btn) => {
     if (btn) { btn.disabled = true; btn.dataset.t = btn.textContent; btn.textContent = "Sincronizando…"; }
     try { await load(); msg("Datos actualizados desde el servidor ✅"); }

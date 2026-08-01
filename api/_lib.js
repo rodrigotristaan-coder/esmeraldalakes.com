@@ -343,20 +343,49 @@ async function writeFinance(movs) {
 // `aplicar(doc)`  muta el documento y devuelve lo que haga falta (o {error}).
 // `quedo(doc)`    dice si el cambio ya se ve al releer.
 // Si no se ve, se reintenta aplicando el cambio sobre lo MÁS FRESCO que haya.
-async function mutarFinanzas(aplicar, quedo) {
+async function mutarDoc(leer, escribir, aplicar, quedo, etiqueta) {
   let ultimo = null;
   for (let intento = 0; intento < 4; intento++) {
-    const doc = await readFinanceDoc();
+    const doc = await leer();
     const r = aplicar(doc);
     if (r && r.error) return { error: r.error };
-    await writeFinanceDoc(doc);
-    const check = await readFinanceDoc();
+    await escribir(doc);
+    const check = await leer();
     ultimo = check;
     if (quedo(check)) return { doc: check, r };
     await new Promise((s) => setTimeout(s, 150 * (intento + 1)));
   }
-  console.error("mutarFinanzas: el cambio no se pudo confirmar tras 4 intentos");
+  console.error(etiqueta + ": el cambio no se pudo confirmar tras 4 intentos");
   return { doc: ultimo, error: "no-se-guardo" };
+}
+
+const mutarFinanzas = (aplicar, quedo) =>
+  mutarDoc(readFinanceDoc, writeFinanceDoc, aplicar, quedo, "mutarFinanzas");
+
+// Los clientes viven en otro blob pero corren el mismo riesgo: dos cambios
+// seguidos (p. ej. el huésped acepta el reglamento mientras el admin le pone
+// el teléfono) se pisarían.
+const mutarClientes = (aplicar, quedo) =>
+  mutarDoc(readCustomers, writeCustomers, aplicar, quedo, "mutarClientes");
+
+// Versión del reglamento que se acepta. Si el condominio publica uno nuevo, se
+// cambia aquí y las aceptaciones viejas quedan marcadas con la versión anterior.
+const REGLAMENTO_VERSION = "2025";
+
+// Campos de contacto que puede llevar la ficha de un cliente.
+// ⚠️ La INE NO se guarda aquí: solo el enlace a Drive (ineUrl) y la marca de
+// verificada. Guardar identificaciones oficiales en el sitio nos volvería
+// custodios de material de robo de identidad.
+function sanitizeCliente(campos = {}) {
+  const out = {};
+  if (campos.name !== undefined) out.name = String(campos.name).trim().slice(0, 80);
+  if (campos.phone !== undefined) out.phone = String(campos.phone).replace(/[^\d+()\s-]/g, "").trim().slice(0, 25);
+  if (campos.notes !== undefined) out.notes = String(campos.notes).trim().slice(0, 500);
+  if (campos.ineUrl !== undefined) {
+    const u = String(campos.ineUrl).trim().slice(0, 300);
+    out.ineUrl = /^https:\/\//i.test(u) ? u : "";
+  }
+  return out;
 }
 
 // Código de referido tipo ESM-XXXX (alfabeto sin caracteres ambiguos)
@@ -554,7 +583,8 @@ module.exports = {
   normEmail, isEmail, readCustomers, writeCustomers, upsertCustomerFromBooking, ownerOfRefCode, seedCustomer,
   issueCode, verifyCode, sessionCookie, clearSessionCookie, readSession, isAdminEmail,
   // finanzas
-  readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, mutarFinanzas,
+  readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, mutarFinanzas, mutarClientes,
+  sanitizeCliente, REGLAMENTO_VERSION,
   // notas sobre reservas que no controlamos (Airbnb)
   notaKey, aplicarNotas,
   // fechas en hora de Acapulco (no UTC)

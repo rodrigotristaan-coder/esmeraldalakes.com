@@ -176,6 +176,31 @@
         </div>
       </div>
 
+      <div class="guidebox" id="d-datos" style="display:block">
+        <p style="font-weight:700;margin:0 0 .15rem" data-es="🪪 Tus datos" data-en="🪪 Your details"></p>
+        <p style="margin:0 0 .7rem;font-size:.85rem;opacity:.85" data-es="Los necesitamos para darte de alta en la caseta antes de tu llegada." data-en="We need these to register you at the gatehouse before you arrive."></p>
+        <div class="refrow" style="gap:.5rem;flex-wrap:wrap">
+          <input id="d-name" type="text" placeholder="Nombre y apellido" style="flex:1;min-width:160px" />
+          <input id="d-phone" type="tel" placeholder="WhatsApp / teléfono" style="flex:1;min-width:150px" />
+          <button type="button" class="btn" id="save-datos" data-es="Guardar" data-en="Save" style="width:auto;padding:.6rem 1.1rem;margin:0"></button>
+        </div>
+        <p id="d-datos-msg" style="margin:.5rem 0 0;font-size:.85rem;min-height:1.1rem"></p>
+      </div>
+
+      <div class="guidebox" id="d-regl" style="display:block">
+        <p style="font-weight:700;margin:0 0 .15rem" data-es="📜 Reglamento del condominio" data-en="📜 Condo rules"></p>
+        <p id="d-regl-estado" style="margin:0 0 .7rem;font-size:.85rem;opacity:.9"></p>
+        <div id="d-regl-form">
+          <p style="margin:0 0 .5rem;font-size:.85rem;opacity:.85" data-es="Léelo y escribe tu nombre completo para aceptarlo. Queda constancia con la fecha." data-en="Read it and type your full name to accept. The date is recorded."></p>
+          <div class="refrow" style="gap:.5rem;flex-wrap:wrap">
+            <a class="btn btn--ghost" href="/reglamento" target="_blank" rel="noopener" data-es="Leer el reglamento ↗" data-en="Read the rules ↗" style="text-decoration:none;width:auto;padding:.6rem 1.1rem;margin:0"></a>
+            <input id="d-regl-nombre" type="text" placeholder="Nombre y apellido" style="flex:1;min-width:170px" />
+            <button type="button" class="btn" id="accept-regl" data-es="Acepto" data-en="I accept" style="width:auto;padding:.6rem 1.1rem;margin:0"></button>
+          </div>
+        </div>
+        <p id="d-regl-msg" style="margin:.5rem 0 0;font-size:.85rem;min-height:1.1rem"></p>
+      </div>
+
       <div class="guidebox">
         <div style="flex:1;min-width:200px">
           <p style="font-weight:700;margin:0 0 .15rem" data-es="📖 Guía del huésped" data-en="📖 Guest guide"></p>
@@ -200,6 +225,6 @@
   </div>
 
   <!-- ?v= por el caché inmutable de /assets: súbelo cada vez que cambie portal.js -->
-  <script src="/assets/portal.js?v=20260711b"></script>
+  <script src="/assets/portal.js?v=20260801a"></script>
 </body>
 </html>

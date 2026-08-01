@@ -204,8 +204,74 @@
         box.appendChild(row);
       });
     }
+    // --- Tus datos ---
+    var nm = document.getElementById("d-name"), ph = document.getElementById("d-phone");
+    if (nm) nm.value = d.name || "";
+    if (ph) ph.value = d.phone || "";
+
+    // --- Reglamento: constancia de aceptacion (no una foto del papel) ---
+    var est = document.getElementById("d-regl-estado");
+    var frm = document.getElementById("d-regl-form");
+    var alDia = d.reglamento && d.reglamento.version === d.reglamentoVigente;
+    if (est) {
+      if (alDia) {
+        est.textContent = (lang === "en" ? "Accepted on " : "Aceptado el ") + fmtDate((d.reglamento.at || "").slice(0, 10)) +
+          (d.reglamento.nombre ? " · " + d.reglamento.nombre : "");
+      } else if (d.reglamento) {
+        est.textContent = lang === "en"
+          ? "You accepted an older version. Please accept the current one."
+          : "Aceptaste una versión anterior. Acepta la vigente, por favor.";
+      } else {
+        est.textContent = lang === "en" ? "Not accepted yet." : "Todavía no lo aceptas.";
+      }
+    }
+    if (frm) frm.style.display = alDia ? "none" : "block";
+    var rn = document.getElementById("d-regl-nombre");
+    if (rn && !rn.value) rn.value = d.name || "";
+
     show("dash"); apply(lang);
   }
+
+  // Guardar nombre y telefono del huesped
+  var btnDatos = document.getElementById("save-datos");
+  if (btnDatos) btnDatos.addEventListener("click", async function () {
+    var nombre = (document.getElementById("d-name").value || "").trim();
+    var tel = (document.getElementById("d-phone").value || "").trim();
+    var out = document.getElementById("d-datos-msg");
+    if (!nombre && !tel) { setStatus(out, lang === "en" ? "Fill in your name or phone." : "Pon tu nombre o tu teléfono.", "err"); return; }
+    btnDatos.disabled = true;
+    try {
+      var r = await fetch("/api/portal-me?action=perfil&name=" + encodeURIComponent(nombre) + "&phone=" + encodeURIComponent(tel),
+        { credentials: "same-origin", cache: "no-store" });
+      var j = await r.json();
+      if (!j.ok) throw new Error("no");
+      setStatus(out, lang === "en" ? "Saved ✅" : "Guardado ✅", "ok");
+    } catch (e) {
+      setStatus(out, lang === "en" ? "Couldn't save. Try again." : "No se pudo guardar. Inténtalo otra vez.", "err");
+    } finally { btnDatos.disabled = false; }
+  });
+
+  // Aceptar el reglamento: queda constancia con fecha y version
+  var btnRegl = document.getElementById("accept-regl");
+  if (btnRegl) btnRegl.addEventListener("click", async function () {
+    var nombre = (document.getElementById("d-regl-nombre").value || "").trim();
+    var out = document.getElementById("d-regl-msg");
+    if (nombre.length < 5 || nombre.indexOf(" ") === -1) {
+      setStatus(out, lang === "en" ? "Type your full name (first and last)." : "Escribe tu nombre completo (nombre y apellido).", "err");
+      return;
+    }
+    btnRegl.disabled = true;
+    try {
+      var r = await fetch("/api/portal-me?action=reglamento&nombre=" + encodeURIComponent(nombre),
+        { credentials: "same-origin", cache: "no-store" });
+      var j = await r.json();
+      if (!j.ok) throw new Error("no");
+      setStatus(out, lang === "en" ? "Recorded ✅ Thanks." : "Registrado ✅ Gracias.", "ok");
+      await loadDash();
+    } catch (e) {
+      setStatus(out, lang === "en" ? "Couldn't record it. Try again." : "No se pudo registrar. Inténtalo otra vez.", "err");
+    } finally { btnRegl.disabled = false; }
+  });
 
   async function loadDash() {
     var r = await fetch("/api/portal-me", { credentials: "same-origin", cache: "no-store" });

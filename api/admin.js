@@ -1,6 +1,6 @@
 // Panel de administración (protegido con ADMIN_KEY): fechas, reseñas, clientes y finanzas.
 const crypto = require("crypto");
-const { safeEqual, readBlocks, addBlock, removeBlock, updateBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail, readSession, readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, mutarFinanzas, notaKey, aplicarNotas, hoyMx } = require("./_lib");
+const { safeEqual, readBlocks, addBlock, removeBlock, updateBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail, readSession, readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, mutarFinanzas, mutarClientes, sanitizeCliente, notaKey, aplicarNotas, hoyMx } = require("./_lib");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
@@ -135,6 +135,31 @@ module.exports = async (req, res) => {
       const lista = Object.values(customers).sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
       return res.status(200).json({ ok: true, freeNights: c.freeNights, customers: lista });
     }
+    // Ficha del cliente: contacto, notas y el enlace a su INE en Drive.
+    // La INE nunca se sube aquí; solo se guarda a dónde está y si ya se revisó.
+    if (action === "customer-update") {
+      const email = normEmail(q.email);
+      if (!email) return res.status(422).json({ ok: false, error: "correo" });
+      const campos = sanitizeCliente({ name: q.name, phone: q.phone, notes: q.notes, ineUrl: q.ineUrl });
+      const marcaIne = q.ineOk === "1" ? hoyMx() : q.ineOk === "0" ? "" : undefined;
+      const out = await mutarClientes(
+        (cs) => {
+          const c = cs[email];
+          if (!c) return { error: "cliente" };
+          Object.assign(c, campos);
+          if (marcaIne !== undefined) { if (marcaIne) c.ineVerificada = marcaIne; else delete c.ineVerificada; }
+        },
+        (cs) => {
+          const c = cs[email];
+          if (!c) return false;
+          return Object.keys(campos).every((k) => (c[k] || "") === (campos[k] || ""));
+        }
+      );
+      if (out.error) return res.status(out.error === "cliente" ? 404 : 500).json({ ok: false, error: out.error });
+      const lista = Object.values(out.doc).sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+      return res.status(200).json({ ok: true, customers: lista });
+    }
+
     // --- Finanzas (ingresos y gastos) ---
     if (action === "finance-list") {
       const movs = (await readFinance()).sort((a, b) => (b.date + b.at).localeCompare(a.date + a.at));

@@ -587,6 +587,31 @@
   </div>
 </dialog>
 
+<!-- Ficha del cliente -->
+<dialog id="dlg-ficha" aria-labelledby="fi-title">
+  <div class="modal">
+    <div class="modal__head">
+      <h2 id="fi-title">Ficha del cliente</h2>
+      <button class="modal__cerrar" type="button" data-cerrar aria-label="Cerrar">✕</button>
+    </div>
+    <div id="fi-resumen" class="muted" style="margin-bottom:1rem"></div>
+    <div class="fgrid">
+      <label class="wide">Nombre <input id="fi-name" type="text" placeholder="Nombre y apellido" /></label>
+      <label class="wide">Teléfono <input id="fi-phone" type="tel" placeholder="744 123 4567" /></label>
+      <label class="wide">Enlace a su INE en Drive
+        <input id="fi-ine" type="url" placeholder="https://drive.google.com/..." />
+      </label>
+      <label class="wide check"><input id="fi-ineok" type="checkbox" /> Ya revisé su INE</label>
+      <label class="wide">Notas <input id="fi-notes" type="text" placeholder="Lo que quieras recordar de este huésped" /></label>
+    </div>
+    <p class="muted" style="margin-top:.8rem">La identificación no se guarda aquí: solo el enlace a tu carpeta de Drive. Bórrala de Drive cuando ya no la necesites.</p>
+    <div class="modal__pie">
+      <button class="ghost" type="button" data-cerrar>Cerrar</button>
+      <button id="fi-save" type="button">Guardar ficha</button>
+    </div>
+  </div>
+</dialog>
+
 <!-- Alta de cliente -->
 <dialog id="dlg-cliente" aria-labelledby="cli-title">
   <div class="modal">
