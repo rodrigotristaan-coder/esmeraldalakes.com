@@ -1188,13 +1188,26 @@ function montoHoy(r, diaRef) {
   return { monto: r.amount, tarde: false, faltan: null };
 }
 
+// Qué le va a costar hoy, dicho como se lo diría una persona.
 function textoProntoPago(r) {
   if (!r.dayLimit || !r.amountLate) return "";
   const { tarde, faltan } = montoHoy(r);
-  if (tarde) return `⚠️ ya pasó el día ${r.dayLimit}: cuesta ${money(r.amountLate)} en vez de ${money(r.amount)}`;
-  if (faltan === 0) return `⚠️ hoy es el último día a ${money(r.amount)}; mañana sube a ${money(r.amountLate)}`;
-  return `${money(r.amount)} hasta el día ${r.dayLimit} · ${money(r.amountLate)} después (faltan ${faltan} día${faltan === 1 ? "" : "s"})`;
+  if (tarde) return `Pagando hoy son ${money(r.amountLate)}: el precio de ${money(r.amount)} vencía el día ${r.dayLimit}.`;
+  if (faltan === 0) return `Hoy es el último día a ${money(r.amount)}. Mañana sube a ${money(r.amountLate)}.`;
+  return `Pagando hoy son ${money(r.amount)}. Te quedan ${faltan} día${faltan === 1 ? "" : "s"} antes de que suba a ${money(r.amountLate)}.`;
 }
+
+// Cómo se cobra, para la lista de "todos": "$3,900 al mes, el día 1"
+function comoSeCobra(r) {
+  const cada = r.cadaMeses || 1;
+  const frec = cada === 1 ? "al mes" : cada === 12 ? "al año" : `cada ${cada} meses`;
+  if (r.periodoAnterior) return `${money(r.amount)} aprox. ${frec} · monto variable, es el consumo del mes anterior`;
+  const base = `${money(r.amount)} ${frec}, el día ${r.day}`;
+  return r.dayLimit && r.amountLate ? `${base} · después del día ${r.dayLimit} sube a ${money(r.amountLate)}` : base;
+}
+
+// Etiqueta del periodo que se está pagando: "julio 2026"
+const periodoActual = () => mesLabel(hoyMx().slice(0, 7));
 
 // Lo que se propone cobrar: si el monto cambia cada mes (gas), el último real;
 // si tiene pronto pago, el que toque según el día.
@@ -1207,19 +1220,24 @@ function renderRecurring() {
   if (bp) {
     const total = pend.reduce((a, x) => a + montoPropuesto(x), 0);
     bp.innerHTML = pend.length
-      ? `<p class="muted">${pend.length} por registrar · ${money(total)} en total</p>`
-      : '<p class="muted">Todo lo recurrente de este mes ya está registrado ✅</p>';
+      ? `<p class="muted">Te faltan <b>${pend.length}</b> por registrar · ${money(total)} en total. Revisa el monto, ajústalo si hace falta y confirma: hasta entonces no se guarda nada.</p>`
+      : '<div class="vacio"><b>Nada pendiente</b>Ya registraste todo lo que se repite en este periodo.</div>';
     for (const x of pend) {
       const r = x.r;
       const div = document.createElement("div");
       const pp = montoHoy(r);
       const aviso = x.variable ? "" : textoProntoPago(r);
       div.className = "card" + (!x.variable && (pp.tarde || pp.faltan === 0) ? " urgente" : "");
+      // Título: qué es y de qué periodo. Debajo, en una frase, qué cuesta hoy.
+      const titulo = x.variable ? x.concept : `${r.concept} — ${periodoActual()}`;
+      const explica = x.variable
+        ? (x.rango
+            ? `El monto y las fechas los pone el recibo. Se propone ${money(montoPropuesto(x))}, que fue lo último que pagaste.`
+            : `El monto cambia cada mes. Se propone ${money(montoPropuesto(x))}, que fue lo último que pagaste; corrígelo con el recibo.`)
+        : aviso;
       div.innerHTML = `<span style="text-align:left"><span class="tag ${r.type}">${r.type === "in" ? "INGRESO" : "GASTO"}</span>` +
-        `<b>${escHtml(x.concept)}</b> <span class="muted">· ${x.variable ? (x.rango ? `periodo ${escHtml(x.periodo)}` : `consumo de ${escHtml(x.periodo)}`) : `día ${r.day}`} · ${escHtml(r.category || "")}</span>` +
-        (x.variable
-          ? `<br><span class="muted">${x.rango ? "Ajusta las fechas reales del recibo y el monto" : "El monto cambia cada mes: revisa el recibo"}. Se propone ${money(montoPropuesto(x))} (lo último que se pagó).</span>`
-          : (aviso ? `<br><span class="${pp.tarde || pp.faltan === 0 ? "aviso-pp" : "muted"}">${escHtml(aviso)}</span>` : "")) +
+        `<b>${escHtml(titulo)}</b>` +
+        (explica ? `<br><span class="${!x.variable && (pp.tarde || pp.faltan === 0) ? "aviso-pp" : "muted"}">${escHtml(explica)}</span>` : "") +
         `</span>`;
       const wrap = document.createElement("span");
       wrap.className = "row";
@@ -1227,6 +1245,7 @@ function renderRecurring() {
       amt.type = "number"; amt.step = "0.01"; amt.min = "0"; amt.value = montoPropuesto(x); amt.style.width = "105px";
       amt.title = "Puedes cambiar el monto antes de confirmar";
       amt.setAttribute("aria-label", `Monto de ${x.concept}`);
+      wrap.insertAdjacentHTML("beforeend", '<span class="muted campo">Monto</span>');
       // Recibo de varios meses: se capturan las fechas reales que trae el recibo
       let desde = null, hasta = null;
       if (x.rango) {
@@ -1238,10 +1257,17 @@ function renderRecurring() {
         hasta.type = "date"; hasta.value = x.rango.hasta;
         hasta.title = "Hasta qué día cubre el recibo";
         hasta.setAttribute("aria-label", `Fin del periodo de ${r.concept}`);
-        wrap.append(desde, hasta);
+        wrap.insertAdjacentHTML("beforeend", '<span class="muted campo">Del</span>');
+        wrap.append(desde);
+        wrap.insertAdjacentHTML("beforeend", '<span class="muted campo">al</span>');
+        wrap.append(hasta);
       }
       const dt = document.createElement("input");
       dt.type = "date"; dt.value = x.date; dt.title = "Fecha con la que se guarda el gasto";
+      dt.setAttribute("aria-label", `Fecha de ${x.concept}`);
+      const etqFecha = document.createElement("span");
+      etqFecha.className = "muted campo";
+      etqFecha.textContent = "Fecha";
       const ok = document.createElement("button");
       ok.textContent = "Confirmar";
       ok.addEventListener("click", () => {
@@ -1251,7 +1277,7 @@ function renderRecurring() {
           : x;
         confirmRecurring(conPeriodo, parseFloat(amt.value), dt.value, ok);
       });
-      wrap.append(amt, dt, ok);
+      wrap.append(amt, etqFecha, dt, ok);
       div.appendChild(wrap);
       bp.appendChild(div);
     }
@@ -1263,10 +1289,11 @@ function renderRecurring() {
   for (const r of RECUR) {
     const div = document.createElement("div");
     div.className = "card";
-    const aviso = textoProntoPago(r);
-    div.innerHTML = `<span style="text-align:left"><b>${escHtml(r.concept)}</b> ` +
-      `<span class="muted">· ${money(r.amount)} · día ${r.day} · ${escHtml(r.category || "")}${r.activo ? "" : " · ⏸ pausado"}</span>` +
-      (aviso ? `<br><span class="muted">${escHtml(aviso)}</span>` : "") + `</span>`;
+    // La categoría solo se muestra si aporta algo (a veces es igual al concepto)
+    const cat = (r.category || "").trim();
+    const catTxt = cat && cat.toLowerCase() !== (r.concept || "").trim().toLowerCase() ? ` · ${escHtml(cat)}` : "";
+    div.innerHTML = `<span style="text-align:left"><b>${escHtml(r.concept)}</b>${r.activo ? "" : ' <span class="muted">· ⏸ pausado</span>'}` +
+      `<br><span class="muted">${escHtml(comoSeCobra(r))}${catTxt}</span></span>`;
     const wrap = document.createElement("span");
     wrap.className = "row";
     const ed = document.createElement("button");

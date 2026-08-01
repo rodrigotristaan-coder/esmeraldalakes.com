@@ -221,6 +221,8 @@
     .fgrid label.check input, label.check input { width:1.15rem; flex:0 0 auto; }
     /* Aviso de que un cobro está por subir de precio */
     .aviso-pp { color:var(--ambar); font-weight:600; }
+    /* Etiquetas chiquitas que dicen qué es cada campo en las filas por confirmar */
+    .campo { font-size:.72rem; text-transform:uppercase; letter-spacing:.4px; opacity:.75; }
     .card.urgente { border-color:rgba(245,179,1,.55); background:rgba(245,179,1,.1); }
     @media (max-width:520px) { .fgrid { grid-template-columns:1fr; } }
 
@@ -381,7 +383,7 @@
       <div class="vhead">
         <div>
           <h1>Recurrentes</h1>
-          <p class="muted">Lo que se repite cada mes: internet, luz, gas, cuota, jardinería.</p>
+          <p class="muted">Gastos que se repiten. Los das de alta una vez y el panel te los recuerda cuando toca; <b>nada se guarda hasta que tú confirmas</b>.</p>
         </div>
       </div>
 
@@ -392,13 +394,14 @@
       </div>
 
       <div class="bloque">
-        <h2>Cada mes</h2>
-        <span class="muted">Puedes ajustar el monto y la fecha antes de guardarlos.</span>
+        <h2>Por confirmar</h2>
+        <span class="muted">Lo que toca pagar en este periodo y todavía no registras.</span>
         <div id="r-pending"></div>
       </div>
 
       <div class="bloque">
-        <h2>Todos los recurrentes</h2>
+        <h2>Los que tienes dados de alta</h2>
+        <span class="muted">Cada cuánto se cobra y cuánto cuesta. Aquí se editan, se pausan o se quitan.</span>
         <div id="r-list"></div>
       </div>
     </section>
