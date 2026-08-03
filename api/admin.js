@@ -188,7 +188,10 @@ module.exports = async (req, res) => {
         return res.status(422).json({ ok: false, error: "datos" });
       }
       const guest = String(q.guest || "").trim().slice(0, 80);
-      const mov = { id: crypto.randomBytes(5).toString("hex"), type, date: q.date, concept, category, amount, guest, at: new Date().toISOString() };
+      // Quién puso el dinero (Lau, Ro, Bi…). No cambia la utilidad del depa:
+      // sirve para saldar entre quienes adelantan gastos.
+      const payer = String(q.payer || "").trim().slice(0, 40);
+      const mov = { id: crypto.randomBytes(5).toString("hex"), type, date: q.date, concept, category, amount, guest, payer, at: new Date().toISOString() };
       // Escritura verificada: si otra escritura la pisa, se reintenta sobre lo más fresco
       const out = await mutarFinanzas(
         // Idempotente a propósito: si el reintento encuentra que ya se guardó,
@@ -199,6 +202,79 @@ module.exports = async (req, res) => {
       if (out.error) return res.status(500).json({ ok: false, error: out.error });
       const sorted = out.doc.movs.slice().sort((a, b) => (b.date + b.at).localeCompare(a.date + a.at));
       return res.status(200).json({ ok: true, mov, movs: sorted, aviso: out.aviso });
+    }
+    // Lee la foto de un ticket con Claude y devuelve lo que alcanzó a sacar.
+    // NO guarda nada: el panel prellena el formulario, pregunta lo que falta y
+    // Rodrigo confirma. Son sus finanzas reales — un OCR no las escribe solo.
+    if (action === "ticket-read") {
+      if (!process.env.ANTHROPIC_API_KEY) {
+        return res.status(503).json({ ok: false, error: "Falta ANTHROPIC_API_KEY en el proyecto." });
+      }
+      const body = req.body || {};
+      const image = String(body.image || "");
+      const mime = ["image/jpeg", "image/png", "image/webp"].includes(body.mime) ? body.mime : "image/jpeg";
+      if (!image || image.length > 9000000) {
+        return res.status(422).json({ ok: false, error: "imagen" });
+      }
+      // Las categorías las manda el panel para no tener la lista duplicada aquí:
+      // si mañana se agrega una, el modelo se entera sin tocar este archivo.
+      const cats = Array.isArray(body.categorias)
+        ? body.categorias.map((c) => String(c).slice(0, 40)).slice(0, 60)
+        : [];
+      const hoy = hoyMx();
+      try {
+        const Anthropic = require("@anthropic-ai/sdk");
+        const cliente = new Anthropic();
+        const r = await cliente.messages.create({
+          model: "claude-opus-5",
+          max_tokens: 4000,
+          output_config: {
+            effort: "medium",
+            format: {
+              type: "json_schema",
+              schema: {
+                type: "object",
+                properties: {
+                  monto: { type: "string", description: "Total pagado, solo el número con punto decimal. Vacío si no se ve." },
+                  fecha: { type: "string", description: "Fecha del ticket en formato AAAA-MM-DD. Vacío si no se ve." },
+                  comercio: { type: "string", description: "Nombre del negocio. Vacío si no se ve." },
+                  concepto: { type: "string", description: "Descripción corta de la compra, máximo 60 caracteres." },
+                  categoria: { type: "string", description: "Exactamente una de las categorías dadas, o vacío si ninguna encaja." },
+                  dudas: { type: "array", items: { type: "string" }, description: "Nombres de los campos que leíste con poca confianza." },
+                },
+                required: ["monto", "fecha", "comercio", "concepto", "categoria", "dudas"],
+                additionalProperties: false,
+              },
+            },
+          },
+          system:
+            "Lees tickets de compra de México para la contabilidad de un departamento en renta vacacional en Acapulco. " +
+            `Hoy es ${hoy}. Las fechas de los tickets vienen en formato día/mes/año; si el ticket no trae el año, usa el año en curso. ` +
+            "El monto es el TOTAL pagado, no el subtotal ni el efectivo entregado ni el cambio. Devuélvelo sin signo de pesos ni comas.\n" +
+            (cats.length ? `Categorías disponibles (usa una tal cual, sin inventar):\n${cats.join("\n")}\n` : "") +
+            "Deja un campo vacío en vez de adivinarlo. Pon en `dudas` el nombre de cada campo que hayas leído con poca confianza " +
+            "— borroso, cortado, arrugado o ambiguo — para que la persona lo revise.",
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: mime, data: image } },
+              { type: "text", text: "Extrae los datos de este ticket." },
+            ],
+          }],
+        });
+        // En Opus 5 los clasificadores pueden declinar; hay que mirar stop_reason
+        // ANTES de leer content, porque en ese caso viene vacío.
+        if (r.stop_reason === "refusal") {
+          return res.status(200).json({ ok: false, error: "El modelo no pudo procesar esta imagen." });
+        }
+        const txt = (r.content.find((b) => b.type === "text") || {}).text || "";
+        let datos;
+        try { datos = JSON.parse(txt); } catch { return res.status(200).json({ ok: false, error: "No se entendió el ticket." }); }
+        return res.status(200).json({ ok: true, datos, uso: { entrada: r.usage.input_tokens, salida: r.usage.output_tokens } });
+      } catch (e) {
+        console.error("ticket-read:", e.message);
+        return res.status(200).json({ ok: false, error: "No se pudo leer el ticket: " + e.message });
+      }
     }
     // Editar un movimiento existente (solo los campos que vengan).
     if (action === "finance-update") {
@@ -211,6 +287,7 @@ module.exports = async (req, res) => {
       if (q.concept !== undefined) { const c = String(q.concept).trim().slice(0, 120); if (!c) return res.status(422).json({ ok: false, error: "concepto" }); m.concept = c; }
       if (q.category !== undefined) m.category = String(q.category).trim().slice(0, 40);
       if (q.guest !== undefined) m.guest = String(q.guest).trim().slice(0, 80);
+      if (q.payer !== undefined) m.payer = String(q.payer).trim().slice(0, 40);
       if (q.amount !== undefined) {
         const a = Math.round(Number(q.amount) * 100) / 100;
         if (!(a > 0) || a > 5000000) return res.status(422).json({ ok: false, error: "monto" });

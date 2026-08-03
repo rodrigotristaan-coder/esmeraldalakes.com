@@ -160,6 +160,12 @@
     .mc-day:hover { outline:1.5px solid rgba(255,255,255,.6); transform:none; }
     .mc-day.dir { background:var(--aqua); color:var(--ink); font-weight:600; }
     .mc-day.abb { background:var(--ambar); color:#3a2c00; font-weight:600; }
+    /* Medio día: izquierda = mañana (quien sale) · derecha = noche (quien entra).
+       Los dos colores llegan inline desde admin-app.js. Va ANTES de .sel/.inrange
+       para que al elegir fechas se vea la selección y no el gradiente. */
+    .mc-day.mitades { background-image:linear-gradient(to right,
+        var(--mit-izq,transparent) 0 50%, var(--mit-der,transparent) 50% 100%);
+      color:#fff; font-weight:600; }
     .mc-day.past { opacity:.33; cursor:default; }
     .mc-day.past:hover { outline:none; }
     .mc-day.today { outline:2px solid #fff; }
@@ -168,22 +174,18 @@
     .callegend { display:flex; flex-wrap:wrap; gap:.5rem 1.1rem; font-size:.75rem; opacity:.85; margin-top:.7rem; }
     .dot { display:inline-block; width:.7rem; height:.7rem; border-radius:50%; margin-right:.3rem; vertical-align:-1px; }
     .dot.d { background:var(--aqua); } .dot.a { background:var(--ambar); } .dot.s { background:var(--gold); }
-    /* Marca de llegada (recepción) y salida (limpieza) en el calendario */
-    .mc-day.llega, .mc-day.sale { position:relative; }
-    .mc-day.llega::after, .mc-day.sale::after { content:""; position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
-      width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; }
-    .mc-day.llega::after { border-bottom:5px solid #06301f; }
-    .mc-day.sale::after { border-top:5px solid #06301f; }
-    .marca { display:inline-block; width:0; height:0; margin-right:.35rem; vertical-align:1px;
-      border-left:4px solid transparent; border-right:4px solid transparent; }
-    .marca--llega { border-bottom:5px solid rgba(255,255,255,.85); }
-    .marca--sale { border-top:5px solid rgba(255,255,255,.85); }
+    /* Muestras de medio día para la leyenda (mismo gradiente que las celdas) */
+    .mitad { display:inline-block; width:1.4rem; height:.8rem; border-radius:3px; margin-right:.35rem; vertical-align:-1px;
+      background:rgba(255,255,255,.14); }
+    .mitad--sale { background-image:linear-gradient(to right, var(--aqua) 0 50%, transparent 50% 100%); }
+    .mitad--llega { background-image:linear-gradient(to right, transparent 0 50%, var(--aqua) 50% 100%); }
     #hoy-dia { font-size:.84rem; color:var(--gold); min-height:1.2rem; margin-top:.55rem; }
     .cinta__d { cursor:pointer; }
     .cinta__d:hover { outline:1.5px solid rgba(255,255,255,.75); }
     .calnav { display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-bottom:.7rem; }
-    .calnav h4 { font-family:Georgia,serif; font-size:1rem; font-weight:400; }
+    .calnav h4 { font-family:Georgia,serif; font-size:1rem; font-weight:400; flex:1; text-align:center; }
     .calnav button { padding:.35rem .85rem; }
+    .calnav button[disabled] { opacity:.28; cursor:default; }
     #cal-who { font-size:.82rem; min-height:1.1rem; margin-top:.6rem; color:var(--gold); }
 
     /* ---------- tarjetas de lista ---------- */
@@ -228,6 +230,12 @@
     .chart .val { font-size:8.5px; font-weight:600; font-variant-numeric:tabular-nums; }
     .chart .val.gin { fill:var(--aqua); } .chart .val.gout { fill:var(--rojo); }
     .chart .base { stroke:rgba(255,255,255,.22); }
+    .chart .vacio { fill:rgba(255,255,255,.3); }
+
+    /* ---------- leer un ticket ---------- */
+    .ticketrow { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; margin:0 0 .9rem; }
+    /* Campo que el modelo leyó con dudas (o dejó vacío): revísalo antes de guardar */
+    input.revisar, select.revisar { border:2px solid var(--ambar); background:#fff6e0; }
     .chartlg { display:flex; gap:1rem; font-size:.75rem; opacity:.85; flex-wrap:wrap; }
     .charthead { display:flex; align-items:baseline; justify-content:space-between; gap:.8rem; flex-wrap:wrap; margin-bottom:.5rem; }
 
@@ -359,6 +367,7 @@
           <button id="cal-prev" class="ghost" type="button" aria-label="Meses anteriores">‹</button>
           <h4 id="cal-title"></h4>
           <button id="cal-next" class="ghost" type="button" aria-label="Meses siguientes">›</button>
+          <button id="cal-hoy" class="ghost" type="button" hidden>Hoy</button>
         </div>
         <div id="minical" class="minical"></div>
         <p id="cal-who" aria-live="polite"></p>
@@ -366,8 +375,8 @@
           <span><i class="dot d"></i>Reserva directa</span>
           <span><i class="dot a"></i>Airbnb</span>
           <span><i class="dot s"></i>Lo que estás eligiendo</span>
-          <span><i class="marca marca--llega"></i>Llegada · recepción</span>
-          <span><i class="marca marca--sale"></i>Salida · limpieza</span>
+          <span><i class="mitad mitad--sale"></i>Media mañana: alguien sale · limpieza</span>
+          <span><i class="mitad mitad--llega"></i>Media noche: alguien entra · recepción</span>
         </div>
       </div>
 
@@ -415,6 +424,12 @@
         <h2>Movimientos</h2>
         <span class="muted">Los últimos 40. Toca un movimiento para editarlo.</span>
         <div id="f-movs"></div>
+      </div>
+
+      <div class="bloque" data-plegable data-cerrado>
+        <h2>Quién puso el dinero</h2>
+        <span class="muted">Para saldar entre ustedes: cuánto adelantó cada quien y cuánto cobró. No cambia la utilidad del depa.</span>
+        <div class="finwrap" id="pagadores"></div>
       </div>
 
       <div class="bloque" data-plegable data-cerrado>
@@ -532,6 +547,11 @@
       <h2 id="mov-title">Registrar movimiento</h2>
       <button class="modal__cerrar" type="button" data-cerrar aria-label="Cerrar">✕</button>
     </div>
+    <div class="ticketrow">
+      <button id="f-ticket" class="ghost" type="button">📷 Leer un ticket</button>
+      <span class="muted">Toma la foto y se llena solo. Tú revisas y guardas.</span>
+      <input id="f-ticket-file" type="file" accept="image/*" capture="environment" hidden />
+    </div>
     <div class="fgrid">
       <label>Tipo
         <select id="f-type">
@@ -546,7 +566,11 @@
       <label class="wide">Huésped (opcional)
         <input id="f-guest" type="text" list="guestlist" placeholder="Con quién va este movimiento" />
       </label>
+      <label class="wide">Quién pagó (opcional)
+        <input id="f-payer" type="text" list="payerlist" placeholder="Lau, Ro, Bi…" />
+      </label>
       <datalist id="guestlist"></datalist>
+      <datalist id="payerlist"></datalist>
     </div>
     <div class="modal__pie">
       <button id="f-cancel" class="ghost hidden" type="button">Cancelar edición</button>
@@ -668,6 +692,6 @@
   </div>
 </dialog>
 
-<script src="/admin-app.js?v=20260801-5" defer></script>
+<script src="/admin-app.js?v=20260803-6" defer></script>
 </body>
 </html>

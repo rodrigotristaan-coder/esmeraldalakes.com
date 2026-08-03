@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260801-5";
+const VERSION = "20260803-6";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -34,6 +34,19 @@ function msg(t, ok = true) {
 async function api(params) {
   const url = "/api/admin?key=" + encodeURIComponent(KEY) + params;
   const r = await fetch(url);
+  if (r.status === 401) throw new Error("401");
+  return r.json();
+}
+
+// Igual que api(), pero manda un cuerpo JSON. La foto del ticket no cabe en la
+// dirección: tiene que viajar en el cuerpo de la petición.
+async function apiPost(params, body) {
+  const url = "/api/admin?key=" + encodeURIComponent(KEY) + params;
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
   if (r.status === 401) throw new Error("401");
   return r.json();
 }
@@ -154,6 +167,14 @@ let SEL = { start: null, end: null };
 const DOWS_MC = ["L", "M", "M", "J", "V", "S", "D"];
 const MESES_MC = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 const isoDay = (y, m, d) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+// El día anterior en ISO (cruza mes y año sin problema). Sirve para saber quién
+// durmió la noche de ayer, que es quien sale en la mañana de hoy.
+const prevDs = (ds) => {
+  const [y, m, d] = ds.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
+};
+// Los mismos colores del pantallazo: verde = directa, ámbar = Airbnb
+const COLOR_MC = { dir: "#06d67e", abb: "#f5b301" };
 
 function srcFor(ds) {
   let src = null;
@@ -177,9 +198,23 @@ function whoOn(ds) {
   return null;
 }
 
-// Meses visibles del calendario (0 = el mes en curso). En pantalla chica, 1.
+// Meses visibles del calendario (0 = el mes en curso; negativo = pasado).
+// En pantalla chica, 1.
 let CAL_OFFSET = 0;
 const CAL_MESES = window.matchMedia("(min-width: 700px)").matches ? 2 : 1;
+
+// Hasta dónde deja retroceder el calendario: al primer mes con historia
+// (una reserva o un movimiento), y nunca más de 36 meses atrás. Así no se
+// puede uno perder en años vacíos, pero todo lo que pasó sigue alcanzable.
+function calMinOffset() {
+  const todayDs = hoyMx();
+  let min = todayDs;
+  for (const b of BLOCKS) if (b.start && b.start < min) min = b.start;
+  for (const m of FIN) if (m.date && m.date < min) min = m.date;
+  const [Y, M] = todayDs.split("-").map(Number);
+  const [y, m] = min.split("-").map(Number);
+  return Math.max(-36, Math.min(0, (y - Y) * 12 + (m - M)));
+}
 
 function renderMiniCal() {
   const box = $("minical");
@@ -206,17 +241,26 @@ function renderMiniCal() {
     for (let d = 1; d <= daysIn; d++) {
       const ds = isoDay(my, mm, d);
       const cls = ["mc-day"];
-      const s = srcFor(ds);
-      if (s) cls.push(s);
+      // Cada celda son dos mitades, igual que el pantallazo de Telegram:
+      // izquierda = mañana (la noche de ayer, o sea quién SALE ese día) y
+      // derecha = noche (quién ENTRA y duerme). Estancia continua = celda llena.
+      const eSrc = srcFor(ds);            // noche de hoy
+      const mSrc = srcFor(prevDs(ds));    // noche de ayer
+      let mitades = null;
+      if (eSrc && mSrc === eSrc) cls.push(eSrc);           // llena, como siempre
+      else if (mSrc || eSrc) { cls.push("mitades"); mitades = { mSrc, eSrc }; }
       if (ds < todayDs) cls.push("past");
       if (ds === todayDs) cls.push("today");
-      if (BLOCKS.some((b) => b.start === ds)) cls.push("llega");
-      if (BLOCKS.some((b) => b.end === ds)) cls.push("sale");
       if (ds === SEL.start || ds === SEL.end) cls.push("sel");
       else if (SEL.start && SEL.end && ds > SEL.start && ds < SEL.end) cls.push("inrange");
       const cell = document.createElement("button");
       cell.type = "button";
       cell.className = cls.join(" ");
+      // Los colores de cada mitad van inline: el CSS los lee como gradiente.
+      if (mitades) {
+        cell.style.setProperty("--mit-izq", mitades.mSrc ? COLOR_MC[mitades.mSrc] : "transparent");
+        cell.style.setProperty("--mit-der", mitades.eSrc ? COLOR_MC[mitades.eSrc] : "transparent");
+      }
       cell.textContent = d;
       const w = whoOn(ds);
       // El detalle del día (quién está, quién llega o sale, y cuánto entró o salió)
@@ -224,7 +268,13 @@ function renderMiniCal() {
       cell.title = detalle;
       cell.addEventListener("mouseenter", () => { const e = $("cal-who"); if (e) e.textContent = detalle; });
       cell.addEventListener("focus", () => { const e = $("cal-who"); if (e) e.textContent = detalle; });
-      if (ds >= todayDs) cell.addEventListener("click", () => (w ? showWho(ds) : pickDay(ds)));
+      // Días futuros: eligen fechas de reserva o dicen quién está. Días
+      // pasados: solo consulta — se ve quién estuvo y qué se movió ese día,
+      // pero no se pueden elegir para una reserva nueva.
+      cell.addEventListener("click", () => {
+        if (ds < todayDs) { const e = $("cal-who"); if (e) e.textContent = detalle; return; }
+        return w ? showWho(ds) : pickDay(ds);
+      });
       grid.appendChild(cell);
     }
     sec.appendChild(grid);
@@ -237,6 +287,11 @@ function renderMiniCal() {
       ? `${MESES_MC[a.getMonth()]} ${a.getFullYear()}`
       : `${MESES_MC[a.getMonth()]} – ${MESES_MC[b.getMonth()]} ${b.getFullYear()}`;
   }
+  // Las flechas se apagan al llegar al límite, y "Hoy" solo aparece si te fuiste
+  const prev = $("cal-prev"), next = $("cal-next"), hoyBtn = $("cal-hoy");
+  if (prev) prev.disabled = CAL_OFFSET <= calMinOffset();
+  if (next) next.disabled = CAL_OFFSET >= 24 - CAL_MESES;
+  if (hoyBtn) hoyBtn.hidden = CAL_OFFSET === 0;
 }
 
 function showWho(ds) {
@@ -250,7 +305,14 @@ function showWho(ds) {
 }
 
 function calMove(delta) {
-  CAL_OFFSET = Math.max(0, Math.min(24 - CAL_MESES, CAL_OFFSET + delta * CAL_MESES));
+  CAL_OFFSET = Math.max(calMinOffset(), Math.min(24 - CAL_MESES, CAL_OFFSET + delta * CAL_MESES));
+  const e = $("cal-who"); if (e) e.textContent = "";
+  renderMiniCal();
+}
+
+// Volver al mes en curso de un toque (si te fuiste lejos hacia atrás o adelante)
+function calHoy() {
+  CAL_OFFSET = 0;
   const e = $("cal-who"); if (e) e.textContent = "";
   renderMiniCal();
 }
@@ -872,22 +934,42 @@ function renderChart(movs) {
     by[ym] = by[ym] || { in: 0, out: 0 };
     by[ym][m.type] += Number(m.amount) || 0;
   }
-  const meses = Object.keys(by).sort().slice(-12);
-  if (!meses.length) { svg.innerHTML = '<text x="10" y="24">Sin movimientos todavía.</text>'; return; }
-  const max = Math.max(...meses.map((ym) => Math.max(by[ym].in, by[ym].out)), 1);
+  // Eje de tiempo CONTINUO: mes a mes, sin saltarse los vacíos. Antes se armaba
+  // solo con los meses que tenían movimiento, así que un mes sin nada
+  // desaparecía y marzo quedaba pegado a julio — la gráfica mentía sobre el
+  // paso del tiempo, y un mes flojo se veía igual que un mes inexistente.
+  const conDatos = Object.keys(by).sort();
+  if (!conDatos.length) { svg.innerHTML = '<text x="10" y="24">Sin movimientos todavía.</text>'; return; }
+  const hoyYm = hoyMx().slice(0, 7);
+  const finYm = conDatos[conDatos.length - 1] > hoyYm ? conDatos[conDatos.length - 1] : hoyYm;
+  const todos = [];
+  let [ey, em] = conDatos[0].split("-").map(Number);
+  for (let i = 0; i < 400; i++) { // tope de seguridad por si una fecha viene rota
+    const ym = `${ey}-${String(em).padStart(2, "0")}`;
+    todos.push(ym);
+    if (ym >= finYm) break;
+    if (++em > 12) { em = 1; ey++; }
+  }
+  const meses = todos.slice(-12);
+  const dat = (ym) => by[ym] || { in: 0, out: 0 };
+  const max = Math.max(...meses.map((ym) => Math.max(dat(ym).in, dat(ym).out)), 1);
   // Se deja aire arriba (alto útil menor) para que quepan las cifras sobre las barras
   const W = 720, H = 210, base = H - 26, alto = base - 26;
   const paso = W / meses.length, ancho = Math.min(16, paso / 3.2);
   let out = `<line class="base" x1="0" y1="${base}" x2="${W}" y2="${base}" />`;
   meses.forEach((ym, i) => {
     const cx = i * paso + paso / 2;
-    const hi = (by[ym].in / max) * alto, ho = (by[ym].out / max) * alto;
+    const d = dat(ym);
+    const hi = (d.in / max) * alto, ho = (d.out / max) * alto;
     const xi = cx - ancho - 1.5, xo = cx + 1.5;
-    out += `<rect class="gin"  x="${xi}" y="${base - hi}" width="${ancho}" height="${hi}" rx="2"><title>${mesLabel(ym)} · ingresos ${money(by[ym].in)}</title></rect>`;
-    out += `<rect class="gout" x="${xo}" y="${base - ho}" width="${ancho}" height="${ho}" rx="2"><title>${mesLabel(ym)} · gastos ${money(by[ym].out)}</title></rect>`;
+    out += `<rect class="gin"  x="${xi}" y="${base - hi}" width="${ancho}" height="${hi}" rx="2"><title>${mesLabel(ym)} · ingresos ${money(d.in)}</title></rect>`;
+    out += `<rect class="gout" x="${xo}" y="${base - ho}" width="${ancho}" height="${ho}" rx="2"><title>${mesLabel(ym)} · gastos ${money(d.out)}</title></rect>`;
+    // Un mes sin nada se marca con un punto en la base, para que se lea
+    // "aquí no hubo movimiento" en vez de parecer que el mes no existe.
+    if (!d.in && !d.out) out += `<circle class="vacio" cx="${cx}" cy="${base - 3}" r="1.6" />`;
     // Cifra sobre cada barra, abreviada para que quepan las 12 columnas
-    if (by[ym].in) out += `<text class="val gin" x="${xi + ancho / 2}" y="${base - hi - 4}" text-anchor="middle">${moneyCorto(by[ym].in)}</text>`;
-    if (by[ym].out) out += `<text class="val gout" x="${xo + ancho / 2}" y="${base - ho - 4}" text-anchor="middle">${moneyCorto(by[ym].out)}</text>`;
+    if (d.in) out += `<text class="val gin" x="${xi + ancho / 2}" y="${base - hi - 4}" text-anchor="middle">${moneyCorto(d.in)}</text>`;
+    if (d.out) out += `<text class="val gout" x="${xo + ancho / 2}" y="${base - ho - 4}" text-anchor="middle">${moneyCorto(d.out)}</text>`;
     out += `<text x="${cx}" y="${H - 8}" text-anchor="middle">${mesLabel(ym).replace(" ", "'")}</text>`;
   });
   svg.innerHTML = out;
@@ -899,6 +981,7 @@ function renderFinance(movs) {
   renderChart(movs);
   renderGuests(movs);
   renderPlataformas();
+  renderPagadores(movs);
   fillGuestList(movs);
 
   // Resumen mensual (últimos 13 meses con movimiento)
@@ -929,7 +1012,7 @@ function renderFinance(movs) {
     const div = document.createElement("div");
     div.className = "fila";
     div.innerHTML = `<span style="text-align:left"><span class="tag ${m.type}">${m.type === "in" ? "INGRESO" : "GASTO"}</span>` +
-      `<b>${escHtml(m.concept)}</b> <span class="muted">· ${fmtD(m.date)} · ${escHtml(m.category || "")}${m.guest ? " · 👤 " + escHtml(m.guest) : ""}</span></span>` +
+      `<b>${escHtml(m.concept)}</b> <span class="muted">· ${fmtD(m.date)} · ${escHtml(m.category || "")}${m.guest ? " · 👤 " + escHtml(m.guest) : ""}${m.payer ? " · 💳 pagó " + escHtml(m.payer) : ""}</span></span>` +
       `<span class="row"><b class="${m.type === "in" ? "pos" : "neg"}">${m.type === "in" ? "+" : "−"}${money(m.amount)}</b></span>`;
     // Acciones calladas: antes eran tres botones de color en cada fila y el
     // listado parecía un tablero de botones. Ahora el monto manda.
@@ -981,6 +1064,13 @@ function fillGuestList(movs) {
   for (const b of BLOCKS) if (b.name) nombres.add(b.name);
   for (const m of movs) if (m.guest) nombres.add(m.guest);
   dl.innerHTML = [...nombres].sort().map((n) => `<option value="${escHtml(n)}"></option>`).join("");
+  // Sugerencias de "quién pagó": los que ya se usaron antes, para no reescribirlos
+  const dp = $("payerlist");
+  if (dp) {
+    const quienes = new Set();
+    for (const m of movs) if (m.payer) quienes.add(m.payer);
+    dp.innerHTML = [...quienes].sort().map((n) => `<option value="${escHtml(n)}"></option>`).join("");
+  }
 }
 
 // Cuánto se queda cada plataforma. Sale de las reservas donde capturaste los dos
@@ -1008,6 +1098,41 @@ function renderPlataformas() {
     `<td class="neg"><b>${money(ta)}</b><br><span class="muted">${tp ? Math.round((ta / tp) * 100) : 0}%</span></td>` +
     `<td><b>${money(tg)}</b></td><td class="pos"><b>${money(tn)}</b></td></tr></table>` +
     '<p class="muted" style="margin-top:.6rem">Los impuestos de ocupación y las retenciones de ISR e IVA no se los queda la plataforma: van al gobierno y los pagarías igual con reserva directa.</p>';
+}
+
+// Quién puso el dinero: cuánto adelantó cada quien en gastos y cuánto cobró.
+// Sirve para saldar entre Lau, Ro y Bi — la utilidad del depa no cambia.
+function renderPagadores(movs) {
+  const box = $("pagadores");
+  if (!box) return;
+  const by = {};
+  for (const m of movs) {
+    const p = (m.payer || "").trim();
+    if (!p) continue;
+    by[p] = by[p] || { puso: 0, cobro: 0, n: 0 };
+    if (m.type === "out") by[p].puso += Number(m.amount) || 0;
+    else by[p].cobro += Number(m.amount) || 0;
+    by[p].n++;
+  }
+  const nombres = Object.keys(by).sort();
+  if (!nombres.length) {
+    box.innerHTML = '<p class="muted">Todavía ningún movimiento dice quién pagó. ' +
+      'Al registrar un gasto llena el campo “Quién pagó” y aquí aparece el saldo de cada quien.</p>';
+    return;
+  }
+  const sinEtiqueta = movs.filter((m) => !(m.payer || "").trim()).length;
+  let tp = 0, tc = 0;
+  const filas = nombres.map((n) => {
+    const x = by[n];
+    tp += x.puso; tc += x.cobro;
+    const saldo = x.puso - x.cobro;
+    return `<tr><td class="g"><b>${escHtml(n)}</b><br><span class="muted">${x.n} movimiento${x.n === 1 ? "" : "s"}</span></td>` +
+      `<td class="neg">${money(x.puso)}</td><td class="pos">${money(x.cobro)}</td>` +
+      `<td class="${saldo > 0 ? "pos" : saldo < 0 ? "neg" : ""}"><b>${saldo > 0 ? "le deben " : saldo < 0 ? "debe " : ""}${money(Math.abs(saldo))}</b></td></tr>`;
+  }).join("");
+  box.innerHTML = `<table class="fin"><tr><th>Quién</th><th>Puso en gastos</th><th>Cobró</th><th>Saldo</th></tr>${filas}` +
+    `<tr><td class="g"><b>Total</b></td><td class="neg"><b>${money(tp)}</b></td><td class="pos"><b>${money(tc)}</b></td><td></td></tr></table>` +
+    (sinEtiqueta ? `<p class="muted" style="margin-top:.6rem">⚠️ ${sinEtiqueta} movimiento${sinEtiqueta === 1 ? "" : "s"} sin “quién pagó”, así que no ${sinEtiqueta === 1 ? "entra" : "entran"} en esta cuenta.</p>` : "");
 }
 
 // Cuánto pagó y cuánto costó cada huésped
@@ -1073,6 +1198,86 @@ async function financeAdd(params) {
   return r;
 }
 
+// ---- Capturar un gasto desde la foto del ticket ----
+// El modelo lee la foto y propone monto, fecha, comercio y categoría; el panel
+// prellena el formulario y marca lo dudoso. NO guarda solo: son finanzas reales
+// y un OCR se equivoca, así que el último paso siempre es humano.
+
+// La foto se encoge antes de subirla: un ticket se lee perfecto a 1600 px y así
+// no viaja una foto de 4 MB ni se pagan tokens de más.
+// ⚠️ `imageOrientation:"from-image"` respeta el EXIF — sin eso las fotos de
+// iPhone llegan giradas y el modelo lee mucho peor (ya nos pasó con el comedor).
+async function fotoABase64(file, maxLado = 1600) {
+  let bmp;
+  try { bmp = await createImageBitmap(file, { imageOrientation: "from-image" }); }
+  catch { bmp = await createImageBitmap(file); }
+  const escala = Math.min(1, maxLado / Math.max(bmp.width, bmp.height));
+  const w = Math.max(1, Math.round(bmp.width * escala)), h = Math.max(1, Math.round(bmp.height * escala));
+  const cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  cv.getContext("2d").drawImage(bmp, 0, 0, w, h);
+  if (bmp.close) bmp.close();
+  return cv.toDataURL("image/jpeg", 0.85).split(",")[1];
+}
+
+let ticketBusy = false;
+async function leerTicket(file) {
+  if (ticketBusy || !file) return;
+  ticketBusy = true;
+  const btn = $("f-ticket");
+  if (btn) { btn.disabled = true; btn.dataset.txt = btn.textContent; btn.textContent = "Leyendo…"; }
+  msg("Leyendo el ticket…");
+  try {
+    const image = await fotoABase64(file);
+    const r = await apiPost("&action=ticket-read", { image, mime: "image/jpeg", categorias: catsPlanas("out") });
+    if (!r.ok) { msg(r.error || "No se pudo leer el ticket.", false); return; }
+    aplicarTicket(r.datos || {});
+  } catch (e) {
+    msg("No se pudo leer el ticket: " + e.message, false);
+  } finally {
+    ticketBusy = false;
+    if (btn) { btn.disabled = false; btn.textContent = btn.dataset.txt || "📷 Leer un ticket"; }
+  }
+}
+
+// Vuelca lo leído en el formulario y marca lo que hay que revisar
+function aplicarTicket(d) {
+  $("f-type").value = "out";
+  // Solo se acepta una categoría que EXISTA. Si el modelo inventa una, fillCats
+  // la agregaría como "La que ya tenía" (eso está pensado para movimientos
+  // viejos) y se colaría una categoría falsa a las finanzas.
+  const cat = catsPlanas("out").includes(d.categoria || "") ? d.categoria : "";
+  fillCats(cat);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d.fecha || "")) $("f-date").value = d.fecha;
+  const monto = parseFloat(String(d.monto || "").replace(/[^\d.]/g, ""));
+  if (monto > 0) $("f-amount").value = monto;
+  const concepto = [d.concepto, d.comercio].filter(Boolean).join(" · ").trim().slice(0, 120);
+  if (concepto) $("f-concept").value = concepto;
+
+  // Lo que quedó vacío o que el modelo leyó con dudas se marca y se enumera:
+  // la idea es que revises esos campos, no que confíes en el OCR a ciegas.
+  const dudas = Array.isArray(d.dudas) ? d.dudas.map((x) => String(x).toLowerCase()) : [];
+  const campos = [
+    { id: "f-amount", nombre: "el monto", vacio: !(monto > 0), clave: "monto" },
+    { id: "f-date", nombre: "la fecha", vacio: !/^\d{4}-\d{2}-\d{2}$/.test(d.fecha || ""), clave: "fecha" },
+    { id: "f-concept", nombre: "el concepto", vacio: !concepto, clave: "concepto" },
+    // Ojo: el <select> nunca está "vacío" — si no le pones valor se queda en la
+    // primera opción. Hay que preguntarle al modelo, no al control.
+    { id: "f-cat", nombre: "la categoría", vacio: !cat, clave: "categoria" },
+  ];
+  const revisar = [];
+  for (const c of campos) {
+    const el = $(c.id);
+    if (!el) continue;
+    const dudoso = c.vacio || dudas.some((x) => x.includes(c.clave));
+    el.classList.toggle("revisar", dudoso);
+    if (dudoso) revisar.push(c.nombre);
+  }
+  msg(revisar.length
+    ? `Ticket leído. Revisa ${revisar.join(", ")} antes de guardar.`
+    : "Ticket leído. Revisa que todo cuadre y guarda.");
+}
+
 // Edición de un movimiento: reusa el mismo formulario de alta
 let EDIT_MOV = null;
 function startEditMov(m) {
@@ -1081,6 +1286,7 @@ function startEditMov(m) {
   $("f-date").value = m.date;
   $("f-concept").value = m.concept || "";
   $("f-guest").value = m.guest || "";
+  $("f-payer").value = m.payer || "";
   $("f-amount").value = m.amount;
   $("mov-title").textContent = "Editar movimiento";
   $("f-add").textContent = "Guardar cambios";
@@ -1099,7 +1305,10 @@ function nuevoMov() {
 
 function resetMovForm() {
   EDIT_MOV = null;
-  $("f-concept").value = ""; $("f-amount").value = ""; $("f-guest").value = "";
+  $("f-concept").value = ""; $("f-amount").value = ""; $("f-guest").value = ""; $("f-payer").value = "";
+  // Quita las marcas de "revisa esto" que hubiera dejado la lectura de un ticket
+  ["f-amount", "f-date", "f-concept", "f-cat"].forEach((id) => { const e = $(id); if (e) e.classList.remove("revisar"); });
+  const ft = $("f-ticket-file"); if (ft) ft.value = "";
   $("f-date").value = hoyMx();
   $("mov-title").textContent = "Registrar movimiento";
   $("f-add").textContent = "Guardar";
@@ -1114,20 +1323,21 @@ async function addMovFromForm() {
   const type = $("f-type").value, date = $("f-date").value, concept = $("f-concept").value.trim();
   const category = $("f-cat").value, amount = parseFloat($("f-amount").value);
   const guest = $("f-guest").value.trim();
+  const payer = $("f-payer").value.trim();
   if (!date || !concept || !(amount > 0)) return msg("Faltan datos: fecha, concepto y monto.", false);
   const btn = $("f-add");
   finBusy = true;
   if (btn) { btn.disabled = true; btn.dataset.txt = btn.textContent; btn.textContent = "Guardando…"; }
   try {
     if (EDIT_MOV) {
-      const qs = Object.entries({ id: EDIT_MOV, type, date, concept, category, guest, amount })
+      const qs = Object.entries({ id: EDIT_MOV, type, date, concept, category, guest, payer, amount })
         .map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join("");
       const r = await api("&action=finance-update" + qs);
       if (!r.ok) throw new Error(r.error);
       applyFinance(r.movs || FIN);
       msg("Movimiento actualizado ✅");
     } else {
-      const r = await financeAdd({ type, date, concept, category, guest, amount });
+      const r = await financeAdd({ type, date, concept, category, guest, payer, amount });
       applyFinance(r.movs || FIN.concat(r.mov));
       msg(type === "in" ? "Ingreso registrado ✅" : "Gasto registrado ✅");
     }
@@ -1854,6 +2064,10 @@ document.addEventListener("DOMContentLoaded", () => {
   $("r-add").addEventListener("click", addRecurring);
   $("cal-prev").addEventListener("click", () => calMove(-1));
   $("cal-next").addEventListener("click", () => calMove(1));
+  $("cal-hoy").addEventListener("click", calHoy);
+  // Leer un ticket: el botón dispara el selector de foto (cámara en celular)
+  $("f-ticket").addEventListener("click", () => $("f-ticket-file").click());
+  $("f-ticket-file").addEventListener("change", (e) => leerTicket(e.target.files && e.target.files[0]));
   // swipe horizontal para cambiar de mes en el celular
   (() => {
     const box = $("minical"); if (!box) return;
