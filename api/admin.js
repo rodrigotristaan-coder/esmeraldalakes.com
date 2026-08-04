@@ -1,6 +1,10 @@
 // Panel de administración (protegido con ADMIN_KEY): fechas, reseñas, clientes y finanzas.
 const crypto = require("crypto");
-const { safeEqual, readBlocks, addBlock, removeBlock, updateBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail, readSession, readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, mutarFinanzas, mutarClientes, sanitizeCliente, notaKey, aplicarNotas, hoyMx } = require("./_lib");
+const { safeEqual, readBlocks, addBlock, removeBlock, updateBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail, readSession, readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, mutarFinanzas, mutarClientes, contarTicket, sanitizeCliente, notaKey, aplicarNotas, hoyMx } = require("./_lib");
+
+// Tope de lecturas de ticket por día. Es la red contra un ciclo que queme el
+// saldo de la API: el prepago ya topa el daño en el saldo, esto lo topa antes.
+const TOPE_TICKETS_DIA = 40;
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
@@ -221,6 +225,15 @@ module.exports = async (req, res) => {
       const cats = Array.isArray(body.categorias)
         ? body.categorias.map((c) => String(c).slice(0, 40)).slice(0, 60)
         : [];
+      // Se cuenta ANTES de llamar al modelo, para que un ciclo que truene a la
+      // mitad también consuma cupo y no pueda dar vueltas para siempre.
+      const cupo = await contarTicket(TOPE_TICKETS_DIA);
+      if (cupo.pasado) {
+        return res.status(429).json({
+          ok: false,
+          error: `Llegaste al tope de ${TOPE_TICKETS_DIA} tickets por hoy. Se reinicia mañana; captura este a mano.`,
+        });
+      }
       const hoy = hoyMx();
       try {
         const Anthropic = require("@anthropic-ai/sdk");
@@ -270,7 +283,11 @@ module.exports = async (req, res) => {
         const txt = (r.content.find((b) => b.type === "text") || {}).text || "";
         let datos;
         try { datos = JSON.parse(txt); } catch { return res.status(200).json({ ok: false, error: "No se entendió el ticket." }); }
-        return res.status(200).json({ ok: true, datos, uso: { entrada: r.usage.input_tokens, salida: r.usage.output_tokens } });
+        return res.status(200).json({
+          ok: true, datos,
+          uso: { entrada: r.usage.input_tokens, salida: r.usage.output_tokens },
+          cupo: { usados: cupo.n, tope: TOPE_TICKETS_DIA },
+        });
       } catch (e) {
         console.error("ticket-read:", e.message);
         return res.status(200).json({ ok: false, error: "No se pudo leer el ticket: " + e.message });

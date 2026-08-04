@@ -17,6 +17,11 @@ const REVIEWS = "reviews.json";
 const CUSTOMERS = "customers.json";
 const CODES = "portal-codes.json";
 const FINANCE = "finance.json";
+// El contador de lecturas de ticket vive APARTE, no en finance.json. Si viviera
+// ahí, cada foto sería una escritura más al documento del dinero — y ese blob ya
+// perdió datos dos veces por escrituras encimadas (25-jul y 31-jul de 2026).
+// Aquí, en el peor caso, se pierde una cuenta; nunca un movimiento.
+const TICKETS = "ticket-uso.json";
 
 function sign(value) {
   return crypto
@@ -372,6 +377,21 @@ async function mutarDoc(leer, escribir, aplicar, quedo, etiqueta) {
 const mutarFinanzas = (aplicar, quedo) =>
   mutarDoc(readFinanceDoc, writeFinanceDoc, aplicar, quedo, "mutarFinanzas");
 
+// Cuenta una lectura de ticket del día y dice si ya se pasó del tope.
+// Es una red de seguridad contra un ciclo que queme el saldo de la API, no una
+// contabilidad: si una escritura se pierde, la cuenta queda corta y no pasa nada.
+// Por eso NO usa mutarDoc — su verificación tarda hasta 4 s y aquí no hace falta.
+// Se cuenta ANTES de llamar al modelo: si la llamada truena a la mitad, ya contó.
+async function contarTicket(tope) {
+  const hoy = hoyMx();
+  let o = {};
+  try { o = await readJsonObj(TICKETS); } catch { /* sin cuenta previa, arranca en cero */ }
+  const n = (o.fecha === hoy ? Number(o.n) || 0 : 0) + 1;
+  try { await writeJsonObj(TICKETS, { fecha: hoy, n }); }
+  catch (e) { console.error("contarTicket:", e.message); }
+  return { n, tope, pasado: n > tope };
+}
+
 // Los clientes viven en otro blob pero corren el mismo riesgo: dos cambios
 // seguidos (p. ej. el huésped acepta el reglamento mientras el admin le pone
 // el teléfono) se pisarían.
@@ -593,7 +613,7 @@ module.exports = {
   normEmail, isEmail, readCustomers, writeCustomers, upsertCustomerFromBooking, ownerOfRefCode, seedCustomer,
   issueCode, verifyCode, sessionCookie, clearSessionCookie, readSession, isAdminEmail,
   // finanzas
-  readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, mutarFinanzas, mutarClientes,
+  readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, mutarFinanzas, mutarClientes, contarTicket,
   sanitizeCliente, REGLAMENTO_VERSION,
   // notas sobre reservas que no controlamos (Airbnb)
   notaKey, aplicarNotas,
