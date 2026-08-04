@@ -71,6 +71,9 @@
     .foto img{display:block;width:100%;height:auto;max-width:280px;
       border-radius:18px;border:1px solid var(--glass-border)}
     .foto figcaption{font-size:.88rem;color:#5c6b65;margin-top:.4rem;max-width:280px}
+    /* Caseta y croquis van lado a lado en escritorio y apiladas en celular */
+    .fotos2{display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start}
+    .fotos2 .foto{flex:1 1 240px;max-width:280px}
     .note{background:rgba(255,255,255,.6);border:1px solid rgba(166,124,0,.35);border-left:3px solid var(--gold);border-radius:14px;padding:.7rem .9rem;margin:.8rem 0;font-size:.92rem}
     .btn{display:inline-block;background:var(--gold);color:#fff;font-weight:700;text-decoration:none;padding:.7rem 1.4rem;border-radius:999px;margin-top:.6rem}
     /* Ruta de llegada: las 5 paradas, en orden, con la línea que las une.
@@ -180,11 +183,18 @@
       <p data-es="Toma la <strong>Carretera Escénica</strong> hacia Puerto Marqués, baja al <strong>Blvd. de las Naciones</strong> y sigue rumbo al aeropuerto hasta la Arena GNP Seguros (20–25 min aprox.)." data-en="Take the <strong>Carretera Escénica</strong> toward Puerto Marqués, exit onto <strong>Blvd. de las Naciones</strong> and continue toward the airport until the Arena GNP Seguros (about 20–25 min)."></p>
       <a class="btn" href="https://maps.google.com/?q=Diamante+Lakes+Revolcadero+Acapulco" target="_blank" rel="noopener" data-es="📍 Abrir en Google Maps" data-en="📍 Open in Google Maps"></a>
 
-      <figure class="foto">
-        <img src="/assets/images/llegada-croquis-cluster.webp" width="1000" height="1339" loading="lazy"
-             alt="Vista aérea de Diamante Lakes con la ruta marcada desde Blvd. de las Naciones hasta el cluster Esmeralda" />
-        <figcaption data-es="Entras por Blvd. de las Naciones; las flechas marcan el camino hasta nuestro cluster." data-en="You come in from Blvd. de las Naciones; the arrows show the way to our cluster."></figcaption>
-      </figure>
+      <div class="fotos2">
+        <figure class="foto">
+          <img src="/assets/images/caseta-entrance-sm.webp" loading="lazy"
+               alt="Caseta de vigilancia y entrada al residencial Diamante Lakes" />
+          <figcaption data-es="Así se ve la entrada: aquí paras primero." data-en="This is the entrance: your first stop."></figcaption>
+        </figure>
+        <figure class="foto">
+          <img src="/assets/images/llegada-croquis-cluster.webp" width="1000" height="1339" loading="lazy"
+               alt="Vista aérea de Diamante Lakes con la ruta marcada desde Blvd. de las Naciones hasta el cluster Esmeralda" />
+          <figcaption data-es="Ya adentro: las flechas marcan el camino a nuestro cluster." data-en="Once inside: the arrows show the way to our cluster."></figcaption>
+        </figure>
+      </div>
 
       <h3 data-es="De la entrada a la puerta del depa" data-en="From the gate to the apartment door"></h3>
       <p data-es="Cinco paradas, en este orden. Cada una tiene su requisito — por eso conviene traerlos listos." data-en="Five stops, in this order. Each one has its requirement — that's why it helps to have them ready."></p>
@@ -345,6 +355,6 @@
   <!-- ?v= obligatorio: /assets/* se sirve con caché immutable de un año, así que
        sin cambiar la URL un visitante que ya estuvo aquí nunca vería el JS nuevo.
        Súbelo cada vez que toques guia.js (misma convención que portal.js). -->
-  <script src="/assets/guia.js?v=20260804a"></script>
+  <script src="/assets/guia.js?v=20260804b"></script>
 </body>
 </html>
