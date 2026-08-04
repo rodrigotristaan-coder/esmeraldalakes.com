@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260804-1";
+const VERSION = "20260804-2";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -176,9 +176,15 @@ const prevDs = (ds) => {
 // Los mismos colores del pantallazo: verde = directa, ámbar = Airbnb
 const COLOR_MC = { dir: "#06d67e", abb: "#f5b301" };
 
+// TODAS las reservas: las próximas Y las que ya pasaron.
+// ⚠️ El servidor las manda en dos arreglos distintos — `all` trae SOLO las
+// futuras y el historial va en `pasadas`. El calendario tiene que mirar los dos
+// o los meses anteriores salen vacíos aunque sí hubiera huéspedes.
+const todasReservas = () => BLOCKS.concat(PASADAS);
+
 function srcFor(ds) {
   let src = null;
-  for (const b of BLOCKS) {
+  for (const b of todasReservas()) {
     if (ds >= b.start && ds < b.end) {
       if (b.source !== "airbnb") return "dir";
       src = src || "abb";
@@ -189,7 +195,7 @@ function srcFor(ds) {
 
 // Quién ocupa un día (para el hover y el clic)
 function whoOn(ds) {
-  for (const b of BLOCKS) {
+  for (const b of todasReservas()) {
     if (ds >= b.start && ds < b.end) {
       const quien = b.name || (b.source === "airbnb" ? "Reserva de Airbnb" : "Reserva directa");
       return { quien, b };
@@ -203,18 +209,12 @@ function whoOn(ds) {
 let CAL_OFFSET = 0;
 const CAL_MESES = window.matchMedia("(min-width: 700px)").matches ? 2 : 1;
 
-// Hasta dónde deja retroceder el calendario: al primer mes con historia
-// (una reserva o un movimiento), y nunca más de 36 meses atrás. Así no se
-// puede uno perder en años vacíos, pero todo lo que pasó sigue alcanzable.
-function calMinOffset() {
-  const todayDs = hoyMx();
-  let min = todayDs;
-  for (const b of BLOCKS) if (b.start && b.start < min) min = b.start;
-  for (const m of FIN) if (m.date && m.date < min) min = m.date;
-  const [Y, M] = todayDs.split("-").map(Number);
-  const [y, m] = min.split("-").map(Number);
-  return Math.max(-36, Math.min(0, (y - Y) * 12 + (m - M)));
-}
+// Hasta dónde deja retroceder el calendario: 36 meses fijos.
+// Antes esto se calculaba desde el primer mes "con historia" — y salió mal: el
+// servidor manda las reservas pasadas en OTRO arreglo (`pasadas`), así que el
+// cálculo casi siempre daba 0 y la flecha de atrás quedaba muerta. Un tope fijo
+// es más tonto y funciona siempre; un mes sin nada simplemente se ve vacío.
+const calMinOffset = () => -36;
 
 function renderMiniCal() {
   const box = $("minical");
@@ -559,7 +559,10 @@ function pendientesDeReservas() {
   const hasta = masDias(hoyDs, 7);
   const yaHay = new Set(FIN.map((m) => (m.concept || "").trim().toLowerCase()));
   const out = [];
-  for (const b of BLOCKS) {
+  // ⚠️ Con BLOCKS solo (que son las FUTURAS) esta ventana de 60 días atrás no
+  // veía nada del pasado: las recepciones y limpiezas de huéspedes que ya se
+  // fueron jamás aparecían como pendientes de registrar.
+  for (const b of todasReservas()) {
     const items = [
       { tipo: "recepcion", date: b.start, amount: COSTO_RECEPCION, concept: conceptoRecepcion(b), etiqueta: "Recepción", categoria: "Recepción" },
       { tipo: "limpieza", date: b.end, amount: COSTO_LIMPIEZA, concept: conceptoLimpieza(b), etiqueta: "Limpieza", categoria: "Limpieza" },
@@ -587,8 +590,8 @@ function dineroDelDia(ds) {
 function detalleDia(ds) {
   const partes = [];
   const w = whoOn(ds);
-  const llega = BLOCKS.filter((b) => b.start === ds);
-  const sale = BLOCKS.filter((b) => b.end === ds);
+  const llega = todasReservas().filter((b) => b.start === ds);
+  const sale = todasReservas().filter((b) => b.end === ds);
   if (w) partes.push(`👤 ${w.quien}`);
   for (const b of llega) partes.push(`🛬 llega ${quienDe(b)} · recepción ${money(COSTO_RECEPCION)}`);
   for (const b of sale) partes.push(`🧹 sale ${quienDe(b)} · limpieza ${money(COSTO_LIMPIEZA)}`);
@@ -706,7 +709,9 @@ function renderHoy() {
     }
     // Reservas que ya terminaron y no tienen un ingreso registrado a ese nombre
     const cobrados = new Set(FIN.filter((m) => m.type === "in" && m.guest).map((m) => m.guest.trim().toLowerCase()));
-    const sinCobrar = BLOCKS.filter((b) => b.source !== "airbnb" && b.name && b.end <= hoyDs && !cobrados.has(b.name.trim().toLowerCase()));
+    // Idem: pidiendo `b.end <= hoy` sobre BLOCKS (futuras) esto solo cazaba una
+    // reserva que terminara HOY. Con el historial ya avisa de verdad.
+    const sinCobrar = todasReservas().filter((b) => b.source !== "airbnb" && b.name && b.end <= hoyDs && !cobrados.has(b.name.trim().toLowerCase()));
     if (sinCobrar.length) {
       items.push({ ico: "💵", txt: `${sinCobrar.length} reserva${sinCobrar.length === 1 ? "" : "s"} terminada${sinCobrar.length === 1 ? "" : "s"} sin ingreso registrado`,
         sub: sinCobrar.map((b) => `${b.name} (${fmtD(b.start)})`).join(", "), btn: "Ir a reservas", ir: "calendario" });
@@ -1071,7 +1076,7 @@ function fillGuestList(movs) {
   const dl = $("guestlist");
   if (!dl) return;
   const nombres = new Set();
-  for (const b of BLOCKS) if (b.name) nombres.add(b.name);
+  for (const b of todasReservas()) if (b.name) nombres.add(b.name);
   for (const m of movs) if (m.guest) nombres.add(m.guest);
   dl.innerHTML = [...nombres].sort().map((n) => `<option value="${escHtml(n)}"></option>`).join("");
   // Sugerencias de "quién pagó": los que ya se usaron antes, para no reescribirlos
