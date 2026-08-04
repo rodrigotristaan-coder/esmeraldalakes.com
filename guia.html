@@ -52,6 +52,18 @@
     section li{margin:.25rem 0}
     .note{background:rgba(255,255,255,.6);border:1px solid rgba(166,124,0,.35);border-left:3px solid var(--gold);border-radius:14px;padding:.7rem .9rem;margin:.8rem 0;font-size:.92rem}
     .btn{display:inline-block;background:var(--gold);color:#fff;font-weight:700;text-decoration:none;padding:.7rem 1.4rem;border-radius:999px;margin-top:.6rem}
+    /* Ruta de llegada: las 5 paradas, en orden, con la línea que las une.
+       Va en vertical a propósito — se lee en el celular y se imprime bien. */
+    .ruta{list-style:none;margin:.9rem 0 .3rem;padding:0;position:relative;counter-reset:ruta}
+    .ruta li{position:relative;padding:0 0 1.15rem 2.4rem;counter-increment:ruta}
+    .ruta li::before{content:counter(ruta);position:absolute;left:0;top:0;width:1.6rem;height:1.6rem;
+      border-radius:50%;background:var(--gold);color:#fff;font-weight:700;font-size:.85rem;
+      display:flex;align-items:center;justify-content:center}
+    /* La línea baja de un número al siguiente; la última parada no la lleva */
+    .ruta li:not(:last-child)::after{content:"";position:absolute;left:.77rem;top:1.7rem;bottom:.15rem;
+      width:2px;background:rgba(166,124,0,.3)}
+    .ruta li b{display:block;margin-bottom:.1rem}
+    .ruta li span{display:block;font-size:.93rem;opacity:.88}
     table.fines{width:100%;border-collapse:collapse;margin-top:.6rem;font-size:.92rem}
     table.fines th,table.fines td{text-align:left;padding:.55rem .5rem;border-bottom:1px solid #eee}
     table.fines th{color:var(--gold);text-transform:uppercase;font-size:.72rem;letter-spacing:.06em}
@@ -90,6 +102,7 @@
     <nav class="toc">
       <h2 data-es="Contenido" data-en="Contents"></h2>
       <ol>
+        <li><a href="#antes" data-es="Antes de llegar" data-en="Before you arrive"></a></li>
         <li><a href="#llegar" data-es="Cómo llegar" data-en="Getting here"></a></li>
         <li><a href="#acceso" data-es="Acceso y entrada" data-en="Access & entry"></a></li>
         <li><a href="#wifi" data-es="WiFi y entretenimiento" data-en="WiFi & entertainment"></a></li>
@@ -105,6 +118,35 @@
       </ol>
     </nav>
 
+    <!-- 0. Antes de llegar — lo que más se pregunta y lo que más se atora.
+         Va primero a propósito: los huéspedes suelen escribir el mismo día,
+         muchas veces ya en carretera. -->
+    <section id="antes">
+      <h2>✅ <span data-es="Antes de llegar" data-en="Before you arrive"></span></h2>
+      <p data-es="Con estos cinco datos adelantamos tu registro y entras rápido por la caseta. Mándanoslos por WhatsApp en cuanto puedas — <strong>si ya vas en camino, no pasa nada: también se resuelve el mismo día</strong>." data-en="With these five items we pre-register you so you get through the gate quickly. Send them over WhatsApp whenever you can — <strong>if you're already on the road, no problem: we can still sort it out the same day</strong>."></p>
+      <ol>
+        <li data-es="<strong>INE del responsable</strong> — foto por ambos lados." data-en="<strong>Lead guest's photo ID</strong> — picture of both sides."></li>
+        <li data-es="<strong>Nombre completo de cada huésped</strong> y cuántos son en total." data-en="<strong>Full name of every guest</strong> and the total headcount."></li>
+        <li data-es="<strong>Datos del auto: placas, modelo y color.</strong>" data-en="<strong>Car details: license plate, model and color.</strong>"></li>
+        <li data-es="<strong>Última hoja del reglamento, con tu nombre y firma.</strong> Puedes mandarnos una <strong>foto de la hoja firmada por WhatsApp</strong>, o llevarla impresa a la caseta. Descárgala en <a href='/reglamento'>esmeraldalakes.com/reglamento</a>." data-en="<strong>Last page of the condo rules, with your name and signature.</strong> You can send us a <strong>photo of the signed page over WhatsApp</strong>, or bring it printed to the gate. Download it at <a href='/reglamento'>esmeraldalakes.com/reglamento</a>."></li>
+        <li data-es="<strong>Comprobante de las pulseras de acceso</strong> — $50 por persona (ver cuenta abajo)." data-en="<strong>Proof of payment for the access wristbands</strong> — $50 MXN per person (account details below)."></li>
+      </ol>
+
+      <h3 data-es="Pulseras de acceso — $50 por persona" data-en="Access wristbands — $50 MXN per person"></h3>
+      <p data-es="Es un <strong>cobro de la administración del residencial</strong>, no del departamento, y se paga <strong>solo por transferencia</strong>: <strong>no se acepta efectivo</strong>. Sin pulsera no hay acceso a alberca ni áreas comunes." data-en="This is a <strong>charge from the residential administration</strong>, not from the apartment, and it is paid <strong>by bank transfer only</strong>: <strong>cash is not accepted</strong>. Without a wristband there's no access to the pool or common areas."></p>
+      <ul>
+        <li><strong>Banco:</strong> BBVA</li>
+        <li data-es="<strong>Destinatario:</strong> Administración Diamante Lakes Acapulco" data-en="<strong>Recipient:</strong> Administración Diamante Lakes Acapulco"></li>
+        <li data-es="<strong>CLABE:</strong> 012261001929045781" data-en="<strong>CLABE:</strong> 012261001929045781"></li>
+        <li data-es="<strong>Concepto:</strong> tu nombre + E-205" data-en="<strong>Reference:</strong> your name + E-205"></li>
+        <li data-es="<strong>Monto:</strong> $50 × número de personas" data-en="<strong>Amount:</strong> $50 MXN × number of guests"></li>
+      </ul>
+      <div class="note" data-es="📸 Mándanos el comprobante por WhatsApp y con eso adelantamos tu registro." data-en="📸 Send us the receipt over WhatsApp and we'll pre-register you with it."></div>
+
+      <h3 data-es="¿Vienes con mascota?" data-en="Traveling with a pet?"></h3>
+      <p data-es="Avísanos <strong>antes</strong> de llegar. Se permiten con autorización previa: siempre con correa, prohibidas en áreas verdes, alberca y jacuzzi, y hay que recoger sus desechos. Cualquier multa del condominio por la mascota corre por cuenta del huésped." data-en="Let us know <strong>before</strong> you arrive. Pets are allowed with prior approval: always on a leash, not allowed on lawns, in the pool or the jacuzzi, and you must pick up after them. Any condo fine related to the pet is charged to the guest."></p>
+    </section>
+
     <!-- 1. Cómo llegar -->
     <section id="llegar">
       <h2>🚗 <span data-es="Cómo llegar" data-en="Getting here"></span></h2>
@@ -116,6 +158,31 @@
       <h3 data-es="Desde la Costera / centro" data-en="From the Costera / downtown"></h3>
       <p data-es="Toma la <strong>Carretera Escénica</strong> hacia Puerto Marqués, baja al <strong>Blvd. de las Naciones</strong> y sigue rumbo al aeropuerto hasta la Arena GNP Seguros (20–25 min aprox.)." data-en="Take the <strong>Carretera Escénica</strong> toward Puerto Marqués, exit onto <strong>Blvd. de las Naciones</strong> and continue toward the airport until the Arena GNP Seguros (about 20–25 min)."></p>
       <a class="btn" href="https://maps.google.com/?q=Diamante+Lakes+Revolcadero+Acapulco" target="_blank" rel="noopener" data-es="📍 Abrir en Google Maps" data-en="📍 Open in Google Maps"></a>
+
+      <h3 data-es="De la entrada a la puerta del depa" data-en="From the gate to the apartment door"></h3>
+      <p data-es="Cinco paradas, en este orden. Cada una tiene su requisito — por eso conviene traerlos listos." data-en="Five stops, in this order. Each one has its requirement — that's why it helps to have them ready."></p>
+      <ol class="ruta">
+        <li>
+          <b data-es="Arena GNP Seguros" data-en="Arena GNP Seguros"></b>
+          <span data-es="Tu referencia sobre Blvd. de las Naciones. Diamante Lakes está justo al lado." data-en="Your landmark on Blvd. de las Naciones. Diamante Lakes is right next to it."></span>
+        </li>
+        <li>
+          <b data-es="Caseta de vigilancia" data-en="Security gate"></b>
+          <span data-es="Da el nombre de la reservación. Presenta <strong>INE</strong> y la <strong>hoja del reglamento firmada</strong>. Te dan el pase del carro (se devuelve al salir)." data-en="Give the booking name. Show your <strong>photo ID</strong> and the <strong>signed rules page</strong>. They hand you a car pass (returned when you leave)."></span>
+        </li>
+        <li>
+          <b data-es="Administración" data-en="Administration office"></b>
+          <span data-es="Pasan <strong>todos los huéspedes</strong> por sus pulseras. Ya pagadas por transferencia." data-en="<strong>All guests</strong> stop here for their wristbands. Already paid by transfer."></span>
+        </li>
+        <li>
+          <b data-es="Estacionamiento del cluster" data-en="Cluster parking"></b>
+          <span data-es="Solo el <strong>cajón asignado al 205</strong>, justo enfrente del departamento. Máx. 10 km/h dentro del residencial." data-en="Only the <strong>spot assigned to 205</strong>, right in front of the apartment. Max 10 km/h inside the complex."></span>
+        </li>
+        <li>
+          <b data-es="Esmeralda 205" data-en="Esmeralda 205"></b>
+          <span data-es="Planta alta. Abre con el <strong>código que te mandamos por WhatsApp</strong> una hora antes." data-en="Upper floor. Open with the <strong>code we send you on WhatsApp</strong> an hour before."></span>
+        </li>
+      </ol>
     </section>
 
     <!-- 2. Acceso -->
@@ -124,8 +191,8 @@
       <h3 data-es="Entrada al condominio" data-en="Condo entrance"></h3>
       <p data-es="En la caseta de vigilancia da el <strong>nombre con el que se hizo la reservación</strong> y deja una <strong>identificación</strong>; te darán un <strong>pase para el carro</strong>, que se entrega al salir." data-en="At the security booth give the <strong>name used for the booking</strong> and leave an <strong>ID</strong>; you'll receive a <strong>car pass</strong>, which you return when you leave."></p>
       <h3 data-es="Entrada al departamento" data-en="Apartment entry"></h3>
-      <p data-es="El departamento tiene <strong>cerradura inteligente</strong>: el código se envía al <strong>correo y celular con los que reservaste</strong>, cerca de tu fecha de llegada." data-en="The apartment has a <strong>smart lock</strong>: the code is sent to the <strong>email and phone number used for your booking</strong>, close to your arrival date."></p>
-      <div class="note" data-es="🔐 Por tu seguridad y la del depa, los códigos se envían cerca de la fecha y cambian entre estancias." data-en="🔐 For your safety and the apartment's, codes are sent close to the date and change between stays."></div>
+      <p data-es="El departamento tiene <strong>cerradura inteligente</strong>: te enviamos el código <strong>por WhatsApp, alrededor de una hora antes de tu llegada</strong>." data-en="The apartment has a <strong>smart lock</strong>: we send you the code <strong>via WhatsApp, about an hour before you arrive</strong>."></p>
+      <div class="note" data-es="🔐 Por tu seguridad y la del depa, el código cambia entre estancias. Si no te abre a la primera, escríbenos por WhatsApp y lo resolvemos en el momento." data-en="🔐 For your safety and the apartment's, the code changes between stays. If it doesn't work on the first try, message us on WhatsApp and we'll sort it out right away."></div>
     </section>
 
     <!-- 3. WiFi y entretenimiento -->
@@ -152,8 +219,8 @@
       <h2>🏖️ <span data-es="Reglas del condominio" data-en="Condo rules"></span></h2>
       <ul>
         <li data-es="<strong>Alberca / jacuzzi:</strong> horario <strong>9:00 – 23:00</strong> (mantenimiento 7–9). Jacuzzi solo mayores de 12 años. No vidrio, alimentos ni hieleras en el área; alimentos solo en la palapa. Menores de 4 años con pañal de alberca. Sin inflables grandes (máx 60 cm)." data-en="<strong>Pool / jacuzzi:</strong> hours <strong>9:00 AM – 11:00 PM</strong> (maintenance 7–9 AM). Jacuzzi is ages 12+ only. No glass, food or coolers in the pool area; food only at the palapa. Kids under 4 must wear swim diapers. No large inflatables (max 60 cm)."></li>
-        <li data-es="<strong>Pulseras de identificación (obligatorias):</strong> al llegar, pasa a LA ADMINISTRACIÓN para que te coloquen tu pulsera (<strong>$50 por persona</strong>, efectivo o transferencia). Sin pulsera no hay acceso a áreas comunes, y <strong>no te la quites durante la estancia</strong> (el reemplazo se cobra)." data-en="<strong>ID wristbands (mandatory):</strong> upon arrival, stop by THE ADMINISTRATION office to get your wristband (<strong>$50 MXN per person</strong>, cash or transfer). No wristband, no access to common areas — and <strong>don't remove it during your stay</strong> (replacements are charged)."></li>
-        <li data-es="<strong>Registro previo:</strong> por reglamento avisamos tu llegada a la administración con 48 h de anticipación — te pediremos <strong>nombres de los huéspedes e identificación del responsable</strong>, y la firma del reglamento del condominio." data-en="<strong>Pre-registration:</strong> per condo bylaws we notify the administration 48h before your arrival — we'll ask for <strong>guest names and the lead guest's ID</strong>, plus a signed copy of the condo rules."></li>
+        <li data-es="<strong>Pulseras de identificación (obligatorias):</strong> <strong>$50 por persona</strong>, que se pagan <strong>solo por transferencia</strong> a la administración del residencial — <strong>no se acepta efectivo</strong>. Los datos de la cuenta están arriba, en “Antes de llegar”. Sin pulsera no hay acceso a áreas comunes, y <strong>no te la quites durante la estancia</strong> (el reemplazo se cobra)." data-en="<strong>ID wristbands (mandatory):</strong> <strong>$50 MXN per person</strong>, paid <strong>by bank transfer only</strong> to the residential administration — <strong>cash is not accepted</strong>. Account details are above, under “Before you arrive”. No wristband, no access to common areas — and <strong>don't remove it during your stay</strong> (replacements are charged)."></li>
+        <li data-es="<strong>Registro previo:</strong> avisamos tu llegada a la administración para que tu entrada sea rápida. Entre antes nos mandes tus datos, mejor — pero si vas en camino, no te preocupes: también lo resolvemos el mismo día." data-en="<strong>Pre-registration:</strong> we notify the administration of your arrival so your entry is quick. The sooner you send us your details the better — but if you're already on the road, don't worry, we can also sort it out the same day."></li>
         <li data-es="<strong>Visitas durante tu estancia:</strong> máximo 4 personas, con autorización previa y registro en administración. Las visitas <strong>no pueden usar la alberca ni quedarse a dormir</strong>." data-en="<strong>Visitors during your stay:</strong> up to 4 people, with prior approval and registration at the administration. Visitors <strong>may not use the pool or stay overnight</strong>."></li>
         <li data-es="<strong>Horario de silencio:</strong> 22:00 – 8:00. La música siempre a volumen moderado, y después de las <strong>23:00</strong> aún más bajo." data-en="<strong>Quiet hours:</strong> 10:00 PM – 8:00 AM. Music always at moderate volume, and even lower after <strong>11:00 PM</strong>."></li>
         <li data-es="<strong>Áreas comunes:</strong> uso responsable; los <strong>menores de 12 siempre acompañados</strong> de un adulto. No apartar camastros ni llevarse mobiliario." data-en="<strong>Common areas:</strong> responsible use; <strong>kids under 12 always supervised</strong> by an adult. No reserving loungers or moving furniture."></li>
