@@ -23,3 +23,23 @@
 
   apply(lang);
 })();
+
+// Las secciones vienen plegadas: si llegas por el índice (o por un enlace con
+// #ancla) hay que abrir la que buscas, o el salto deja al lector en un título
+// cerrado sin entender por qué "no está" el contenido.
+(function () {
+  function abrirDestino() {
+    var id = decodeURIComponent(location.hash.slice(1));
+    if (!id) return;
+    var el = document.getElementById(id);
+    if (!el) return;
+    // El ancla puede ser la sección misma o algo dentro de ella
+    var det = el.closest ? el.closest("details") : null;
+    if (el.tagName === "DETAILS") det = el;
+    if (det && !det.open) det.open = true;
+    // Con la sección ya abierta, el navegador no reposiciona solo
+    el.scrollIntoView({ block: "start" });
+  }
+  window.addEventListener("hashchange", abrirDestino);
+  if (location.hash) setTimeout(abrirDestino, 0);
+})();
