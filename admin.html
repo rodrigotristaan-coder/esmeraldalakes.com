@@ -127,6 +127,11 @@
     .cinta__d { flex:1 1 0; min-width:0; height:100%; border-radius:3px; background:rgba(255,255,255,.1); position:relative; }
     .cinta__d.dir { background:var(--aqua); }
     .cinta__d.abb { background:var(--ambar); }
+    /* Medio día en la cinta, misma convención que el calendario:
+       izquierda = mañana (quien sale) · derecha = noche (quien entra).
+       Los colores llegan inline desde admin-app.js. */
+    .cinta__d.mitades { background-image:linear-gradient(to right,
+        var(--mit-izq,transparent) 0 50%, var(--mit-der,transparent) 50% 100%); }
     .cinta__d.hoy { box-shadow:0 0 0 2px #fff; z-index:1; }
     .cinta__ejes { display:flex; justify-content:space-between; font-size:.68rem; color:rgba(255,255,255,.55); margin-top:.35rem; }
 
@@ -339,7 +344,7 @@
         <p class="ahora__sub muted" id="hoy-sub"></p>
         <div class="cinta" id="hoy-cinta" aria-label="Ocupación de los próximos 30 días"></div>
         <div class="cinta__ejes"><span id="hoy-eje-a"></span><span id="hoy-eje-b"></span></div>
-        <p id="hoy-dia" aria-live="polite">Pasa el cursor por un día para ver quién está y cuánto entra o sale.</p>
+        <p id="hoy-dia" aria-live="polite">Media barra = ese día alguien sale (izquierda) o entra (derecha). Pasa el cursor para ver quién y cuánto se movió.</p>
       </div>
 
       <div class="bloque" data-plegable>
@@ -692,6 +697,6 @@
   </div>
 </dialog>
 
-<script src="/admin-app.js?v=20260803-6" defer></script>
+<script src="/admin-app.js?v=20260804-1" defer></script>
 </body>
 </html>

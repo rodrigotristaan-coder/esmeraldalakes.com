@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260803-6";
+const VERSION = "20260804-1";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -655,9 +655,19 @@ function renderHoy() {
     cinta.innerHTML = "";
     for (let i = 0; i < 30; i++) {
       const ds = masDias(hoyDs, i);
-      const s = srcFor(ds);
+      // Mismas mitades que el calendario: izquierda = mañana (quien sale),
+      // derecha = noche (quien entra), barra llena = estancia continua.
+      const eSrc = srcFor(ds);
+      const mSrc = srcFor(prevDs(ds));
+      let cls = "", mitades = null;
+      if (eSrc && mSrc === eSrc) cls = " " + eSrc;
+      else if (mSrc || eSrc) { cls = " mitades"; mitades = { mSrc, eSrc }; }
       const el = document.createElement("span");
-      el.className = "cinta__d" + (s ? " " + s : "") + (i === 0 ? " hoy" : "");
+      el.className = "cinta__d" + cls + (i === 0 ? " hoy" : "");
+      if (mitades) {
+        el.style.setProperty("--mit-izq", mitades.mSrc ? COLOR_MC[mitades.mSrc] : "transparent");
+        el.style.setProperty("--mit-der", mitades.eSrc ? COLOR_MC[mitades.eSrc] : "transparent");
+      }
       el.tabIndex = 0;
       const detalle = detalleDia(ds);
       el.title = detalle;
