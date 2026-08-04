@@ -64,8 +64,13 @@
     .sec .ruta{padding-left:0}
     /* Fotos de la guía */
     .foto{margin:.9rem 0 .2rem}
-    .foto img{width:100%;max-width:420px;border-radius:18px;border:1px solid var(--glass-border);display:block}
-    .foto figcaption{font-size:.88rem;color:#5c6b65;margin-top:.4rem}
+    /* height:auto es obligatorio: el <img> trae width/height reales en el HTML
+       (para que no brinque el layout al cargar), y sin esto el alto del atributo
+       se aplica tal cual y la foto sale estirada. Son verticales, de celular,
+       así que se topan chicas para que no se coman la pantalla en escritorio. */
+    .foto img{display:block;width:100%;height:auto;max-width:280px;
+      border-radius:18px;border:1px solid var(--glass-border)}
+    .foto figcaption{font-size:.88rem;color:#5c6b65;margin-top:.4rem;max-width:280px}
     .note{background:rgba(255,255,255,.6);border:1px solid rgba(166,124,0,.35);border-left:3px solid var(--gold);border-radius:14px;padding:.7rem .9rem;margin:.8rem 0;font-size:.92rem}
     .btn{display:inline-block;background:var(--gold);color:#fff;font-weight:700;text-decoration:none;padding:.7rem 1.4rem;border-radius:999px;margin-top:.6rem}
     /* Ruta de llegada: las 5 paradas, en orden, con la línea que las une.
