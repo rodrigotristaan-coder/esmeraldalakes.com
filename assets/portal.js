@@ -229,6 +229,25 @@
     var rn = document.getElementById("d-regl-nombre");
     if (rn && !rn.value) rn.value = d.name || "";
 
+    // --- Documentos: identificacion y comprobante de pulseras ---
+    // El texto del boton se cambia por sus data-es/data-en (no por textContent)
+    // para que el cambio de idioma lo siga pintando bien.
+    DOCS.forEach(function (doc) {
+      var est = document.getElementById("d-doc-" + doc.k + "-estado");
+      var btn = document.getElementById("d-doc-" + doc.k + "-btn");
+      var tiene = (d.docs && d.docs[doc.k]) || null;
+      if (est) {
+        var etiqueta = lang === "en" ? doc.en : doc.es;
+        est.textContent = tiene
+          ? "✅ " + etiqueta + " · " + (lang === "en" ? "received " : "recibida ") + fmtDate((tiene.at || "").slice(0, 10))
+          : "⬜ " + etiqueta + " · " + (lang === "en" ? "pending" : "pendiente");
+      }
+      if (btn) {
+        btn.setAttribute("data-es", tiene ? "Reemplazar" : doc.btnEs);
+        btn.setAttribute("data-en", tiene ? "Replace" : doc.btnEn);
+      }
+    });
+
     show("dash"); apply(lang);
   }
 
@@ -271,6 +290,71 @@
     } catch (e) {
       setStatus(out, lang === "en" ? "Couldn't record it. Try again." : "No se pudo registrar. Inténtalo otra vez.", "err");
     } finally { btnRegl.disabled = false; }
+  });
+
+  // Documentos que el huesped puede mandar desde el portal.
+  var DOCS = [
+    { k: "ine", es: "Identificación", en: "ID", btnEs: "Subir identificación", btnEn: "Upload ID" },
+    { k: "pulseras", es: "Pago de pulseras", en: "Wristband payment", btnEs: "Subir comprobante", btnEn: "Upload receipt" },
+  ];
+
+  function aBase64(file, cb) {
+    var fr = new FileReader();
+    fr.onload = function () { cb(String(fr.result).split(",")[1], file.type); };
+    fr.onerror = function () { cb(null); };
+    fr.readAsDataURL(file);
+  }
+
+  // Una foto de celular pesa varios MB y no hace falta tanto para leer una
+  // identificacion: se reduce a 1600 px antes de subirla. Va con
+  // imageOrientation porque si no, las fotos de iPhone llegan giradas — el EXIF
+  // se pierde al pasarlas por el canvas.
+  function comprimir(file, cb) {
+    if (file.type === "application/pdf" || !window.createImageBitmap) { aBase64(file, cb); return; }
+    createImageBitmap(file, { imageOrientation: "from-image" }).then(function (bm) {
+      var max = 1600, w = bm.width, h = bm.height;
+      if (w > max || h > max) { var s = Math.min(max / w, max / h); w = Math.round(w * s); h = Math.round(h * s); }
+      var cv = document.createElement("canvas");
+      cv.width = w; cv.height = h;
+      cv.getContext("2d").drawImage(bm, 0, 0, w, h);
+      bm.close();
+      cb(cv.toDataURL("image/jpeg", 0.85).split(",")[1], "image/jpeg");
+    }).catch(function () { aBase64(file, cb); });
+  }
+
+  DOCS.forEach(function (doc) {
+    var btn = document.getElementById("d-doc-" + doc.k + "-btn");
+    var inp = document.getElementById("d-doc-" + doc.k + "-file");
+    var out = document.getElementById("d-docs-msg");
+    if (!btn || !inp || !out) return;
+    btn.addEventListener("click", function () { inp.click(); });
+    inp.addEventListener("change", function () {
+      var file = inp.files && inp.files[0];
+      if (!file) return;
+      if (file.size > 20 * 1024 * 1024) {
+        setStatus(out, lang === "en" ? "That file is too big." : "Ese archivo pesa demasiado.", "err");
+        inp.value = ""; return;
+      }
+      btn.disabled = true;
+      setStatus(out, lang === "en" ? "Uploading…" : "Subiendo…", "");
+      comprimir(file, async function (data, mime) {
+        try {
+          if (!data) throw new Error("lectura");
+          var r = await fetch("/api/portal-me?action=documento", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ tipo: doc.k, mime: mime, data: data }),
+          });
+          var j = await r.json();
+          if (!j.ok) throw new Error(j.error || "no");
+          setStatus(out, lang === "en" ? "Received ✅ Thanks." : "Recibido ✅ Gracias.", "ok");
+          await loadDash();
+        } catch (e) {
+          setStatus(out, lang === "en" ? "Couldn't upload it. Try again." : "No se pudo subir. Inténtalo otra vez.", "err");
+        } finally { btn.disabled = false; inp.value = ""; }
+      });
+    });
   });
 
   async function loadDash() {

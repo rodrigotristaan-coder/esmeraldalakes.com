@@ -201,6 +201,26 @@
         <p id="d-regl-msg" style="margin:.5rem 0 0;font-size:.85rem;min-height:1.1rem"></p>
       </div>
 
+      <div class="guidebox" id="d-docs" style="display:block">
+        <p style="font-weight:700;margin:0 0 .15rem" data-es="📎 Lo que falta para tu llegada" data-en="📎 What's left before you arrive"></p>
+        <p style="margin:0 0 .7rem;font-size:.85rem;opacity:.85" data-es="Con esto te damos de alta en la caseta. Basta una foto legible desde el celular." data-en="This is what registers you at the gatehouse. A clear phone photo is enough."></p>
+
+        <div class="refrow" style="gap:.5rem;flex-wrap:wrap;margin-bottom:.55rem">
+          <span id="d-doc-ine-estado" style="flex:1;min-width:180px;font-size:.9rem"></span>
+          <input type="file" id="d-doc-ine-file" accept="image/jpeg,image/png,image/webp,application/pdf" style="display:none" />
+          <button type="button" class="btn btn--ghost" id="d-doc-ine-btn" data-es="Subir identificación" data-en="Upload ID" style="width:auto;padding:.6rem 1.1rem;margin:0"></button>
+        </div>
+
+        <div class="refrow" style="gap:.5rem;flex-wrap:wrap">
+          <span id="d-doc-pulseras-estado" style="flex:1;min-width:180px;font-size:.9rem"></span>
+          <input type="file" id="d-doc-pulseras-file" accept="image/jpeg,image/png,image/webp,application/pdf" style="display:none" />
+          <button type="button" class="btn btn--ghost" id="d-doc-pulseras-btn" data-es="Subir comprobante" data-en="Upload receipt" style="width:auto;padding:.6rem 1.1rem;margin:0"></button>
+        </div>
+
+        <p id="d-docs-msg" style="margin:.5rem 0 0;font-size:.85rem;min-height:1.1rem"></p>
+        <p style="margin:.6rem 0 0;font-size:.78rem;opacity:.7" data-es="Tu identificación se guarda en un espacio privado y se usa solo para registrarte en la caseta. Si vuelves, no tendrás que subirla otra vez." data-en="Your ID is kept in private storage and used only to register you at the gatehouse. If you come back, you won't need to upload it again."></p>
+      </div>
+
       <div class="guidebox">
         <div style="flex:1;min-width:200px">
           <p style="font-weight:700;margin:0 0 .15rem" data-es="📖 Guía del huésped" data-en="📖 Guest guide"></p>
@@ -225,6 +245,6 @@
   </div>
 
   <!-- ?v= por el caché inmutable de /assets: súbelo cada vez que cambie portal.js -->
-  <script src="/assets/portal.js?v=20260801a"></script>
+  <script src="/assets/portal.js?v=20260805a"></script>
 </body>
 </html>

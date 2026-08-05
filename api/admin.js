@@ -240,7 +240,10 @@ module.exports = async (req, res) => {
         const cliente = new Anthropic();
         const r = await cliente.messages.create({
           model: "claude-opus-5",
-          max_tokens: 4000,
+          // Este tope lo comparten el razonamiento del modelo y la respuesta. Con un
+          // ticket arrugado piensa de más y, si se queda corto, el JSON llega cortado
+          // y la lectura se pierde. Solo se cobra lo que de verdad genera.
+          max_tokens: 8000,
           output_config: {
             effort: "medium",
             format: {
