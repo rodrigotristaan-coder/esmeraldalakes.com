@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260806-1";
+const VERSION = "20260806-2";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -544,12 +544,20 @@ const escHtml = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", 
 // ===================== Costos por reserva =====================
 // Cada huésped cuesta recibirlo y cuesta dejar el depa limpio cuando se va.
 // Estos son los montos que se proponen; siempre se pueden ajustar antes de confirmar.
-const COSTO_RECEPCION = 100;
-const COSTO_LIMPIEZA = 400;
+// Cada huésped cuesta $500: $100 de recibirlo y $400 de dejar el depa limpio
+// cuando se va. Se registran JUNTOS, en un solo movimiento el día que se va.
+//
+// Antes eran dos movimientos, uno en cada punta de la estancia. Rodrigo pidió
+// juntarlos el 6-ago-2026 porque en la práctica es un solo pago a la misma
+// persona y llevar dos renglones por huésped era trabajo de más.
+//
+// ⚠️ Si algún día se vuelven a separar, hay que separar TAMBIÉN lo que el panel
+// propone: si lo que se propone y lo que se registra no dicen exactamente lo
+// mismo, nunca se reconocen y "Por hacer" queda pidiendo lo que ya pagaste.
+const COSTO_POR_HUESPED = 500;
 
 const quienDe = (b) => b.name || (b.source === "airbnb" ? "Airbnb" : "Reserva directa");
-const conceptoRecepcion = (b) => `Recepción — ${quienDe(b)} ${fmtD(b.start)}`;
-const conceptoLimpieza = (b) => `Limpieza — ${quienDe(b)} ${fmtD(b.end)}`;
+const conceptoEstancia = (b) => `Recepción y limpieza — ${quienDe(b)} ${fmtD(b.end)}`;
 
 // Cuando un huésped alarga su estancia, las noches extra pueden quedar como una
 // reserva pegada a la anterior (con Airbnb no hay de otra: su reserva no se
@@ -578,11 +586,12 @@ function pendientesDeReservas() {
   // veía nada del pasado: las recepciones y limpiezas de huéspedes que ya se
   // fueron jamás aparecían como pendientes de registrar.
   for (const b of todasReservas()) {
-    const items = [];
-    // Una continuación no se cobra como llegada nueva ni como salida: el huésped
-    // ni se fue ni volvió a llegar, solo se quedó más noches.
-    if (!esContinuacion(b)) items.push({ tipo: "recepcion", date: b.start, amount: COSTO_RECEPCION, concept: conceptoRecepcion(b), etiqueta: "Recepción", categoria: "Recepción" });
-    if (!sigueDespues(b)) items.push({ tipo: "limpieza", date: b.end, amount: COSTO_LIMPIEZA, concept: conceptoLimpieza(b), etiqueta: "Limpieza", categoria: "Limpieza" });
+    // Se propone el día que se va, que es cuando se paga todo junto.
+    // Si el huésped alargó su estancia, esta reserva no termina en salida: sigue
+    // la continuación, y el cobro va al final de la última.
+    const items = sigueDespues(b)
+      ? []
+      : [{ tipo: "estancia", date: b.end, amount: COSTO_POR_HUESPED, concept: conceptoEstancia(b), etiqueta: "Recepción y limpieza", categoria: "Limpieza" }];
     for (const it of items) {
       if (it.date < desde || it.date > hasta) continue;
       if (yaHay.has(it.concept.trim().toLowerCase())) continue;
@@ -609,8 +618,8 @@ function detalleDia(ds) {
   const llega = todasReservas().filter((b) => b.start === ds);
   const sale = todasReservas().filter((b) => b.end === ds);
   if (w) partes.push(`👤 ${w.quien}`);
-  for (const b of llega) partes.push(`🛬 llega ${quienDe(b)} · recepción ${money(COSTO_RECEPCION)}`);
-  for (const b of sale) partes.push(`🧹 sale ${quienDe(b)} · limpieza ${money(COSTO_LIMPIEZA)}`);
+  for (const b of llega) partes.push(`🛬 llega ${quienDe(b)}`);
+  for (const b of sale) partes.push(`🧹 sale ${quienDe(b)}${sigueDespues(b) ? " (se queda más)" : ` · recepción y limpieza ${money(COSTO_POR_HUESPED)}`}`);
   if (!partes.length) partes.push("libre");
   const { ing, gas } = dineroDelDia(ds);
   if (ing) partes.push(`entra ${money(ing)}`);
@@ -881,7 +890,7 @@ function renderHoy() {
     if (res.length) {
       const total = res.reduce((a, r) => a + r.amount, 0);
       const quienes = [...new Set(res.map((r) => quienDe(r.b)))].join(", ");
-      items.push({ ico: "🧹", txt: `${res.length} cobro${res.length === 1 ? "" : "s"} de recepción o limpieza sin registrar`,
+      items.push({ ico: "🧹", txt: `${res.length} huésped${res.length === 1 ? "" : "es"} sin registrar su recepción y limpieza`,
         sub: `${money(total)} en total · ${quienes}`, btn: "Revisar", ir: "recurrentes" });
     }
     const rec = pendientesDelMes();
