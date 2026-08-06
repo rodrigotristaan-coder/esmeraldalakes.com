@@ -1,8 +1,8 @@
-// Utilidades compartidas: almacenamiento de fechas (Vercel Blob), firma HMAC,
+// Utilidades compartidas: almacenamiento (Postgres en Neon), firma HMAC,
 // lectura de calendarios iCal y detección de traslapes.
 // Archivos con guion bajo NO son rutas en Vercel.
 const crypto = require("crypto");
-const { put, list } = require("@vercel/blob");
+const { neon } = require("@neondatabase/serverless");
 
 // El depa está en Acapulco. Calcular "hoy" con toISOString() da la fecha en UTC,
 // así que a partir de las 18:00 hora local el sistema se adelantaba un día:
@@ -18,7 +18,7 @@ const CUSTOMERS = "customers.json";
 const CODES = "portal-codes.json";
 const FINANCE = "finance.json";
 // El contador de lecturas de ticket vive APARTE, no en finance.json. Si viviera
-// ahí, cada foto sería una escritura más al documento del dinero — y ese blob ya
+// ahí, cada foto sería una escritura más al documento del dinero — y ese documento ya
 // perdió datos dos veces por escrituras encimadas (25-jul y 31-jul de 2026).
 // Aquí, en el peor caso, se pierde una cuenta; nunca un movimiento.
 const TICKETS = "ticket-uso.json";
@@ -38,11 +38,58 @@ function safeEqual(a, b) {
   return x.length === y.length && crypto.timingSafeEqual(x, y);
 }
 
-// Lectura del blob con cache-buster: la URL pública pasa por CDN y puede servir
-// una copia vieja aunque cacheControlMaxAge sea 0. Sin esto, un read-modify-write
-// con copia stale sobreescribe (y pierde) escrituras recientes — pasó con una
-// reseña el 25-jul-2026.
-const freshUrl = (url) => url + (url.includes("?") ? "&" : "?") + "_=" + Date.now();
+// ===================== El almacén =====================
+// Antes esto vivía en Vercel Blob: un archivo JSON por cosa. Se cambió el
+// 6-ago-2026 por dos razones, y la segunda es la que de verdad importa:
+//
+// 1. Blob cobra por operación y el patrón de aquí no cachea nada a propósito
+//    (para no leer copias viejas), así que cada consulta contaba. Con 6 KB de
+//    datos se topó el plan y el almacén quedó suspendido un mes: el panel dejó
+//    de guardar y las fechas ocupadas salieron libres en el feed de Airbnb.
+//
+// 2. Blob no sabe de transacciones. Dos escrituras seguidas al mismo archivo se
+//    pisaban, y eso ya costó datos dos veces (una reseña el 25-jul y un
+//    movimiento el 1-ago). Se mitigó a mano, pero era un parche sobre algo que
+//    una base de datos resuelve de raíz.
+//
+// El formato no cambió: cada documento sigue siendo el mismo JSON, ahora en un
+// renglón de la tabla `docs` (clave, valor, version). Eso mantuvo la migración
+// chica y sin tocar nada del panel.
+let _sql = null;
+function db() {
+  if (!_sql) {
+    const url = process.env.DATABASE_URL;
+    if (!url) throw new Error("falta DATABASE_URL");
+    _sql = neon(url);
+  }
+  return _sql;
+}
+
+// Devuelve el documento y su versión. La versión es lo que después permite
+// escribir sin pisar a nadie (ver mutarDoc).
+async function leerDoc(clave) {
+  const filas = await db()`select valor, version from docs where clave = ${clave}`;
+  return filas.length ? { valor: filas[0].valor, version: filas[0].version } : { valor: null, version: null };
+}
+
+async function guardarDoc(clave, valor) {
+  await db()`insert into docs (clave, valor) values (${clave}, ${JSON.stringify(valor)}::jsonb)
+             on conflict (clave) do update set valor = excluded.valor, version = docs.version + 1, actualizado = now()`;
+}
+
+// Escribe SOLO si nadie más escribió desde que leímos. Devuelve false si alguien
+// se nos adelantó, para volver a intentarlo sobre lo nuevo en vez de pisarlo.
+async function guardarSiNadieEscribio(clave, valor, version) {
+  const j = JSON.stringify(valor);
+  if (version === null) {
+    const f = await db()`insert into docs (clave, valor) values (${clave}, ${j}::jsonb)
+                         on conflict (clave) do nothing returning clave`;
+    return f.length > 0;
+  }
+  const f = await db()`update docs set valor = ${j}::jsonb, version = version + 1, actualizado = now()
+                       where clave = ${clave} and version = ${version} returning clave`;
+  return f.length > 0;
+}
 
 // Red de emergencia para cuando el almacén no responde.
 //
@@ -71,12 +118,10 @@ async function readBlocks() {
     return copia;
   };
   try {
-    const { blobs } = await list({ prefix: FILE });
-    if (!blobs.length) return []; // el almacén contestó: de verdad no hay nada
-    const r = await fetch(freshUrl(blobs[0].url), { cache: "no-store" });
-    if (!r.ok) return seFue(`el almacén respondió ${r.status}`);
-    const j = await r.json();
-    return Array.isArray(j) ? j : [];
+    const { valor } = await leerDoc(FILE);
+    // Si la base contesta y dice que no hay nada, se respeta: eso es un dato,
+    // no una falla. El respaldo entra solo cuando la consulta truena.
+    return Array.isArray(valor) ? valor : [];
   } catch (e) {
     return seFue(e.message);
   }
@@ -89,13 +134,7 @@ async function writeBlocks(arr) {
   if (arr && arr.esRespaldo) {
     throw new Error("el almacén no está respondiendo: no se guarda encima del respaldo");
   }
-  await put(FILE, JSON.stringify(arr), {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: "application/json",
-    cacheControlMaxAge: 0, // sin caché: lecturas siempre frescas (bloqueos inmediatos)
-  });
+  await guardarDoc(FILE, arr);
 }
 
 // Campos opcionales de una reserva directa (los usa el admin y el bot)
@@ -154,28 +193,18 @@ async function removeBlock(start, end) {
   return next;
 }
 
-// --- Reseñas (Vercel Blob) ---
+// --- Reseñas ---
 async function readReviews() {
   try {
-    const { blobs } = await list({ prefix: REVIEWS });
-    if (!blobs.length) return [];
-    const r = await fetch(freshUrl(blobs[0].url), { cache: "no-store" });
-    if (!r.ok) return [];
-    const j = await r.json();
-    return Array.isArray(j) ? j : [];
+    const { valor } = await leerDoc(REVIEWS);
+    return Array.isArray(valor) ? valor : [];
   } catch (e) {
     console.error("readReviews:", e.message);
     return [];
   }
 }
 async function writeReviews(arr) {
-  await put(REVIEWS, JSON.stringify(arr), {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: "application/json",
-    cacheControlMaxAge: 0,
-  });
+  await guardarDoc(REVIEWS, arr);
 }
 
 // --- Calendarios iCal externos (Airbnb / directo extra) ---
@@ -240,9 +269,8 @@ async function fetchIcal(url, source) {
 
 // Todos los bloqueos: Airbnb + iCal directo + reservas directas guardadas.
 // `known`: arreglo de reservas directas ya en memoria (p. ej. el que acaba de
-// escribirse). Se pasa para NO releer el blob justo después de un put —
-// esa relectura puede traer una copia vieja y "desaparecer" la reserva recién
-// hecha. Sin argumento se comporta como siempre y lee del blob.
+// escribirse). Se pasa para ahorrarse la consulta justo después de guardar.
+// Sin argumento, lee de la base.
 async function getAllBlocks(known) {
   const urls = [
     [process.env.AIRBNB_ICAL_URL, "airbnb"],
@@ -282,7 +310,7 @@ async function sendEmail(to, subject, html) {
 }
 
 // ===================== Portal de clientes =====================
-// Almacenamiento de clientes (Vercel Blob). Objeto keyed por email (minúsculas):
+// Clientes. Objeto keyed por email (minúsculas):
 //   { email, name, refCode, referredBy, freeNights, createdAt, reservations[], credits[] }
 const PORTAL_SECRET = () => process.env.PORTAL_SECRET || process.env.CONFIRM_SECRET || "";
 const SESSION_TTL = 30 * 24 * 60 * 60 * 1000; // 30 días
@@ -298,37 +326,27 @@ function psign(value) {
   return crypto.createHmac("sha256", PORTAL_SECRET()).update(String(value)).digest("hex");
 }
 
-// Lee/escribe un JSON arbitrario en Blob (objeto). Devuelve {} si no existe.
+// Lee/escribe un documento JSON cualquiera (objeto). Devuelve {} si no existe.
 async function readJsonObj(name) {
   try {
-    const { blobs } = await list({ prefix: name });
-    if (!blobs.length) return {};
-    const r = await fetch(freshUrl(blobs[0].url), { cache: "no-store" });
-    if (!r.ok) return {};
-    const j = await r.json();
-    return j && typeof j === "object" && !Array.isArray(j) ? j : {};
+    const { valor } = await leerDoc(name);
+    return valor && typeof valor === "object" && !Array.isArray(valor) ? valor : {};
   } catch (e) {
     console.error("readJsonObj " + name + ":", e.message);
     return {};
   }
 }
 async function writeJsonObj(name, obj) {
-  await put(name, JSON.stringify(obj), {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: "application/json",
-    cacheControlMaxAge: 0,
-  });
+  await guardarDoc(name, obj);
 }
 
 const readCustomers = () => readJsonObj(CUSTOMERS);
 const writeCustomers = (o) => writeJsonObj(CUSTOMERS, o);
 
-// --- Finanzas (ingresos y gastos del depa, Vercel Blob) ---
+// --- Finanzas (ingresos y gastos del depa) ---
 // Movimiento: { id, type: "in"|"out", date: "YYYY-MM-DD", concept, category, amount, guest?, at }
 // Recurrente: { id, type, concept, category, amount, day (1-28), activo }
-// Los dos viven en el MISMO blob: { movs, recurring }. Por eso writeFinance relee
+// Los dos viven en el MISMO documento: { movs, recurring }. Por eso writeFinance relee
 // el doc antes de escribir — si escribiera solo { movs } borraría los recurrentes.
 // `notas`: datos que ponemos a mano sobre una reserva que NO controlamos (las de
 // Airbnb llegan por iCal y no traen nombre). Van indexadas por "llegada_salida".
@@ -366,50 +384,53 @@ async function writeFinance(movs) {
   await writeFinanceDoc(doc);
 }
 
-// Guarda un cambio en el documento de finanzas y COMPRUEBA que quedó.
+// Cambia un documento sin que dos cambios simultáneos se pisen.
 //
-// El blob es eventualmente consistente: dos escrituras seguidas pueden pisarse
-// porque la segunda lee una copia vieja del documento. Pasó de verdad el
-// 31-jul-2026: se registró un gasto de luz y, en el mismo segundo, tres altas de
-// recurrentes; las altas leyeron el documento sin el gasto y lo borraron al
-// guardar.
+// El problema que resuelve, con nombre y apellido: el 31-jul-2026 se registró un
+// gasto de luz y, en el mismo segundo, tres altas de recurrentes; las altas
+// leyeron el documento SIN el gasto y lo borraron al guardar. Con Blob no había
+// forma de evitarlo: se leía, se modificaba en memoria y se escribía entero, y
+// quien llegaba tarde ganaba.
+//
+// Ahora cada documento lleva una `version` que sube en cada escritura. Se lee la
+// versión junto con el documento y se escribe solo si sigue siendo la misma. Si
+// alguien se adelantó, el UPDATE no toca nada, se vuelve a leer lo NUEVO y se
+// aplica el cambio encima. Nadie pierde su escritura.
+//
+// (La verificación por relectura que había antes ya no hace falta: Postgres
+// contesta si guardó o no. Se acabaron los hasta 4 segundos de espera.)
 //
 // `aplicar(doc)`  muta el documento y devuelve lo que haga falta (o {error}).
-// `quedo(doc)`    dice si el cambio ya se ve al releer.
-// Si no se ve, se reintenta aplicando el cambio sobre lo MÁS FRESCO que haya.
-async function mutarDoc(leer, escribir, aplicar, quedo, etiqueta) {
-  const doc = await leer();
-  const r = aplicar(doc);
-  if (r && r.error) return { error: r.error };
-  await escribir(doc);
-
-  // Se verifica LEYENDO, nunca volviendo a escribir.
-  //
-  // El primer intento de arreglo reescribía cuando la verificación fallaba, y
-  // resultó peor: cada reintento manda una copia construida sobre una base
-  // distinta, esas copias llegan desordenadas al almacenamiento y una vieja
-  // puede pisar a una nueva. Se comprobó el 1-ago-2026: de dos altas seguidas,
-  // la primera sobrevivió y la segunda desapareció, y las dos "fallaron".
-  //
-  // El blob solo tarda en propagar; con esperar alcanza. Si aun así no se ve,
-  // se devuelve el documento que sí tenemos en memoria y un aviso — sin
-  // reescribir, porque reescribir es lo que rompe.
-  for (let i = 0; i < 6; i++) {
-    await new Promise((s) => setTimeout(s, 200 * (i + 1)));
-    const check = await leer();
-    if (quedo(check)) return { doc: check, r };
+// `quedo(doc)`    se recibe por compatibilidad con quien ya llamaba a esto; hoy
+//                 no se usa, porque la base ya confirma la escritura.
+async function mutarDoc(clave, normalizar, aplicar, quedo, etiqueta) {
+  for (let intento = 1; intento <= 5; intento++) {
+    const { valor, version } = await leerDoc(clave);
+    const doc = normalizar(valor);
+    const r = aplicar(doc);
+    if (r && r.error) return { error: r.error };
+    if (await guardarSiNadieEscribio(clave, doc, version)) return { doc, r };
+    console.error(`${etiqueta}: otro cambio entró primero, se reintenta sobre lo nuevo (intento ${intento})`);
   }
-  console.error(etiqueta + ": escrito, pero no se pudo confirmar leyendo");
-  return { doc, r, aviso: "sin-confirmar" };
+  // Cinco choques seguidos no es una carrera normal, es algo raro. Mejor avisar
+  // que guardar a ciegas: el de arriba enseña el error y nadie pierde nada.
+  console.error(etiqueta + ": no se pudo guardar tras 5 intentos");
+  return { error: "el documento está cambiando demasiado seguido, intenta de nuevo" };
 }
 
+const normFinanzas = (o) => ({
+  movs: Array.isArray(o && o.movs) ? o.movs : [],
+  recurring: Array.isArray(o && o.recurring) ? o.recurring : [],
+  notas: o && o.notas && typeof o.notas === "object" && !Array.isArray(o.notas) ? o.notas : {},
+});
+
 const mutarFinanzas = (aplicar, quedo) =>
-  mutarDoc(readFinanceDoc, writeFinanceDoc, aplicar, quedo, "mutarFinanzas");
+  mutarDoc(FINANCE, normFinanzas, aplicar, quedo, "mutarFinanzas");
 
 // Cuenta una lectura de ticket del día y dice si ya se pasó del tope.
 // Es una red de seguridad contra un ciclo que queme el saldo de la API, no una
 // contabilidad: si una escritura se pierde, la cuenta queda corta y no pasa nada.
-// Por eso NO usa mutarDoc — su verificación tarda hasta 4 s y aquí no hace falta.
+// Por eso no pasa por mutarDoc: no vale la pena reintentar por un contador.
 // Se cuenta ANTES de llamar al modelo: si la llamada truena a la mitad, ya contó.
 async function contarTicket(tope) {
   const hoy = hoyMx();
@@ -421,11 +442,12 @@ async function contarTicket(tope) {
   return { n, tope, pasado: n > tope };
 }
 
-// Los clientes viven en otro blob pero corren el mismo riesgo: dos cambios
+// Los clientes viven en otro documento pero corrían el mismo riesgo: dos cambios
 // seguidos (p. ej. el huésped acepta el reglamento mientras el admin le pone
-// el teléfono) se pisarían.
+// el teléfono) se pisaban.
+const normClientes = (o) => (o && typeof o === "object" && !Array.isArray(o) ? o : {});
 const mutarClientes = (aplicar, quedo) =>
-  mutarDoc(readCustomers, writeCustomers, aplicar, quedo, "mutarClientes");
+  mutarDoc(CUSTOMERS, normClientes, aplicar, quedo, "mutarClientes");
 
 // Versión del reglamento que se acepta. Si el condominio publica uno nuevo, se
 // cambia aquí y las aceptaciones viejas quedan marcadas con la versión anterior.
@@ -562,12 +584,12 @@ async function seedCustomer({ email, name, sampleReservation }) {
     customers[key].reservations.push({ ...sampleReservation, at: new Date().toISOString(), sample: true });
   }
   await writeCustomers(customers);
-  // Devuelve el objeto ya en memoria: quien llame NO debe releer el blob
-  // (la lectura inmediata después de escribir puede traer la copia vieja).
+  // Devuelve el objeto ya en memoria para que quien llame no tenga que
+  // volver a consultar lo que acaba de guardar.
   return { ok: true, email: key, refCode: customers[key].refCode, customers };
 }
 
-// --- Magic-link: códigos de 6 dígitos (Vercel Blob) ---
+// --- Magic-link: códigos de 6 dígitos ---
 const genCode = () => String(crypto.randomInt(0, 1000000)).padStart(6, "0");
 
 async function issueCode(email) {
