@@ -47,5 +47,11 @@ module.exports = async (req, res) => {
     Promise.all(sources.map(([url, src]) => fetchBlocks(url, src))),
     readBlocks(), // reservas directas confirmadas (guardadas en la web)
   ]);
-  return res.status(200).json({ blocked: [...icalResults.flat(), ...directBlocks] });
+  // Solo salen fechas. Esta ruta es PÚBLICA y las reservas directas guardadas
+  // traen además nombre del huésped, tarifa, cuántos son y quién los recomendó:
+  // devolverlas enteras publicaba datos personales de gente real y, de paso, el
+  // precio que se le cobró a cada quien. El calendario de la web nada más
+  // necesita saber qué días están ocupados.
+  const soloFechas = (b) => ({ start: b.start, end: b.end, source: b.source });
+  return res.status(200).json({ blocked: [...icalResults.flat(), ...directBlocks].map(soloFechas) });
 };
