@@ -44,22 +44,51 @@ function safeEqual(a, b) {
 // reseña el 25-jul-2026.
 const freshUrl = (url) => url + (url.includes("?") ? "&" : "?") + "_=" + Date.now();
 
+// Red de emergencia para cuando el almacén no responde.
+//
+// Antes, si la lectura fallaba, esto devolvía una lista VACÍA — o sea, "no hay
+// ninguna reserva". Eso es lo peor que puede contestar: /api/availability dice
+// que todo está libre y /calendar.ics sale sin eventos, y ese feed es el que lee
+// Airbnb para bloquear fechas. Resultado: el depa se vende dos veces la misma
+// noche, con un huésped real que hay que cancelar.
+//
+// Pasó de verdad el 6-ago-2026: el store de Blob se suspendió por tope del plan
+// y las fechas de Carla (8–14 ago) aparecieron como disponibles en Airbnb.
+//
+// Ojo con la diferencia: si el almacén contesta bien y dice que no hay reservas,
+// se respeta (devuelve vacío). El respaldo entra SOLO cuando la lectura falla.
+const RESPALDO = require("./_reservas-respaldo.json").reservas;
+
 // --- Reservas directas guardadas (fechas) ---
 async function readBlocks() {
+  const seFue = (porQue) => {
+    console.error(`readBlocks: ${porQue} — se usan las fechas de respaldo (${RESPALDO.length} reservas)`);
+    const copia = RESPALDO.slice();
+    // Marca para que NADIE escriba esta lista de vuelta: el respaldo trae solo
+    // fechas, así que guardarlo encima de blocks.json borraría los nombres, los
+    // huéspedes y las tarifas de todas las reservas reales.
+    Object.defineProperty(copia, "esRespaldo", { value: true, enumerable: false });
+    return copia;
+  };
   try {
     const { blobs } = await list({ prefix: FILE });
-    if (!blobs.length) return [];
+    if (!blobs.length) return []; // el almacén contestó: de verdad no hay nada
     const r = await fetch(freshUrl(blobs[0].url), { cache: "no-store" });
-    if (!r.ok) return [];
+    if (!r.ok) return seFue(`el almacén respondió ${r.status}`);
     const j = await r.json();
     return Array.isArray(j) ? j : [];
   } catch (e) {
-    console.error("readBlocks:", e.message);
-    return [];
+    return seFue(e.message);
   }
 }
 
 async function writeBlocks(arr) {
+  // Si esta lista salió del respaldo de emergencia, la lectura falló y aquí solo
+  // hay fechas. Guardarla borraría las reservas reales. Mejor fallar de frente:
+  // quien esté guardando ve un error y vuelve a intentar cuando el almacén sirva.
+  if (arr && arr.esRespaldo) {
+    throw new Error("el almacén no está respondiendo: no se guarda encima del respaldo");
+  }
   await put(FILE, JSON.stringify(arr), {
     access: "public",
     addRandomSuffix: false,

@@ -1,0 +1,13 @@
+{
+  "_porQue": "Red de emergencia. Si el almacen de datos no responde, las reservas directas desaparecen y tanto /api/availability como /calendar.ics dicen que todo esta libre — y Airbnb lee ese feed para bloquear fechas. Sin esto, el depa se puede vender dos veces la misma noche.",
+  "_cuando": "Escrito el 2026-08-06, con el store de Vercel Blob suspendido por tope del plan Hobby.",
+  "_ojo": "Solo van FECHAS. Este repositorio es publico: aqui no van nombres, telefonos ni montos. Las fechas ya son publicas de todos modos, porque el feed las publica para que las plataformas bloqueen.",
+  "_mantenimiento": "Es una foto, no se actualiza sola. En cuanto el almacen responda otra vez, manda lo que este guardado y esto deja de usarse.",
+  "reservas": [
+    { "start": "2026-08-08", "end": "2026-08-14", "source": "directo" },
+    { "start": "2026-08-16", "end": "2026-08-21", "source": "directo" },
+    { "start": "2026-09-15", "end": "2026-09-20", "source": "directo" },
+    { "start": "2026-11-26", "end": "2026-11-27", "source": "directo" },
+    { "start": "2027-01-15", "end": "2027-03-16", "source": "directo" }
+  ]
+}
