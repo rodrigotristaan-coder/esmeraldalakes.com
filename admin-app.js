@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260804-2";
+const VERSION = "20260806-1";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -551,6 +551,21 @@ const quienDe = (b) => b.name || (b.source === "airbnb" ? "Airbnb" : "Reserva di
 const conceptoRecepcion = (b) => `Recepción — ${quienDe(b)} ${fmtD(b.start)}`;
 const conceptoLimpieza = (b) => `Limpieza — ${quienDe(b)} ${fmtD(b.end)}`;
 
+// Cuando un huésped alarga su estancia, las noches extra pueden quedar como una
+// reserva pegada a la anterior (con Airbnb no hay de otra: su reserva no se
+// puede mover desde aquí). Eso NO es una llegada nueva ni una salida: no se le
+// recibe otra vez ni se limpia el depa con él adentro. Se reconoce por lo único
+// que se puede saber sin inventar campos: mismo nombre y fechas pegadas.
+const mismaReserva = (a, b) => a.start === b.start && a.end === b.end;
+const mismoHuesped = (a, b) => {
+  const n = (a.name || "").trim().toLowerCase();
+  return !!n && n === (b.name || "").trim().toLowerCase();
+};
+// ¿Esta reserva continúa una anterior del mismo huésped? (no hubo llegada)
+const esContinuacion = (b) => todasReservas().some((x) => !mismaReserva(x, b) && x.end === b.start && mismoHuesped(x, b));
+// ¿Al terminar esta reserva el huésped se queda? (no hubo salida)
+const sigueDespues = (b) => todasReservas().some((x) => !mismaReserva(x, b) && x.start === b.end && mismoHuesped(x, b));
+
 // Propone recepción y limpieza de cada reserva que no esté ya registrada.
 // Ventana: de 60 días atrás a 7 adelante, para que la de mañana ya aparezca.
 function pendientesDeReservas() {
@@ -563,10 +578,11 @@ function pendientesDeReservas() {
   // veía nada del pasado: las recepciones y limpiezas de huéspedes que ya se
   // fueron jamás aparecían como pendientes de registrar.
   for (const b of todasReservas()) {
-    const items = [
-      { tipo: "recepcion", date: b.start, amount: COSTO_RECEPCION, concept: conceptoRecepcion(b), etiqueta: "Recepción", categoria: "Recepción" },
-      { tipo: "limpieza", date: b.end, amount: COSTO_LIMPIEZA, concept: conceptoLimpieza(b), etiqueta: "Limpieza", categoria: "Limpieza" },
-    ];
+    const items = [];
+    // Una continuación no se cobra como llegada nueva ni como salida: el huésped
+    // ni se fue ni volvió a llegar, solo se quedó más noches.
+    if (!esContinuacion(b)) items.push({ tipo: "recepcion", date: b.start, amount: COSTO_RECEPCION, concept: conceptoRecepcion(b), etiqueta: "Recepción", categoria: "Recepción" });
+    if (!sigueDespues(b)) items.push({ tipo: "limpieza", date: b.end, amount: COSTO_LIMPIEZA, concept: conceptoLimpieza(b), etiqueta: "Limpieza", categoria: "Limpieza" });
     for (const it of items) {
       if (it.date < desde || it.date > hasta) continue;
       if (yaHay.has(it.concept.trim().toLowerCase())) continue;
@@ -615,6 +631,152 @@ function fechaLarga(ds) {
 }
 const noches = (b) => Math.round((new Date(b.end) - new Date(b.start)) / 86400000);
 
+// ===================== Alargar la estancia =====================
+// El caso real: el huésped ya está adentro y decide quedarse más noches, a un
+// precio que se acuerda en el momento (casi nunca es la tarifa con la que entró).
+// Si la reserva es directa se le recorre la salida. Si viene de Airbnb no se
+// puede tocar —llega por su calendario—, así que las noches extra se guardan
+// como una reserva directa pegada a la suya, con su mismo nombre.
+let EXT = null;
+
+// Quién está en el depa. El día de salida cuenta: es justo cuando más se pide
+// quedarse otra noche. Si ese día ya llegó alguien más, gana quien duerme hoy.
+function huespedActual() {
+  const hoyDs = hoyMx();
+  const todas = todasReservas();
+  return todas.find((b) => hoyDs >= b.start && hoyDs < b.end) || todas.find((b) => b.end === hoyDs) || null;
+}
+
+// Si ya se le añadieron noches antes, la estancia se alarga desde la última.
+function ultimaDeLaEstancia(b) {
+  let cur = b;
+  for (let i = 0; i < 20; i++) {
+    const sig = todasReservas().find((x) => !mismaReserva(x, cur) && x.start === cur.end && mismoHuesped(x, cur));
+    if (!sig) return cur;
+    cur = sig;
+  }
+  return cur;
+}
+
+// Cuántas noches caben antes de la siguiente reserva. Sin este tope se podría
+// alargar una estancia encima de otra: el servidor no valida traslapes, así que
+// el resultado sería el depa rentado dos veces la misma noche.
+function nochesLibresTras(b) {
+  const sig = todasReservas()
+    .filter((x) => !mismaReserva(x, b) && x.start >= b.end)
+    .sort((x, y) => x.start.localeCompare(y.start))[0];
+  if (!sig) return { tope: Infinity, sig: null };
+  return { tope: Math.round((new Date(sig.start) - new Date(b.end)) / 86400000), sig };
+}
+
+// Lo ya registrado a nombre de este huésped (para no volver a cobrarle de más)
+function ingresoDe(b) {
+  const n = (b.name || "").trim().toLowerCase();
+  if (!n) return 0;
+  return FIN.filter((m) => m.type === "in" && (m.guest || "").trim().toLowerCase() === n)
+    .reduce((a, m) => a + (Number(m.amount) || 0), 0);
+}
+
+function abrirExtender() {
+  const actual = huespedActual();
+  if (!actual) { msg("Ahora mismo no hay ningún huésped al que alargarle la estancia.", false); return; }
+  const b = ultimaDeLaEstancia(actual);
+  const { tope, sig } = nochesLibresTras(b);
+  EXT = { b, tope, sig };
+  // Lo que venía pagando por noche: en una directa es su tarifa; en Airbnb sale
+  // del desglose anotado. Es contexto para decidir, no el precio que se propone:
+  // una noche extra se vende directa, no al precio de la plataforma.
+  const nb = noches(b);
+  const porNoche = b.rate || (b.tarifa && nb ? Math.round((b.tarifa / nb) * 100) / 100 : 0);
+  const canal = b.source === "airbnb" ? "Airbnb" : "reserva directa";
+  $("ext-quien").textContent = `${quienDe(b)} · ${canal} · ${fmtD(b.start)} → ${fmtD(b.end)}` +
+    (porNoche ? ` · venía pagando ${money(porNoche)}/noche` : "");
+  $("ext-noches").value = "1";
+  if (Number.isFinite(tope)) $("ext-noches").max = String(tope); else $("ext-noches").removeAttribute("max");
+  // La tarifa de una directa sirve de punto de partida; la de Airbnb no, porque
+  // estas noches ya no las cobra la plataforma. Ahí se escribe a propósito.
+  $("ext-precio").value = b.source === "airbnb" ? "" : (b.rate || "");
+  $("ext-cobrar").checked = true;
+  pintarExtender();
+  abrir("dlg-extender");
+  $("ext-noches").focus();
+}
+
+function pintarExtender() {
+  if (!EXT) return;
+  const el = $("ext-resumen");
+  const btn = $("ext-guardar");
+  const n = Math.floor(Number($("ext-noches").value) || 0);
+  const p = Math.round((Number($("ext-precio").value) || 0) * 100) / 100;
+  const choca = () => `${quienDe(EXT.sig)} llega el ${fechaLarga(EXT.sig.start)}`;
+  if (EXT.tope < 1) {
+    el.textContent = `No cabe ninguna noche extra: ${choca()}, justo cuando termina esta reserva.`;
+    btn.disabled = true;
+    return;
+  }
+  if (n < 1) { el.textContent = "Escribe cuántas noches se queda."; btn.disabled = true; return; }
+  if (n > EXT.tope) {
+    el.textContent = `Solo caben ${EXT.tope} noche${EXT.tope === 1 ? "" : "s"}: ${choca()}.`;
+    btn.disabled = true;
+    return;
+  }
+  const nuevoEnd = masDias(EXT.b.end, n);
+  el.innerHTML = `Se queda hasta el <b>${escHtml(fechaLarga(nuevoEnd))}</b> (salida ${escHtml(EXT.b.checkoutTime || "10:00")}).` +
+    (p > 0 ? ` Son <b>${money(n * p)}</b> por ${n} noche${n === 1 ? "" : "s"}.` : " Falta el precio por noche.");
+  btn.disabled = false;
+}
+
+async function guardarExtension() {
+  if (!EXT) return;
+  const b = EXT.b;
+  const n = Math.floor(Number($("ext-noches").value) || 0);
+  const p = Math.round((Number($("ext-precio").value) || 0) * 100) / 100;
+  const cobrar = $("ext-cobrar").checked;
+  if (n < 1 || n > EXT.tope) { msg("Revisa cuántas noches se queda.", false); return; }
+  if (cobrar && !(p > 0)) { msg("Ponle precio por noche, o desmarca el registro del ingreso.", false); return; }
+  const nuevoEnd = masDias(b.end, n);
+  const btn = $("ext-guardar");
+  btn.disabled = true;
+  try {
+    let r;
+    if (b.source === "airbnb") {
+      const qs = [
+        `&start=${b.end}`, `&end=${nuevoEnd}`,
+        `&name=${encodeURIComponent(b.name || "")}`,
+        b.guests ? `&guests=${b.guests}` : "",
+        p > 0 ? `&rate=${p}` : "",
+        `&checkinTime=${encodeURIComponent(b.checkinTime || "14:00")}`,
+        `&checkoutTime=${encodeURIComponent(b.checkoutTime || "10:00")}`,
+      ].join("");
+      r = await api("&action=block" + qs);
+    } else {
+      // Solo se manda la salida nueva: lo que no viaja, el servidor lo conserva.
+      r = await api(`&action=block-update&ostart=${b.start}&oend=${b.end}&end=${nuevoEnd}`);
+    }
+    if (!r.ok) throw new Error(r.error || "no se pudo");
+    cerrar("dlg-extender");
+    EXT = null;
+    if (r.direct) applyBlocks(r); else await load();
+    msg(`Estancia alargada hasta el ${fmtD(nuevoEnd)} ✅`);
+    // El ingreso va aparte y después: son dos documentos distintos, y si este
+    // falla la estancia ya quedó bien (que es lo que no se puede perder).
+    if (cobrar && p > 0) {
+      const concepto = `Noches extra — ${quienDe(b)} · ${n} noche${n === 1 ? "" : "s"} hasta ${fmtD(nuevoEnd)}`;
+      try {
+        const fr = await financeAdd({ type: "in", date: hoyMx(), concept: concepto, category: "Reserva", amount: n * p, guest: b.name || "" });
+        if (fr.movs) applyFinance(fr.movs);
+        msg(`Estancia alargada hasta el ${fmtD(nuevoEnd)} · ${money(n * p)} registrados ✅`);
+      } catch (e) {
+        msg("Se añadieron las noches, pero el ingreso NO se guardó. Regístralo en Dinero.", false);
+      }
+    }
+  } catch (e) {
+    msg("No se pudieron añadir las noches: " + e.message, false);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function renderHoy() {
   const hoyDs = hoyMx();
   const f = $("hoy-fecha");
@@ -649,6 +811,31 @@ function renderHoy() {
     } else {
       frase.innerHTML = `El depa está <b>libre</b>.`;
       if (sub) sub.textContent = "No hay reservas próximas.";
+    }
+  }
+
+  // --- Ficha del huésped actual, con el botón de alargarle la estancia ---
+  // Aparece también el día que se va: ese día es cuando piden quedarse más.
+  const hc = $("hoy-huesped"), hd = $("hoy-huesped-d");
+  if (hc && hd) {
+    const act = huespedActual();
+    if (act) {
+      const b = ultimaDeLaEstancia(act);
+      const n = noches(b);
+      const canal = b.source === "airbnb" ? "Airbnb" : "Reserva directa";
+      const cobrado = ingresoDe(b);
+      const partes = [
+        `<b>${escHtml(quienDe(b))}</b>`,
+        canal,
+        `${fmtD(b.start)} → ${fmtD(b.end)} · ${n} noche${n === 1 ? "" : "s"}`,
+        b.end === hoyDs ? "sale hoy" : null,
+        b.rate ? `${money(b.rate)}/noche` : null,
+        cobrado > 0 ? `${money(cobrado)} registrados` : "sin ingreso registrado",
+      ].filter(Boolean);
+      hd.innerHTML = partes.join('<span class="sep">·</span>');
+      hc.hidden = false;
+    } else {
+      hc.hidden = true;
     }
   }
 
@@ -2077,6 +2264,9 @@ document.addEventListener("DOMContentLoaded", () => {
   $("f-cancel").addEventListener("click", () => { resetMovForm(); msg("Edición cancelada."); });
   $("periodo-sel").addEventListener("change", (e) => { PERIODO = e.target.value; renderStats(FIN); });
   $("r-add").addEventListener("click", addRecurring);
+  $("hoy-extender").addEventListener("click", abrirExtender);
+  $("ext-guardar").addEventListener("click", guardarExtension);
+  ["ext-noches", "ext-precio"].forEach((id) => $(id).addEventListener("input", pintarExtender));
   $("cal-prev").addEventListener("click", () => calMove(-1));
   $("cal-next").addEventListener("click", () => calMove(1));
   $("cal-hoy").addEventListener("click", calHoy);

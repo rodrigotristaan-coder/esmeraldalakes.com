@@ -135,6 +135,14 @@
     .cinta__d.hoy { box-shadow:0 0 0 2px #fff; z-index:1; }
     .cinta__ejes { display:flex; justify-content:space-between; font-size:.68rem; color:rgba(255,255,255,.55); margin-top:.35rem; }
 
+    /* Ficha de quien está en el depa ahora, con el botón de alargarle la estancia.
+       Va pegada a la frase de arriba porque habla de la misma persona. */
+    .hcard { margin-top:.8rem; padding-top:.8rem; border-top:1px solid rgba(255,255,255,.14);
+      display:flex; align-items:center; gap:.7rem; flex-wrap:wrap; }
+    .hcard__d { flex:1 1 240px; font-size:.84rem; color:rgba(255,255,255,.75); line-height:1.5; }
+    .hcard__d b { color:#fff; font-weight:400; }
+    .hcard__d .sep { opacity:.4; margin:0 .35rem; }
+
     /* ---------- pendientes ---------- */
     .pend { display:flex; align-items:center; gap:.75rem; padding:.7rem .3rem; border-bottom:1px solid rgba(255,255,255,.12); }
     .pend:last-child { border-bottom:0; }
@@ -342,6 +350,10 @@
       <div class="ahora">
         <p class="ahora__frase" id="hoy-frase">Cargando…</p>
         <p class="ahora__sub muted" id="hoy-sub"></p>
+        <div class="hcard" id="hoy-huesped" hidden>
+          <span class="hcard__d" id="hoy-huesped-d"></span>
+          <button class="quiet" id="hoy-extender" type="button">+ Añadir noches</button>
+        </div>
         <div class="cinta" id="hoy-cinta" aria-label="Ocupación de los próximos 30 días"></div>
         <div class="cinta__ejes"><span id="hoy-eje-a"></span><span id="hoy-eje-b"></span></div>
         <p id="hoy-dia" aria-live="polite">Media barra = ese día alguien sale (izquierda) o entra (derecha). Pasa el cursor para ver quién y cuánto se movió.</p>
@@ -545,6 +557,27 @@
   </div>
 </dialog>
 
+<!-- Alargar la estancia de quien ya está en el depa -->
+<dialog id="dlg-extender" aria-labelledby="ext-title">
+  <div class="modal">
+    <div class="modal__head">
+      <h2 id="ext-title">Añadir noches</h2>
+      <button class="modal__cerrar" type="button" data-cerrar aria-label="Cerrar">✕</button>
+    </div>
+    <p class="muted" id="ext-quien"></p>
+    <div class="fgrid">
+      <label>Noches extra <input id="ext-noches" type="number" min="1" step="1" value="1" /></label>
+      <label>Precio por noche <input id="ext-precio" type="number" min="0" step="0.01" placeholder="MXN" /></label>
+      <label class="wide check"><input id="ext-cobrar" type="checkbox" checked /> Registrar el ingreso de estas noches</label>
+    </div>
+    <p id="ext-resumen" aria-live="polite"></p>
+    <div class="modal__pie">
+      <button class="ghost" type="button" data-cerrar>Cerrar</button>
+      <button id="ext-guardar" type="button">Añadir noches</button>
+    </div>
+  </div>
+</dialog>
+
 <!-- Movimiento de dinero -->
 <dialog id="dlg-mov" aria-labelledby="mov-title">
   <div class="modal">
@@ -697,6 +730,6 @@
   </div>
 </dialog>
 
-<script src="/admin-app.js?v=20260804-2" defer></script>
+<script src="/admin-app.js?v=20260806-1" defer></script>
 </body>
 </html>
