@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260806-2";
+const VERSION = "20260807-1";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -477,6 +477,7 @@ function applyBlocks(data) {
   renderPasadas();
   renderHoy();
   renderResPend(); // las reservas cambiaron: recepción y limpieza también
+  renderFinPend();
 }
 
 // Estancias que ya terminaron. El panel solo mostraba el futuro, así que los
@@ -886,13 +887,10 @@ function renderHoy() {
   if (box) {
     box.innerHTML = "";
     const items = [];
+    // Los cobros de recepción y limpieza se confirman aquí mismo, tarjeta por
+    // tarjeta. Antes solo había un renglón que mandaba a Recurrentes; Rodrigo
+    // pidió (7-ago-2026) tenerlos por confirmar directo en Hoy y en Dinero.
     const res = pendientesDeReservas();
-    if (res.length) {
-      const total = res.reduce((a, r) => a + r.amount, 0);
-      const quienes = [...new Set(res.map((r) => quienDe(r.b)))].join(", ");
-      items.push({ ico: "🧹", txt: `${res.length} huésped${res.length === 1 ? "" : "es"} sin registrar su recepción y limpieza`,
-        sub: `${money(total)} en total · ${quienes}`, btn: "Revisar", ir: "recurrentes" });
-    }
     const rec = pendientesDelMes();
     if (rec.length) {
       const total = rec.reduce((a, x) => a + montoPropuesto(x), 0);
@@ -912,9 +910,15 @@ function renderHoy() {
       items.push({ ico: "💵", txt: `${sinCobrar.length} reserva${sinCobrar.length === 1 ? "" : "s"} terminada${sinCobrar.length === 1 ? "" : "s"} sin ingreso registrado`,
         sub: sinCobrar.map((b) => `${b.name} (${fmtD(b.start)})`).join(", "), btn: "Ir a reservas", ir: "calendario" });
     }
-    if (!items.length) {
+    if (!items.length && !res.length) {
       box.innerHTML = '<div class="vacio"><b>Todo al día</b>No hay nada pendiente por ahora.</div>';
     } else {
+      if (res.length) {
+        const total = res.reduce((a, r) => a + r.amount, 0);
+        box.insertAdjacentHTML("beforeend",
+          `<p class="muted">🧹 ${res.length} cobro${res.length === 1 ? "" : "s"} de recepción y limpieza por confirmar · ${money(total)} en total</p>`);
+        for (const it of res) box.appendChild(cardCostoReserva(it));
+      }
       for (const it of items) {
         const div = document.createElement("div");
         div.className = "pend";
@@ -1187,6 +1191,7 @@ function renderChart(movs) {
 }
 
 function renderFinance(movs) {
+  renderFinPend();
   buildPeriodo(movs);
   renderStats(movs);
   renderChart(movs);
@@ -1691,6 +1696,30 @@ function pendientesDelMes() {
   });
 }
 
+// Tarjeta de un cobro de estancia por confirmar: monto editable + botón.
+// La misma tarjeta se pinta en Hoy, en Dinero y en Recurrentes; el cobro no
+// se registra solo nunca, se confirma en cualquiera de las tres y desaparece
+// de todas.
+function cardCostoReserva(it) {
+  const div = document.createElement("div");
+  div.className = "card";
+  div.innerHTML = `<span style="text-align:left"><span class="tag out">${it.etiqueta.toUpperCase()}</span>` +
+    `<b>${escHtml(quienDe(it.b))}</b> <span class="muted">· ${fmtD(it.date)}` +
+    `${it.futuro ? " · aún no pasa" : ""}${it.b.source === "airbnb" ? " · Airbnb" : ""}</span></span>`;
+  const wrap = document.createElement("span");
+  wrap.className = "row";
+  const amt = document.createElement("input");
+  amt.type = "number"; amt.step = "0.01"; amt.min = "0"; amt.value = it.amount;
+  amt.style.width = "105px";
+  amt.setAttribute("aria-label", `Monto de ${it.etiqueta} de ${quienDe(it.b)}`);
+  const ok = document.createElement("button");
+  ok.textContent = "Confirmar";
+  ok.addEventListener("click", () => confirmarCostoReserva(it, parseFloat(amt.value), ok));
+  wrap.append(amt, ok);
+  div.appendChild(wrap);
+  return div;
+}
+
 // Recepción y limpieza de cada reserva, listas para confirmar (monto editable)
 function renderResPend() {
   const box = $("res-pending");
@@ -1704,25 +1733,23 @@ function renderResPend() {
   const total = pend.reduce((a, r) => a + r.amount, 0);
   box.insertAdjacentHTML("beforeend",
     `<p class="muted">${pend.length} por registrar · ${money(total)} en total</p>`);
-  for (const it of pend) {
-    const div = document.createElement("div");
-    div.className = "card";
-    div.innerHTML = `<span style="text-align:left"><span class="tag out">${it.etiqueta.toUpperCase()}</span>` +
-      `<b>${escHtml(quienDe(it.b))}</b> <span class="muted">· ${fmtD(it.date)}` +
-      `${it.futuro ? " · aún no pasa" : ""}${it.b.source === "airbnb" ? " · Airbnb" : ""}</span></span>`;
-    const wrap = document.createElement("span");
-    wrap.className = "row";
-    const amt = document.createElement("input");
-    amt.type = "number"; amt.step = "0.01"; amt.min = "0"; amt.value = it.amount;
-    amt.style.width = "105px";
-    amt.setAttribute("aria-label", `Monto de ${it.etiqueta} de ${quienDe(it.b)}`);
-    const ok = document.createElement("button");
-    ok.textContent = "Confirmar";
-    ok.addEventListener("click", () => confirmarCostoReserva(it, parseFloat(amt.value), ok));
-    wrap.append(amt, ok);
-    div.appendChild(wrap);
-    box.appendChild(div);
-  }
+  for (const it of pend) box.appendChild(cardCostoReserva(it));
+}
+
+// El mismo listado dentro de Dinero. El bloque entero solo se muestra cuando
+// hay cobros esperando, para no dejar un cajón vacío entre las cifras.
+function renderFinPend() {
+  const box = $("f-pending");
+  if (!box) return;
+  const pend = pendientesDeReservas();
+  const bloque = box.closest(".bloque");
+  if (bloque) bloque.hidden = !pend.length;
+  box.innerHTML = "";
+  if (!pend.length) return;
+  const total = pend.reduce((a, r) => a + r.amount, 0);
+  box.insertAdjacentHTML("beforeend",
+    `<p class="muted">${pend.length} cobro${pend.length === 1 ? "" : "s"} de recepción y limpieza · ${money(total)} en total. Nada se registra hasta que confirmes.</p>`);
+  for (const it of pend) box.appendChild(cardCostoReserva(it));
 }
 
 async function confirmarCostoReserva(it, amount, btn) {
