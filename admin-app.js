@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260810-1";
+const VERSION = "20260810-2";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -61,6 +61,7 @@ const VISTAS = [
   { id: "dinero",      nombre: "Dinero",      corto: "Dinero",  ico: "💰", accion: { txt: "+ Registrar movimiento", mini: "+ Movimiento", fn: () => nuevoMov() } },
   { id: "recurrentes", nombre: "Recurrentes", corto: "Recurr.", ico: "🔁", accion: { txt: "+ Nuevo recurrente",     mini: "+ Recurrente", fn: () => nuevoRecurrente() } },
   { id: "gente",       nombre: "Huéspedes",   corto: "Gente",   ico: "👤", accion: { txt: "+ Dar de alta cliente",  mini: "+ Cliente",    fn: () => abrir("dlg-cliente") } },
+  { id: "biandra",     nombre: "Biandra",     corto: "Biandra", ico: "🧹", accion: { txt: "+ Pago a Biandra",       mini: "+ Pago",       fn: () => pagoBiandra() } },
 ];
 let VISTA = "hoy";
 let RV_PEND = 0; // reseñas esperando aprobación (para el globito del menú)
@@ -68,8 +69,11 @@ let RV_PEND = 0; // reseñas esperando aprobación (para el globito del menú)
 // Cuántas cosas piden atención en cada sección
 function cuentas() {
   const rec = typeof pendientesDelMes === "function" ? pendientesDelMes().length : 0;
-  const res = typeof pendientesDeReservas === "function" ? pendientesDeReservas().length : 0;
-  return { hoy: rec + res + RV_PEND, recurrentes: rec + res, gente: RV_PEND };
+  const resArr = typeof pendientesDeReservas === "function" ? pendientesDeReservas() : [];
+  const res = resArr.length;
+  // El globito de Biandra solo cuenta lo que YA se le debe (estancias
+  // terminadas); las futuras aún no son deuda.
+  return { hoy: rec + res + RV_PEND, recurrentes: rec + res, gente: RV_PEND, biandra: resArr.filter((x) => !x.futuro).length };
 }
 
 function pintarMenu() {
@@ -478,6 +482,7 @@ function applyBlocks(data) {
   renderHoy();
   renderResPend(); // las reservas cambiaron: recepción y limpieza también
   renderFinPend();
+  renderBiandra();
 }
 
 // Estancias que ya terminaron. El panel solo mostraba el futuro, así que los
@@ -1567,6 +1572,115 @@ async function marcarSaldado(m, btn) {
   }
 }
 
+// ===================== Biandra (limpieza y recepción) =====================
+// Su cuenta se arma sola, sin capturar nada aparte: lo PAGADO son los gastos
+// de categoría Limpieza o Recepción (o que la mencionen por nombre), y lo que
+// SE LE DEBE son las estancias ya terminadas cuyo pago no está registrado —
+// las mismas tarjetas por confirmar de Hoy y Dinero, porque registrar ese
+// gasto ES pagarle.
+const esPagoBiandra = (m) => m.type === "out" &&
+  (["Limpieza", "Recepción"].includes((m.category || "").trim()) || /biandra/i.test(m.concept || ""));
+
+function renderBiandra() {
+  const stats = $("b-stats");
+  if (!stats) return;
+  const pagos = FIN.filter(esPagoBiandra);
+  const hoyDs = hoyMx();
+  const ym = hoyDs.slice(0, 7), yy = hoyDs.slice(0, 4);
+  const suma = (arr) => arr.reduce((a, m) => a + (Number(m.amount) || 0), 0);
+  const pend = pendientesDeReservas();
+  const deuda = pend.filter((x) => !x.futuro);
+  const porVenir = pend.filter((x) => x.futuro);
+  const totDeuda = deuda.reduce((a, x) => a + x.amount, 0);
+  stats.innerHTML = `
+    <div class="stat"><span class="lbl">Le debes hoy</span><b class="${totDeuda ? "neg" : "pos"}">${money(totDeuda)}</b><span class="muted">${deuda.length ? deuda.length + " estancia" + (deuda.length === 1 ? "" : "s") + " sin pagar" : "al corriente 🎉"}</span></div>
+    <div class="stat"><span class="lbl">Pagado · ${mesLabel(ym)}</span><b>${money(suma(pagos.filter((m) => m.date.startsWith(ym))))}</b></div>
+    <div class="stat"><span class="lbl">Pagado · ${yy}</span><b>${money(suma(pagos.filter((m) => m.date.startsWith(yy))))}</b></div>
+    <div class="stat"><span class="lbl">Pagado · histórico</span><b>${money(suma(pagos))}</b><span class="muted">${pagos.length} pago${pagos.length === 1 ? "" : "s"}</span></div>`;
+
+  // Por pagarle: confirmar la tarjeta registra el pago y desaparece de todos lados
+  const bd = $("b-deuda");
+  if (bd) {
+    bd.innerHTML = "";
+    if (!deuda.length) {
+      bd.innerHTML = '<div class="vacio"><b>Al corriente</b>No le debes ninguna estancia terminada.</div>';
+    } else {
+      for (const it of deuda) bd.appendChild(cardCostoReserva(it));
+    }
+    if (porVenir.length) {
+      bd.insertAdjacentHTML("beforeend",
+        `<p class="muted" style="margin-top:.5rem">Por venir: ${porVenir.map((x) => `${escHtml(quienDe(x.b))} (${fmtD(x.date)})`).join(", ")} — se le pagan cuando el huésped se vaya.</p>`);
+    }
+  }
+
+  renderBiandraChart(pagos);
+
+  // Historial: los mismos renglones de Dinero, con Editar/Repetir/Borrar
+  const bm = $("b-movs");
+  if (bm) {
+    bm.innerHTML = "";
+    bm.className = "lista";
+    if (!pagos.length) bm.innerHTML = '<p class="muted">Todavía no hay pagos registrados. Los gastos con categoría Limpieza o Recepción aparecen aquí solos.</p>';
+    for (const m of pagos.slice(0, 40)) bm.appendChild(filaMov(m));
+    if (pagos.length > 40) bm.insertAdjacentHTML("beforeend",
+      `<p class="muted">…los más viejos están en Dinero → Movimientos, filtrando por categoría Limpieza.</p>`);
+  }
+}
+
+// Barras de lo pagado por mes, últimos 12 — mismo eje continuo que la gráfica
+// de Dinero: un mes sin pagos se ve vacío, no desaparece.
+function renderBiandraChart(pagos) {
+  const svg = $("b-chart");
+  if (!svg) return;
+  const by = {};
+  for (const m of pagos) {
+    const ym = m.date.slice(0, 7);
+    by[ym] = by[ym] || { tot: 0, n: 0 };
+    by[ym].tot += Number(m.amount) || 0;
+    by[ym].n++;
+  }
+  const conDatos = Object.keys(by).sort();
+  if (!conDatos.length) { svg.innerHTML = '<text x="10" y="24">Sin pagos todavía.</text>'; return; }
+  const hoyYm = hoyMx().slice(0, 7);
+  const finYm = conDatos[conDatos.length - 1] > hoyYm ? conDatos[conDatos.length - 1] : hoyYm;
+  const todos = [];
+  let [ey, em] = conDatos[0].split("-").map(Number);
+  for (let i = 0; i < 400; i++) {
+    const ym = `${ey}-${String(em).padStart(2, "0")}`;
+    todos.push(ym);
+    if (ym >= finYm) break;
+    if (++em > 12) { em = 1; ey++; }
+  }
+  const meses = todos.slice(-12);
+  const dat = (ym) => by[ym] || { tot: 0, n: 0 };
+  const max = Math.max(...meses.map((ym) => dat(ym).tot), 1);
+  const W = 720, H = 210, base = H - 26, alto = base - 26;
+  const paso = W / meses.length, ancho = Math.min(22, paso / 2.2);
+  let out = `<line class="base" x1="0" y1="${base}" x2="${W}" y2="${base}" />`;
+  meses.forEach((ym, i) => {
+    const cx = i * paso + paso / 2;
+    const d = dat(ym);
+    const h = (d.tot / max) * alto;
+    out += `<rect class="gin" x="${cx - ancho / 2}" y="${base - h}" width="${ancho}" height="${h}" rx="2"><title>${mesLabel(ym)} · ${money(d.tot)} en ${d.n} pago${d.n === 1 ? "" : "s"}</title></rect>`;
+    if (!d.tot) out += `<circle class="vacio" cx="${cx}" cy="${base - 3}" r="1.6" />`;
+    if (d.tot) out += `<text class="val gin" x="${cx}" y="${base - h - 4}" text-anchor="middle">${moneyCorto(d.tot)}</text>`;
+    out += `<text x="${cx}" y="${H - 8}" text-anchor="middle">${mesLabel(ym).replace(" ", "'")}</text>`;
+  });
+  svg.innerHTML = out;
+}
+
+// Pago suelto a Biandra (una lavada extra, un encargo): abre el formulario de
+// movimiento ya apuntando a su categoría, solo pones monto y guardas.
+function pagoBiandra() {
+  resetMovForm();
+  $("f-type").value = "out";
+  fillCats("Limpieza");
+  $("f-concept").value = "Biandra — ";
+  $("mov-title").textContent = "Pago a Biandra";
+  abrir("dlg-mov");
+  $("f-amount").focus();
+}
+
 // Cuánto pagó y cuánto costó cada huésped
 function renderGuests(movs) {
   const box = $("guest-table");
@@ -1614,7 +1728,7 @@ function renderGuests(movs) {
 // en memoria (viene en la respuesta) en vez de releer el blob — así evitamos el
 // read-after-write stale que hacía "desaparecer" el movimiento recién creado.
 let FIN = [];
-function applyFinance(movs) { FIN = Array.isArray(movs) ? movs : []; renderFinance(FIN); renderRecurring(); renderHoy(); }
+function applyFinance(movs) { FIN = Array.isArray(movs) ? movs : []; renderFinance(FIN); renderRecurring(); renderHoy(); renderBiandra(); }
 
 async function loadFinance() {
   try {

@@ -68,7 +68,7 @@
       min-width:1.25rem; height:1.25rem; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; padding:0 .35rem; }
 
     /* ---------- barra inferior (celular) ---------- */
-    .tabs { position:fixed; left:0; right:0; bottom:0; z-index:40; display:grid; grid-template-columns:repeat(5,1fr);
+    .tabs { position:fixed; left:0; right:0; bottom:0; z-index:40; display:grid; grid-template-columns:repeat(6,1fr);
       gap:.15rem; padding:.4rem .35rem calc(.4rem + env(safe-area-inset-bottom)); background:rgba(4,33,28,.86);
       border-top:1px solid var(--borde); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); }
     .tab { background:transparent; border:0; border-radius:12px; color:rgba(255,255,255,.7); cursor:pointer;
@@ -552,6 +552,36 @@
         <div id="rv-approved"></div>
       </div>
     </section>
+
+    <!-- ---------- BIANDRA ---------- -->
+    <section class="view" id="v-biandra" hidden>
+      <div class="vhead">
+        <div>
+          <h1>Biandra</h1>
+          <p class="muted">La cuenta de la limpieza y recepción: qué le debes, qué le has pagado y cómo va el año. Se arma sola con los gastos de categoría Limpieza o Recepción.</p>
+        </div>
+      </div>
+
+      <div class="stats" id="b-stats"></div>
+
+      <div class="bloque" data-plegable>
+        <h2>Por pagarle</h2>
+        <span class="muted">Estancias que ya terminaron y cuyo pago no está registrado. Confirmar la tarjeta = registrar el pago.</span>
+        <div id="b-deuda"></div>
+      </div>
+
+      <div class="bloque" data-plegable>
+        <h2>Pagos por mes</h2>
+        <span class="muted">Últimos 12 meses. Toca una barra para ver cuántos pagos fueron.</span>
+        <svg id="b-chart" class="chart" viewBox="0 0 720 210" role="img" aria-label="Pagos a Biandra por mes"></svg>
+      </div>
+
+      <div class="bloque" data-plegable>
+        <h2>Historial de pagos</h2>
+        <span class="muted">Todos los pagos de limpieza y recepción, del más reciente al más viejo.</span>
+        <div id="b-movs"></div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -762,6 +792,6 @@
   </div>
 </dialog>
 
-<script src="/admin-app.js?v=20260810-1" defer></script>
+<script src="/admin-app.js?v=20260810-2" defer></script>
 </body>
 </html>
