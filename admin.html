@@ -256,6 +256,7 @@
 
     /* ---------- leer un ticket ---------- */
     .ticketrow { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; margin:0 0 .9rem; }
+    .ticketrow input[type="text"] { flex:1 1 100%; }
     /* Campo que el modelo leyó con dudas (o dejó vacío): revísalo antes de guardar */
     input.revisar, select.revisar { border:2px solid var(--ambar); background:#fff6e0; }
     .chartlg { display:flex; gap:1rem; font-size:.75rem; opacity:.85; flex-wrap:wrap; }
@@ -655,6 +656,7 @@
     <div class="ticketrow">
       <button id="f-ticket" class="ghost" type="button">📷 Leer un ticket</button>
       <span class="muted">Toma la foto y se llena solo. Tú revisas y guardas.</span>
+      <input id="f-ticket-nota" type="text" maxlength="300" placeholder="Cuéntale algo al lector (opcional): “lo pagó Bi en efectivo”, “se le debe a Bi”, “50% Lau 50% Ro”…" aria-label="Contexto para el lector de tickets" />
       <input id="f-ticket-file" type="file" accept="image/*" capture="environment" hidden />
     </div>
     <div class="fgrid">
@@ -804,6 +806,6 @@
   </div>
 </dialog>
 
-<script src="/admin-app.js?v=20260810-3" defer></script>
+<script src="/admin-app.js?v=20260810-4" defer></script>
 </body>
 </html>

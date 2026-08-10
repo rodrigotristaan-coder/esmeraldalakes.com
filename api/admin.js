@@ -243,6 +243,9 @@ module.exports = async (req, res) => {
       const cats = Array.isArray(body.categorias)
         ? body.categorias.map((c) => String(c).slice(0, 40)).slice(0, 60)
         : [];
+      // Contexto libre del dueño sobre ESTE ticket ("lo pagó Bi en efectivo",
+      // "50% Lau 50% Ro"). El modelo lo usa para llenar quién pagó y estatus.
+      const nota = String(body.nota || "").trim().slice(0, 300);
       // Se cuenta ANTES de llamar al modelo, para que un ciclo que truene a la
       // mitad también consuma cupo y no pueda dar vueltas para siempre.
       const cupo = await contarTicket(TOPE_TICKETS_DIA);
@@ -274,9 +277,11 @@ module.exports = async (req, res) => {
                   comercio: { type: "string", description: "Nombre del negocio. Vacío si no se ve." },
                   concepto: { type: "string", description: "Descripción corta de la compra, máximo 60 caracteres." },
                   categoria: { type: "string", description: "Exactamente una de las categorías dadas, o vacío si ninguna encaja." },
+                  quienPago: { type: "string", description: "Nombre corto de quien puso el dinero, SOLO si el contexto del dueño lo dice (Lau, Ro, Bi…). Vacío si no se menciona." },
+                  estatus: { type: "string", enum: ["pagado", "pendiente"], description: "\"pendiente\" SOLO si el contexto dice que este pago al comercio o servicio aún no se hace. Si alguien ya lo pagó (aunque se le deba a esa persona), es \"pagado\"." },
                   dudas: { type: "array", items: { type: "string" }, description: "Nombres de los campos que leíste con poca confianza." },
                 },
-                required: ["monto", "fecha", "comercio", "concepto", "categoria", "dudas"],
+                required: ["monto", "fecha", "comercio", "concepto", "categoria", "quienPago", "estatus", "dudas"],
                 additionalProperties: false,
               },
             },
@@ -286,13 +291,18 @@ module.exports = async (req, res) => {
             `Hoy es ${hoy}. Las fechas de los tickets vienen en formato día/mes/año; si el ticket no trae el año, usa el año en curso. ` +
             "El monto es el TOTAL pagado, no el subtotal ni el efectivo entregado ni el cambio. Devuélvelo sin signo de pesos ni comas.\n" +
             (cats.length ? `Categorías disponibles (usa una tal cual, sin inventar):\n${cats.join("\n")}\n` : "") +
+            "El dueño puede darte contexto sobre el ticket. Úsalo así:\n" +
+            "- Si dice que alguien del equipo lo pagó o que 'se le debe' a alguien, ese nombre va en quienPago — el ticket YA está pagado, la deuda entre ellos la lleva otra parte del panel.\n" +
+            "- estatus 'pendiente' SOLO si dice que el pago al comercio o servicio no se ha hecho todavía.\n" +
+            "- Si menciona un reparto (\"50% Lau 50% Ro\") o el método de pago, añádelo al final del concepto entre paréntesis, corto.\n" +
+            "- El contexto manda sobre lo que se vea en la foto, pero NO inventes lo que el contexto no diga.\n" +
             "Deja un campo vacío en vez de adivinarlo. Pon en `dudas` el nombre de cada campo que hayas leído con poca confianza " +
             "— borroso, cortado, arrugado o ambiguo — para que la persona lo revise.",
           messages: [{
             role: "user",
             content: [
               { type: "image", source: { type: "base64", media_type: mime, data: image } },
-              { type: "text", text: "Extrae los datos de este ticket." },
+              { type: "text", text: "Extrae los datos de este ticket." + (nota ? `\nContexto del dueño sobre este ticket: «${nota}»` : "") },
             ],
           }],
         });

@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260810-3";
+const VERSION = "20260810-4";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -1824,7 +1824,10 @@ async function leerTicket(file) {
   msg("Leyendo el ticket…");
   try {
     const image = await fotoABase64(file);
-    const r = await apiPost("&action=ticket-read", { image, mime: "image/jpeg", categorias: catsPlanas("out") });
+    // El contexto del dueño viaja junto con la foto ("lo pagó Bi en efectivo",
+    // "50% Lau 50% Ro"): con eso el modelo llena quién pagó y el estatus.
+    const nota = ($("f-ticket-nota") && $("f-ticket-nota").value.trim()) || "";
+    const r = await apiPost("&action=ticket-read", { image, mime: "image/jpeg", categorias: catsPlanas("out"), nota });
     if (!r.ok) { msg(r.error || "No se pudo leer el ticket.", false); return; }
     aplicarTicket(r.datos || {});
   } catch (e) {
@@ -1848,6 +1851,10 @@ function aplicarTicket(d) {
   if (monto > 0) $("f-amount").value = monto;
   const concepto = [d.concepto, d.comercio].filter(Boolean).join(" · ").trim().slice(0, 120);
   if (concepto) $("f-concept").value = concepto;
+  // Lo que salió del contexto del dueño: quién puso el dinero y si está por pagar
+  if (d.quienPago) $("f-payer").value = String(d.quienPago).slice(0, 40);
+  const fst = $("f-status");
+  if (fst && d.estatus === "pendiente") fst.value = "pendiente";
 
   // Lo que quedó vacío o que el modelo leyó con dudas se marca y se enumera:
   // la idea es que revises esos campos, no que confíes en el OCR a ciegas.
@@ -1859,6 +1866,8 @@ function aplicarTicket(d) {
     // Ojo: el <select> nunca está "vacío" — si no le pones valor se queda en la
     // primera opción. Hay que preguntarle al modelo, no al control.
     { id: "f-cat", nombre: "la categoría", vacio: !cat, clave: "categoria" },
+    // Quién pagó es opcional: solo se marca si el modelo dudó del contexto
+    { id: "f-payer", nombre: "quién pagó", vacio: false, clave: "quien" },
   ];
   const revisar = [];
   for (const c of campos) {
@@ -1910,6 +1919,7 @@ function resetMovForm() {
   // Quita las marcas de "revisa esto" que hubiera dejado la lectura de un ticket
   ["f-amount", "f-date", "f-concept", "f-cat"].forEach((id) => { const e = $(id); if (e) e.classList.remove("revisar"); });
   const ft = $("f-ticket-file"); if (ft) ft.value = "";
+  const fn = $("f-ticket-nota"); if (fn) fn.value = "";
   $("f-date").value = hoyMx();
   $("mov-title").textContent = "Registrar movimiento";
   $("f-add").textContent = "Guardar";
