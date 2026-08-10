@@ -209,7 +209,11 @@ module.exports = async (req, res) => {
       // "Saldado": este movimiento ya se liquidó entre quienes ponen el dinero
       // (Lau, Ro, Bi). No cambia la utilidad, solo lo saca de la cuenta de saldos.
       const settled = q.settled === "1";
-      const mov = { id: crypto.randomBytes(5).toString("hex"), type, date: q.date, concept, category, amount, guest, payer, settled, at: new Date().toISOString() };
+      // Estatus: "pendiente" = registrado pero aún no pagado (o no cobrado).
+      // Solo se guarda cuando está pendiente; sin el campo, el movimiento es
+      // pagado — así los movimientos viejos siguen valiendo como pagados.
+      const status = q.status === "pendiente" ? "pendiente" : "";
+      const mov = { id: crypto.randomBytes(5).toString("hex"), type, date: q.date, concept, category, amount, guest, payer, settled, ...(status ? { status } : {}), at: new Date().toISOString() };
       // Escritura verificada: si otra escritura la pisa, se reintenta sobre lo más fresco
       const out = await mutarFinanzas(
         // Idempotente a propósito: si el reintento encuentra que ya se guardó,
@@ -323,6 +327,7 @@ module.exports = async (req, res) => {
       if (q.guest !== undefined) m.guest = String(q.guest).trim().slice(0, 80);
       if (q.payer !== undefined) m.payer = String(q.payer).trim().slice(0, 40);
       if (q.settled !== undefined) m.settled = q.settled === "1";
+      if (q.status !== undefined) { if (q.status === "pendiente") m.status = "pendiente"; else delete m.status; }
       if (q.amount !== undefined) {
         const a = Math.round(Number(q.amount) * 100) / 100;
         if (!(a > 0) || a > 5000000) return res.status(422).json({ ok: false, error: "monto" });

@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260810-2";
+const VERSION = "20260810-3";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -902,6 +902,13 @@ function renderHoy() {
       items.push({ ico: "🔁", txt: `${rec.length} gasto${rec.length === 1 ? "" : "s"} recurrente${rec.length === 1 ? "" : "s"} sin registrar`,
         sub: `${money(total)} en total · ${rec.map((x) => x.concept).join(", ")}`, btn: "Revisar", ir: "recurrentes" });
     }
+    // Registrado pero sin pagar (o sin cobrar): que no se olvide
+    const pendMovs = FIN.filter(esPendiente);
+    if (pendMovs.length) {
+      const total = pendMovs.reduce((a, m) => a + (Number(m.amount) || 0), 0);
+      items.push({ ico: "💳", txt: `${pendMovs.length} movimiento${pendMovs.length === 1 ? "" : "s"} por pagar o por cobrar`,
+        sub: `${money(total)} en total · ${pendMovs.map((m) => m.concept).slice(0, 3).join(", ")}${pendMovs.length > 3 ? "…" : ""}`, btn: "Ver", ir: "dinero" });
+    }
     if (RV_PEND) {
       items.push({ ico: "📝", txt: `${RV_PEND} reseña${RV_PEND === 1 ? "" : "s"} esperando tu visto bueno`,
         sub: "Nadie la ve en la landing hasta que la apruebes.", btn: "Revisar", ir: "gente" });
@@ -1135,13 +1142,19 @@ function renderStats(movs) {
   const util = ing - gas;
   const margen = ing > 0 ? Math.round((util / ing) * 100) : null;
   const noches = movs.filter((m) => enPeriodo(m) && m.type === "in" && m.category === "Reserva").length;
+  // Lo pendiente cuenta en ingresos/gastos (es del periodo), pero se enseña
+  // aparte para que se vea qué falta salir o entrar de verdad.
+  let pendOut = 0, pendIn = 0;
+  for (const m of movs) if (enPeriodo(m) && esPendiente(m)) { const v = Number(m.amount) || 0; if (m.type === "out") pendOut += v; else pendIn += v; }
   const etiqueta = PERIODO.length === 4 ? `todo ${PERIODO}` : mesLabel(PERIODO);
   $("stats").innerHTML = `
     <div class="stat"><span class="lbl">Ocupación 12 meses</span><b>${OCC ? OCC.pct + "%" : "—"}</b><span class="muted">${OCC ? OCC.sold + " noches vendidas" : ""}</span></div>
     <div class="stat"><span class="lbl">Ingresos · ${etiqueta}</span><b class="pos">${money(ing)}</b></div>
     <div class="stat"><span class="lbl">Gastos · ${etiqueta}</span><b class="neg">${money(gas)}</b></div>
     <div class="stat"><span class="lbl">Utilidad · ${etiqueta}</span><b class="${util >= 0 ? "pos" : "neg"}">${money(util)}</b><span class="muted">${margen === null ? "" : margen + "% de margen"}</span></div>
-    <div class="stat"><span class="lbl">Reservas cobradas</span><b>${noches}</b><span class="muted">${etiqueta}</span></div>`;
+    <div class="stat"><span class="lbl">Reservas cobradas</span><b>${noches}</b><span class="muted">${etiqueta}</span></div>` +
+    (pendOut || pendIn ? `
+    <div class="stat"><span class="lbl">Por pagar · ${etiqueta}</span><b class="neg">${money(pendOut)}</b><span class="muted">${pendIn ? "y por cobrar " + money(pendIn) : "registrado, falta pagarlo"}</span></div>` : "");
 }
 
 // Gráfica de barras: ingresos vs gastos, últimos 12 meses con movimiento
@@ -1276,8 +1289,11 @@ function renderCats(movs) {
 }
 
 // --- Movimientos: búsqueda, filtros y páginas ---
+// Estatus: "pendiente" = registrado pero todavía no pagado (o no cobrado).
+// Sin el campo, el movimiento está pagado — los viejos no cambian.
+const esPendiente = (m) => m.status === "pendiente";
 const MOVS_POR_PAG = 25;
-let MOVF = { q: "", tipo: "", cat: "", pagador: "", pag: 1 };
+let MOVF = { q: "", tipo: "", cat: "", pagador: "", status: "", pag: 1 };
 
 function movsFiltrados() {
   const q = MOVF.q.trim().toLowerCase();
@@ -1286,6 +1302,8 @@ function movsFiltrados() {
     if (MOVF.cat && ((m.category || "").trim() || "Sin categoría") !== MOVF.cat) return false;
     if (MOVF.pagador === "__sin__") { if ((m.payer || "").trim()) return false; }
     else if (MOVF.pagador && (m.payer || "").trim() !== MOVF.pagador) return false;
+    if (MOVF.status === "pendiente" && !esPendiente(m)) return false;
+    if (MOVF.status === "pagado" && esPendiente(m)) return false;
     if (q && ![m.concept, m.guest, m.payer, m.category].some((t) => (t || "").toLowerCase().includes(q))) return false;
     return true;
   });
@@ -1314,6 +1332,7 @@ function filaMov(m) {
   const div = document.createElement("div");
   div.className = "fila";
   div.innerHTML = `<span style="text-align:left"><span class="tag ${m.type}">${m.type === "in" ? "INGRESO" : "GASTO"}</span>` +
+    `${esPendiente(m) ? `<span class="tag pend">${m.type === "in" ? "POR COBRAR" : "POR PAGAR"}</span>` : ""}` +
     `${m.settled ? '<span class="tag ok">SALDADO</span>' : ""}` +
     `<b>${escHtml(m.concept)}</b> <span class="muted">· ${fmtD(m.date)} · ${escHtml(m.category || "")}${m.guest ? " · 👤 " + escHtml(m.guest) : ""}${m.payer ? " · 💳 pagó " + escHtml(m.payer) : ""}</span></span>` +
     `<span class="row"><b class="${m.type === "in" ? "pos" : "neg"}">${m.type === "in" ? "+" : "−"}${money(m.amount)}</b></span>`;
@@ -1389,8 +1408,8 @@ function descargarCSV() {
   const lista = movsFiltrados();
   if (!lista.length) return msg("No hay movimientos que exportar con estos filtros.", false);
   const esc = (v) => { const s = String(v === undefined || v === null ? "" : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  const filas = [["fecha", "tipo", "concepto", "categoria", "monto", "huesped", "quien_pago", "saldado"]];
-  for (const m of lista) filas.push([m.date, m.type === "in" ? "ingreso" : "gasto", m.concept, m.category || "", m.amount, m.guest || "", m.payer || "", m.settled ? "si" : "no"]);
+  const filas = [["fecha", "tipo", "concepto", "categoria", "monto", "estatus", "huesped", "quien_pago", "saldado"]];
+  for (const m of lista) filas.push([m.date, m.type === "in" ? "ingreso" : "gasto", m.concept, m.category || "", m.amount, esPendiente(m) ? (m.type === "in" ? "por cobrar" : "por pagar") : "pagado", m.guest || "", m.payer || "", m.settled ? "si" : "no"]);
   // El BOM va para que Excel abra los acentos bien a la primera
   const csv = "\uFEFF" + filas.map((f) => f.map(esc).join(",")).join("\n");
   const a = document.createElement("a");
@@ -1584,28 +1603,44 @@ const esPagoBiandra = (m) => m.type === "out" &&
 function renderBiandra() {
   const stats = $("b-stats");
   if (!stats) return;
-  const pagos = FIN.filter(esPagoBiandra);
+  const suyos = FIN.filter(esPagoBiandra);
+  // Lo pagado de verdad; lo suyo con estatus "por pagar" es deuda, no pago
+  const pagos = suyos.filter((m) => !esPendiente(m));
+  const porPagarMovs = suyos.filter(esPendiente);
   const hoyDs = hoyMx();
   const ym = hoyDs.slice(0, 7), yy = hoyDs.slice(0, 4);
   const suma = (arr) => arr.reduce((a, m) => a + (Number(m.amount) || 0), 0);
   const pend = pendientesDeReservas();
   const deuda = pend.filter((x) => !x.futuro);
   const porVenir = pend.filter((x) => x.futuro);
-  const totDeuda = deuda.reduce((a, x) => a + x.amount, 0);
+  const totDeuda = deuda.reduce((a, x) => a + x.amount, 0) + suma(porPagarMovs);
+  const nDeuda = deuda.length + porPagarMovs.length;
   stats.innerHTML = `
-    <div class="stat"><span class="lbl">Le debes hoy</span><b class="${totDeuda ? "neg" : "pos"}">${money(totDeuda)}</b><span class="muted">${deuda.length ? deuda.length + " estancia" + (deuda.length === 1 ? "" : "s") + " sin pagar" : "al corriente 🎉"}</span></div>
+    <div class="stat"><span class="lbl">Le debes hoy</span><b class="${totDeuda ? "neg" : "pos"}">${money(totDeuda)}</b><span class="muted">${nDeuda ? nDeuda + " pendiente" + (nDeuda === 1 ? "" : "s") : "al corriente 🎉"}</span></div>
     <div class="stat"><span class="lbl">Pagado · ${mesLabel(ym)}</span><b>${money(suma(pagos.filter((m) => m.date.startsWith(ym))))}</b></div>
     <div class="stat"><span class="lbl">Pagado · ${yy}</span><b>${money(suma(pagos.filter((m) => m.date.startsWith(yy))))}</b></div>
     <div class="stat"><span class="lbl">Pagado · histórico</span><b>${money(suma(pagos))}</b><span class="muted">${pagos.length} pago${pagos.length === 1 ? "" : "s"}</span></div>`;
 
-  // Por pagarle: confirmar la tarjeta registra el pago y desaparece de todos lados
+  // Por pagarle: tarjetas de estancias sin registrar + movimientos suyos ya
+  // registrados con estatus "por pagar" (esos se saldan con un toque)
   const bd = $("b-deuda");
   if (bd) {
     bd.innerHTML = "";
-    if (!deuda.length) {
-      bd.innerHTML = '<div class="vacio"><b>Al corriente</b>No le debes ninguna estancia terminada.</div>';
+    if (!deuda.length && !porPagarMovs.length) {
+      bd.innerHTML = '<div class="vacio"><b>Al corriente</b>No le debes nada registrado ni pendiente.</div>';
     } else {
       for (const it of deuda) bd.appendChild(cardCostoReserva(it));
+      for (const m of porPagarMovs) {
+        const fila = document.createElement("div");
+        fila.className = "card";
+        fila.innerHTML = `<span style="text-align:left"><span class="tag pend">POR PAGAR</span>` +
+          `<b>${escHtml(m.concept)}</b> <span class="muted">· ${fmtD(m.date)} · ${money(m.amount)}</span></span>`;
+        const ok = document.createElement("button");
+        ok.textContent = "Ya le pagué ✓";
+        ok.addEventListener("click", () => marcarPagado(m, ok));
+        fila.appendChild(ok);
+        bd.appendChild(fila);
+      }
     }
     if (porVenir.length) {
       bd.insertAdjacentHTML("beforeend",
@@ -1620,10 +1655,24 @@ function renderBiandra() {
   if (bm) {
     bm.innerHTML = "";
     bm.className = "lista";
-    if (!pagos.length) bm.innerHTML = '<p class="muted">Todavía no hay pagos registrados. Los gastos con categoría Limpieza o Recepción aparecen aquí solos.</p>';
-    for (const m of pagos.slice(0, 40)) bm.appendChild(filaMov(m));
-    if (pagos.length > 40) bm.insertAdjacentHTML("beforeend",
+    if (!suyos.length) bm.innerHTML = '<p class="muted">Todavía no hay pagos registrados. Los gastos con categoría Limpieza o Recepción aparecen aquí solos.</p>';
+    for (const m of suyos.slice(0, 40)) bm.appendChild(filaMov(m));
+    if (suyos.length > 40) bm.insertAdjacentHTML("beforeend",
       `<p class="muted">…los más viejos están en Dinero → Movimientos, filtrando por categoría Limpieza.</p>`);
+  }
+}
+
+// Un movimiento "por pagar" se marca pagado con un toque (desde Biandra o donde salga)
+async function marcarPagado(m, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = "Guardando…"; }
+  try {
+    const r = await api(`&action=finance-update&id=${encodeURIComponent(m.id)}&status=pagado`);
+    if (!r.ok) throw new Error(r.error);
+    applyFinance(r.movs || FIN);
+    msg("Marcado como pagado ✅");
+  } catch {
+    msg("No se pudo marcar como pagado.", false);
+    if (btn) { btn.disabled = false; btn.textContent = "Ya le pagué ✓"; }
   }
 }
 
@@ -1835,6 +1884,8 @@ function startEditMov(m) {
   $("f-payer").value = m.payer || "";
   const fs = $("f-settled");
   if (fs) fs.checked = !!m.settled;
+  const fst = $("f-status");
+  if (fst) fst.value = esPendiente(m) ? "pendiente" : "";
   $("f-amount").value = m.amount;
   $("mov-title").textContent = "Editar movimiento";
   $("f-add").textContent = "Guardar cambios";
@@ -1855,6 +1906,7 @@ function resetMovForm() {
   EDIT_MOV = null;
   $("f-concept").value = ""; $("f-amount").value = ""; $("f-guest").value = ""; $("f-payer").value = "";
   const fs = $("f-settled"); if (fs) fs.checked = false;
+  const fst = $("f-status"); if (fst) fst.value = "";
   // Quita las marcas de "revisa esto" que hubiera dejado la lectura de un ticket
   ["f-amount", "f-date", "f-concept", "f-cat"].forEach((id) => { const e = $(id); if (e) e.classList.remove("revisar"); });
   const ft = $("f-ticket-file"); if (ft) ft.value = "";
@@ -1874,20 +1926,21 @@ async function addMovFromForm() {
   const guest = $("f-guest").value.trim();
   const payer = $("f-payer").value.trim();
   const settled = $("f-settled") && $("f-settled").checked ? "1" : "0";
+  const status = $("f-status") && $("f-status").value === "pendiente" ? "pendiente" : "pagado";
   if (!date || !concept || !(amount > 0)) return msg("Faltan datos: fecha, concepto y monto.", false);
   const btn = $("f-add");
   finBusy = true;
   if (btn) { btn.disabled = true; btn.dataset.txt = btn.textContent; btn.textContent = "Guardando…"; }
   try {
     if (EDIT_MOV) {
-      const qs = Object.entries({ id: EDIT_MOV, type, date, concept, category, guest, payer, settled, amount })
+      const qs = Object.entries({ id: EDIT_MOV, type, date, concept, category, guest, payer, settled, status, amount })
         .map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join("");
       const r = await api("&action=finance-update" + qs);
       if (!r.ok) throw new Error(r.error);
       applyFinance(r.movs || FIN);
       msg("Movimiento actualizado ✅");
     } else {
-      const r = await financeAdd({ type, date, concept, category, guest, payer, settled, amount });
+      const r = await financeAdd({ type, date, concept, category, guest, payer, settled, status, amount });
       applyFinance(r.movs || FIN.concat(r.mov));
       msg(type === "in" ? "Ingreso registrado ✅" : "Gasto registrado ✅");
     }
@@ -2642,6 +2695,8 @@ document.addEventListener("DOMContentLoaded", () => {
   if (fcat) fcat.addEventListener("change", () => { MOVF.cat = fcat.value; MOVF.pag = 1; renderMovs(); });
   const fpag = $("f-filtro-pagador");
   if (fpag) fpag.addEventListener("change", () => { MOVF.pagador = fpag.value; MOVF.pag = 1; renderMovs(); });
+  const fst2 = $("f-filtro-status");
+  if (fst2) fst2.addEventListener("change", () => { MOVF.status = fst2.value; MOVF.pag = 1; renderMovs(); });
   const fcsv = $("f-csv");
   if (fcsv) fcsv.addEventListener("click", descargarCSV);
   $("r-add").addEventListener("click", addRecurring);

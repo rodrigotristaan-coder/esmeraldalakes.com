@@ -230,6 +230,7 @@
     .ftools select { max-width:190px; }
     .fpags { display:flex; justify-content:center; align-items:center; gap:.8rem; margin-top:.8rem; flex-wrap:wrap; }
     .tag.ok { background:rgba(122,204,255,.2); color:#bfe5ff; }
+    .tag.pend { background:rgba(255,193,7,.22); color:#ffe28a; }
     details.saldar { margin-top:.8rem; }
     details.saldar summary { cursor:pointer; font-size:.86rem; color:var(--gold); padding:.3rem 0; }
     .vermas { display:block; width:100%; margin-top:.7rem; background:transparent; border:1px dashed rgba(255,255,255,.3);
@@ -469,6 +470,11 @@
           </select>
           <select id="f-filtro-cat" aria-label="Filtrar por categoría"></select>
           <select id="f-filtro-pagador" aria-label="Filtrar por quién pagó"></select>
+          <select id="f-filtro-status" aria-label="Filtrar por estatus">
+            <option value="">Pagados y pendientes</option>
+            <option value="pendiente">Por pagar / cobrar</option>
+            <option value="pagado">Solo pagados</option>
+          </select>
           <button id="f-csv" class="quiet" type="button" title="Descarga lo filtrado como CSV">⬇ CSV</button>
         </div>
         <div id="f-movs"></div>
@@ -566,7 +572,7 @@
 
       <div class="bloque" data-plegable>
         <h2>Por pagarle</h2>
-        <span class="muted">Estancias que ya terminaron y cuyo pago no está registrado. Confirmar la tarjeta = registrar el pago.</span>
+        <span class="muted">Estancias terminadas sin registrar y pagos registrados con estatus “por pagar”. Confirmar o marcar pagado lo salda.</span>
         <div id="b-deuda"></div>
       </div>
 
@@ -662,6 +668,12 @@
       <label class="wide">Concepto <input id="f-concept" type="text" placeholder="Reserva María / Luz CFE" /></label>
       <label>Categoría <select id="f-cat"></select></label>
       <label>Monto <input id="f-amount" type="number" min="0" step="0.01" placeholder="MXN" /></label>
+      <label class="wide">Estatus
+        <select id="f-status">
+          <option value="">Pagado / cobrado</option>
+          <option value="pendiente">Por pagar / por cobrar (solo registrado)</option>
+        </select>
+      </label>
       <label class="wide">Huésped (opcional)
         <input id="f-guest" type="text" list="guestlist" placeholder="Con quién va este movimiento" />
       </label>
@@ -792,6 +804,6 @@
   </div>
 </dialog>
 
-<script src="/admin-app.js?v=20260810-2" defer></script>
+<script src="/admin-app.js?v=20260810-3" defer></script>
 </body>
 </html>
