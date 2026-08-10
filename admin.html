@@ -153,7 +153,7 @@
     .vacio b { display:block; font-family:Georgia,serif; font-size:1.05rem; color:#fff; font-weight:400; margin-bottom:.25rem; }
 
     /* ---------- stats ---------- */
-    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:.6rem; margin:.2rem 0; }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:.6rem; margin:.2rem 0 1.1rem; }
     .stat { background:var(--glass2); border:1px solid var(--borde); border-radius:18px; padding:.8rem .95rem; }
     .stat .lbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.5px; color:rgba(255,255,255,.65); }
     .stat b { display:block; font-size:1.3rem; margin-top:.15rem; }
@@ -224,6 +224,14 @@
     @media (hover: none) { .fila .acciones { opacity:1; } }
 
     /* Cortar listas largas y desplegarlas bajo demanda */
+    /* Toolbar de Movimientos: buscador + filtros + CSV */
+    .ftools { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin:.1rem 0 .5rem; }
+    .ftools input[type="search"] { flex:1 1 200px; min-width:150px; }
+    .ftools select { max-width:190px; }
+    .fpags { display:flex; justify-content:center; align-items:center; gap:.8rem; margin-top:.8rem; flex-wrap:wrap; }
+    .tag.ok { background:rgba(122,204,255,.2); color:#bfe5ff; }
+    details.saldar { margin-top:.8rem; }
+    details.saldar summary { cursor:pointer; font-size:.86rem; color:var(--gold); padding:.3rem 0; }
     .vermas { display:block; width:100%; margin-top:.7rem; background:transparent; border:1px dashed rgba(255,255,255,.3);
       color:rgba(255,255,255,.8); border-radius:14px; padding:.55rem; font-size:.82rem; }
     .vermas:hover { background:rgba(255,255,255,.08); transform:none; }
@@ -443,15 +451,32 @@
         <div class="finwrap" id="f-summary"></div>
       </div>
 
+      <div class="bloque" data-plegable data-cerrado>
+        <h2>En qué se va el dinero</h2>
+        <span class="muted">Los gastos del periodo elegido arriba, agrupados por categoría.</span>
+        <div class="finwrap" id="f-cats"></div>
+      </div>
+
       <div class="bloque" data-plegable>
         <h2>Movimientos</h2>
-        <span class="muted">Los últimos 40. Toca un movimiento para editarlo.</span>
+        <span class="muted">Busca, filtra y pasa de página. El CSV baja lo que estés viendo, para Excel.</span>
+        <div class="ftools">
+          <input id="f-buscar" type="search" placeholder="Buscar concepto, huésped o quién pagó…" aria-label="Buscar movimientos" />
+          <select id="f-filtro-tipo" aria-label="Filtrar por tipo">
+            <option value="">Ingresos y gastos</option>
+            <option value="in">Solo ingresos</option>
+            <option value="out">Solo gastos</option>
+          </select>
+          <select id="f-filtro-cat" aria-label="Filtrar por categoría"></select>
+          <select id="f-filtro-pagador" aria-label="Filtrar por quién pagó"></select>
+          <button id="f-csv" class="quiet" type="button" title="Descarga lo filtrado como CSV">⬇ CSV</button>
+        </div>
         <div id="f-movs"></div>
       </div>
 
       <div class="bloque" data-plegable data-cerrado>
         <h2>Quién puso el dinero</h2>
-        <span class="muted">Para saldar entre ustedes: cuánto adelantó cada quien y cuánto cobró. No cambia la utilidad del depa.</span>
+        <span class="muted">Para saldar entre ustedes: cuánto adelantó cada quien y cuánto cobró. Cuando se liquiden, marca los movimientos como saldados y salen de la cuenta. No cambia la utilidad del depa.</span>
         <div class="finwrap" id="pagadores"></div>
       </div>
 
@@ -613,6 +638,7 @@
       <label class="wide">Quién pagó (opcional)
         <input id="f-payer" type="text" list="payerlist" placeholder="Lau, Ro, Bi…" />
       </label>
+      <label class="wide check"><input id="f-settled" type="checkbox" /> Ya se saldó entre ustedes (sale de “Quién puso el dinero”)</label>
       <datalist id="guestlist"></datalist>
       <datalist id="payerlist"></datalist>
     </div>
@@ -736,6 +762,6 @@
   </div>
 </dialog>
 
-<script src="/admin-app.js?v=20260807-1" defer></script>
+<script src="/admin-app.js?v=20260810-1" defer></script>
 </body>
 </html>

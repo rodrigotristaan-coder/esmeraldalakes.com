@@ -48,6 +48,17 @@ module.exports = async (req, res) => {
       try { notas = (await readFinanceDoc()).notas; } catch { /* sin notas se ve igual, solo sin nombres */ }
     }
     const todos = aplicarNotas(await getAllBlocks(direct), notas);
+    // Una estancia de Airbnb desaparece de su iCal en cuanto termina; si tiene
+    // nota (nombre y desglose puestos a mano), esa nota queda como su único
+    // registro. Aquí se reconstruye como estancia pasada para que el historial
+    // (plataformas, huéspedes, cobros de limpieza) no la pierda. Pasó con
+    // Lupita y Fernanda: desglose capturado y aun así invisibles en el panel.
+    const vistos = new Set(todos.map((b) => notaKey(b.start, b.end)));
+    for (const [k, n] of Object.entries(notas || {})) {
+      const [nStart, nEnd] = k.split("_");
+      if (!validDate(nStart) || !validDate(nEnd) || nEnd >= today || vistos.has(k)) continue;
+      todos.push({ start: nStart, end: nEnd, source: "airbnb", ...n });
+    }
     return {
       direct: upcoming(aplicarNotas(direct, notas), today),
       all: upcoming(todos, today),
@@ -195,7 +206,10 @@ module.exports = async (req, res) => {
       // Quién puso el dinero (Lau, Ro, Bi…). No cambia la utilidad del depa:
       // sirve para saldar entre quienes adelantan gastos.
       const payer = String(q.payer || "").trim().slice(0, 40);
-      const mov = { id: crypto.randomBytes(5).toString("hex"), type, date: q.date, concept, category, amount, guest, payer, at: new Date().toISOString() };
+      // "Saldado": este movimiento ya se liquidó entre quienes ponen el dinero
+      // (Lau, Ro, Bi). No cambia la utilidad, solo lo saca de la cuenta de saldos.
+      const settled = q.settled === "1";
+      const mov = { id: crypto.randomBytes(5).toString("hex"), type, date: q.date, concept, category, amount, guest, payer, settled, at: new Date().toISOString() };
       // Escritura verificada: si otra escritura la pisa, se reintenta sobre lo más fresco
       const out = await mutarFinanzas(
         // Idempotente a propósito: si el reintento encuentra que ya se guardó,
@@ -308,6 +322,7 @@ module.exports = async (req, res) => {
       if (q.category !== undefined) m.category = String(q.category).trim().slice(0, 40);
       if (q.guest !== undefined) m.guest = String(q.guest).trim().slice(0, 80);
       if (q.payer !== undefined) m.payer = String(q.payer).trim().slice(0, 40);
+      if (q.settled !== undefined) m.settled = q.settled === "1";
       if (q.amount !== undefined) {
         const a = Math.round(Number(q.amount) * 100) / 100;
         if (!(a > 0) || a > 5000000) return res.status(422).json({ ok: false, error: "monto" });

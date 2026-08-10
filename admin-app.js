@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260807-1";
+const VERSION = "20260810-1";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -1200,76 +1200,200 @@ function renderFinance(movs) {
   renderPagadores(movs);
   fillGuestList(movs);
 
-  // Resumen mensual (últimos 13 meses con movimiento)
+  // Resumen mensual (últimos 13 meses con movimiento). Las noches y el precio
+  // promedio salen de las RESERVAS, no de los movimientos: así el mes se lee
+  // bien aunque un ingreso se registre tarde o el pago haya entrado por Airbnb.
   const byMonth = {};
   for (const m of movs) {
     const ym = m.date.slice(0, 7);
     byMonth[ym] = byMonth[ym] || { in: 0, out: 0 };
     byMonth[ym][m.type] += Number(m.amount) || 0;
   }
+  const nochesMes = nochesPorMes();
   const meses = Object.keys(byMonth).sort().reverse().slice(0, 13);
   $("f-summary").innerHTML = meses.length
-    ? `<table class="fin"><tr><th>Mes</th><th>Ingresos</th><th>Gastos</th><th>Utilidad</th></tr>` +
+    ? `<table class="fin"><tr><th>Mes</th><th>Noches</th><th>$ / noche</th><th>Ingresos</th><th>Gastos</th><th>Utilidad</th><th>Margen</th></tr>` +
       meses.map((ym) => {
         const r = byMonth[ym], u = r.in - r.out;
-        return `<tr><td>${mesLabel(ym)}</td><td class="pos">${money(r.in)}</td><td class="neg">${money(r.out)}</td><td class="${u >= 0 ? "pos" : "neg"}"><b>${money(u)}</b></td></tr>`;
+        const nm = nochesMes[ym];
+        const prom = nm && nm.conPrecio ? Math.round(nm.importe / nm.conPrecio) : 0;
+        const margen = r.in > 0 ? Math.round((u / r.in) * 100) + "%" : "—";
+        return `<tr><td>${mesLabel(ym)}</td><td>${nm ? nm.noches : "—"}</td><td>${prom ? money(prom) : "—"}</td>` +
+          `<td class="pos">${money(r.in)}</td><td class="neg">${money(r.out)}</td>` +
+          `<td class="${u >= 0 ? "pos" : "neg"}"><b>${money(u)}</b></td><td class="${u >= 0 ? "pos" : "neg"}">${margen}</td></tr>`;
       }).join("") + `</table>`
     : '<p class="muted">Sin movimientos todavía. Agrega el primero arriba ☝️</p>';
 
-  // Movimientos: renglones finos, no burbujas. Se muestran 25 y el resto se
-  // despliega bajo demanda, para que la lista no crezca sin control.
+  renderCats(movs);
+  renderMovs();
+}
+
+// --- Noches ocupadas y precio por noche, mes a mes, desde las reservas ---
+// Una estancia que cruza de mes reparte sus noches donde caen de verdad. El
+// precio por noche: las directas traen `rate`; las de plataforma, la tarifa
+// total del desglose entre sus noches.
+function nochesPorMes() {
+  const by = {};
+  for (const b of todasReservas()) {
+    const n = noches(b);
+    if (!(n > 0)) continue;
+    const precio = Number(b.rate) || (Number(b.tarifa) > 0 ? Number(b.tarifa) / n : 0);
+    for (let ds = b.start; ds < b.end; ds = masDias(ds, 1)) {
+      const ym = ds.slice(0, 7);
+      by[ym] = by[ym] || { noches: 0, importe: 0, conPrecio: 0 };
+      by[ym].noches++;
+      if (precio > 0) { by[ym].importe += precio; by[ym].conPrecio++; }
+    }
+  }
+  return by;
+}
+
+// --- En qué se va el dinero: gastos del periodo elegido, por categoría ---
+function renderCats(movs) {
+  const box = $("f-cats");
+  if (!box) return;
+  const by = {};
+  let tot = 0;
+  for (const m of movs) {
+    if (m.type !== "out" || !m.date.startsWith(PERIODO)) continue;
+    const c = (m.category || "").trim() || "Sin categoría";
+    const v = Number(m.amount) || 0;
+    by[c] = (by[c] || 0) + v;
+    tot += v;
+  }
+  const etiqueta = PERIODO.length === 4 ? `todo ${PERIODO}` : mesLabel(PERIODO);
+  const cats = Object.keys(by).sort((a, b) => by[b] - by[a]);
+  box.innerHTML = cats.length
+    ? `<table class="fin"><tr><th>Categoría</th><th>Gastado · ${etiqueta}</th><th>% del gasto</th></tr>` +
+      cats.map((c) => `<tr><td class="g">${escHtml(c)}</td><td class="neg">${money(by[c])}</td><td>${Math.round((by[c] / tot) * 100)}%</td></tr>`).join("") +
+      `<tr><td class="g"><b>Total</b></td><td class="neg"><b>${money(tot)}</b></td><td></td></tr></table>`
+    : `<p class="muted">Sin gastos en ${etiqueta}.</p>`;
+}
+
+// --- Movimientos: búsqueda, filtros y páginas ---
+const MOVS_POR_PAG = 25;
+let MOVF = { q: "", tipo: "", cat: "", pagador: "", pag: 1 };
+
+function movsFiltrados() {
+  const q = MOVF.q.trim().toLowerCase();
+  return FIN.filter((m) => {
+    if (MOVF.tipo && m.type !== MOVF.tipo) return false;
+    if (MOVF.cat && ((m.category || "").trim() || "Sin categoría") !== MOVF.cat) return false;
+    if (MOVF.pagador === "__sin__") { if ((m.payer || "").trim()) return false; }
+    else if (MOVF.pagador && (m.payer || "").trim() !== MOVF.pagador) return false;
+    if (q && ![m.concept, m.guest, m.payer, m.category].some((t) => (t || "").toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+// Rellena los <select> de filtros con lo que de verdad hay en los movimientos,
+// conservando la opción elegida aunque la lista se refresque tras guardar.
+function llenarFiltros() {
+  const sc = $("f-filtro-cat");
+  if (sc) {
+    const cats = [...new Set(FIN.map((m) => (m.category || "").trim() || "Sin categoría"))].sort();
+    sc.innerHTML = '<option value="">Todas las categorías</option>' +
+      cats.map((c) => `<option value="${escHtml(c)}"${c === MOVF.cat ? " selected" : ""}>${escHtml(c)}</option>`).join("");
+  }
+  const sp = $("f-filtro-pagador");
+  if (sp) {
+    const ps = [...new Set(FIN.map((m) => (m.payer || "").trim()).filter(Boolean))].sort();
+    sp.innerHTML = '<option value="">Quién pagó: da igual</option>' +
+      `<option value="__sin__"${MOVF.pagador === "__sin__" ? " selected" : ""}>Sin “quién pagó”</option>` +
+      ps.map((p) => `<option value="${escHtml(p)}"${p === MOVF.pagador ? " selected" : ""}>${escHtml(p)}</option>`).join("");
+  }
+}
+
+// Un renglón de movimiento con sus acciones calladas (Editar / Repetir / Borrar)
+function filaMov(m) {
+  const div = document.createElement("div");
+  div.className = "fila";
+  div.innerHTML = `<span style="text-align:left"><span class="tag ${m.type}">${m.type === "in" ? "INGRESO" : "GASTO"}</span>` +
+    `${m.settled ? '<span class="tag ok">SALDADO</span>' : ""}` +
+    `<b>${escHtml(m.concept)}</b> <span class="muted">· ${fmtD(m.date)} · ${escHtml(m.category || "")}${m.guest ? " · 👤 " + escHtml(m.guest) : ""}${m.payer ? " · 💳 pagó " + escHtml(m.payer) : ""}</span></span>` +
+    `<span class="row"><b class="${m.type === "in" ? "pos" : "neg"}">${m.type === "in" ? "+" : "−"}${money(m.amount)}</b></span>`;
+  const wrap = div.querySelector(".row");
+  const acciones = document.createElement("span");
+  acciones.className = "row acciones";
+  const ed = document.createElement("button");
+  ed.className = "quiet";
+  ed.textContent = "Editar";
+  ed.setAttribute("aria-label", `Editar ${m.concept}`);
+  ed.addEventListener("click", () => startEditMov(m));
+  acciones.appendChild(ed);
+  const dup = document.createElement("button");
+  dup.className = "quiet";
+  dup.textContent = "Repetir";
+  dup.title = "Repite este movimiento con fecha de hoy (útil para gastos mensuales)";
+  dup.setAttribute("aria-label", `Repetir ${m.concept} con fecha de hoy`);
+  dup.addEventListener("click", () => duplicateMov(m));
+  acciones.appendChild(dup);
+  const del = document.createElement("button");
+  del.className = "quiet peligro";
+  del.textContent = "Borrar";
+  del.setAttribute("aria-label", `Borrar ${m.concept}`);
+  del.addEventListener("click", () => deleteMov(m));
+  acciones.appendChild(del);
+  wrap.appendChild(acciones);
+  return div;
+}
+
+function renderMovs() {
   const box = $("f-movs");
+  if (!box) return;
+  llenarFiltros();
+  const lista = movsFiltrados();
+  const pags = Math.max(1, Math.ceil(lista.length / MOVS_POR_PAG));
+  if (MOVF.pag > pags) MOVF.pag = pags;
+  if (MOVF.pag < 1) MOVF.pag = 1;
   box.innerHTML = "";
   box.className = "lista";
-  const TOPE = 25;
-  const verTodos = box.dataset.todos === "1";
-  const visibles = verTodos ? movs : movs.slice(0, TOPE);
-  for (const m of visibles) {
-    const div = document.createElement("div");
-    div.className = "fila";
-    div.innerHTML = `<span style="text-align:left"><span class="tag ${m.type}">${m.type === "in" ? "INGRESO" : "GASTO"}</span>` +
-      `<b>${escHtml(m.concept)}</b> <span class="muted">· ${fmtD(m.date)} · ${escHtml(m.category || "")}${m.guest ? " · 👤 " + escHtml(m.guest) : ""}${m.payer ? " · 💳 pagó " + escHtml(m.payer) : ""}</span></span>` +
-      `<span class="row"><b class="${m.type === "in" ? "pos" : "neg"}">${m.type === "in" ? "+" : "−"}${money(m.amount)}</b></span>`;
-    // Acciones calladas: antes eran tres botones de color en cada fila y el
-    // listado parecía un tablero de botones. Ahora el monto manda.
-    const wrap = div.querySelector(".row");
-    const acciones = document.createElement("span");
-    acciones.className = "row acciones";
-    const ed = document.createElement("button");
-    ed.className = "quiet";
-    ed.textContent = "Editar";
-    ed.setAttribute("aria-label", `Editar ${m.concept}`);
-    ed.addEventListener("click", () => startEditMov(m));
-    acciones.appendChild(ed);
-    const dup = document.createElement("button");
-    dup.className = "quiet";
-    dup.textContent = "Repetir";
-    dup.title = "Repite este movimiento con fecha de hoy (útil para gastos mensuales)";
-    dup.setAttribute("aria-label", `Repetir ${m.concept} con fecha de hoy`);
-    dup.addEventListener("click", () => duplicateMov(m));
-    acciones.appendChild(dup);
-    const del = document.createElement("button");
-    del.className = "quiet peligro";
-    del.textContent = "Borrar";
-    del.setAttribute("aria-label", `Borrar ${m.concept}`);
-    del.addEventListener("click", () => deleteMov(m));
-    acciones.appendChild(del);
-    wrap.appendChild(acciones);
-    box.appendChild(div);
+  if (!lista.length) {
+    box.innerHTML = '<p class="muted">Ningún movimiento coincide con la búsqueda o los filtros.</p>';
+    return;
   }
-  if (!verTodos && movs.length > TOPE) {
-    const b2 = document.createElement("button");
-    b2.className = "vermas";
-    b2.textContent = `Ver los ${movs.length - TOPE} movimientos restantes`;
-    b2.addEventListener("click", () => { box.dataset.todos = "1"; renderFinance(FIN); });
-    box.appendChild(b2);
-  } else if (verTodos && movs.length > TOPE) {
-    const b2 = document.createElement("button");
-    b2.className = "vermas";
-    b2.textContent = "Mostrar solo los últimos 25";
-    b2.addEventListener("click", () => { box.dataset.todos = "0"; renderFinance(FIN); });
-    box.appendChild(b2);
+  const visibles = lista.slice((MOVF.pag - 1) * MOVS_POR_PAG, MOVF.pag * MOVS_POR_PAG);
+  for (const m of visibles) box.appendChild(filaMov(m));
+  const pie = document.createElement("div");
+  pie.className = "fpags";
+  const info = document.createElement("span");
+  info.className = "muted";
+  info.textContent = pags > 1
+    ? `Página ${MOVF.pag} de ${pags} · ${lista.length} movimiento${lista.length === 1 ? "" : "s"}`
+    : `${lista.length} movimiento${lista.length === 1 ? "" : "s"}`;
+  if (pags > 1) {
+    const prev = document.createElement("button");
+    prev.className = "quiet";
+    prev.textContent = "‹ Anteriores";
+    prev.disabled = MOVF.pag <= 1;
+    prev.addEventListener("click", () => { MOVF.pag--; renderMovs(); });
+    const next = document.createElement("button");
+    next.className = "quiet";
+    next.textContent = "Siguientes ›";
+    next.disabled = MOVF.pag >= pags;
+    next.addEventListener("click", () => { MOVF.pag++; renderMovs(); });
+    pie.append(prev, info, next);
+  } else {
+    pie.append(info);
   }
+  box.appendChild(pie);
+}
+
+// Baja lo que estés viendo (con filtros aplicados) como CSV para Excel/Sheets
+function descargarCSV() {
+  const lista = movsFiltrados();
+  if (!lista.length) return msg("No hay movimientos que exportar con estos filtros.", false);
+  const esc = (v) => { const s = String(v === undefined || v === null ? "" : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const filas = [["fecha", "tipo", "concepto", "categoria", "monto", "huesped", "quien_pago", "saldado"]];
+  for (const m of lista) filas.push([m.date, m.type === "in" ? "ingreso" : "gasto", m.concept, m.category || "", m.amount, m.guest || "", m.payer || "", m.settled ? "si" : "no"]);
+  // El BOM va para que Excel abra los acentos bien a la primera
+  const csv = "\uFEFF" + filas.map((f) => f.map(esc).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = `movimientos-esmeralda-${hoyMx()}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  msg(`${lista.length} movimiento${lista.length === 1 ? "" : "s"} en el CSV 📄`);
 }
 
 // Sugerencias de huésped: los nombres de las reservas + los ya usados en movimientos
@@ -1318,37 +1442,129 @@ function renderPlataformas() {
 
 // Quién puso el dinero: cuánto adelantó cada quien en gastos y cuánto cobró.
 // Sirve para saldar entre Lau, Ro y Bi — la utilidad del depa no cambia.
+// El saldo solo cuenta lo NO saldado: cuando se liquidan entre ellos, se marca
+// el movimiento como saldado y sale de la cuenta (sin borrarlo del historial).
 function renderPagadores(movs) {
   const box = $("pagadores");
   if (!box) return;
+  box.innerHTML = "";
   const by = {};
   for (const m of movs) {
     const p = (m.payer || "").trim();
     if (!p) continue;
-    by[p] = by[p] || { puso: 0, cobro: 0, n: 0 };
+    by[p] = by[p] || { puso: 0, cobro: 0, n: 0, saldados: 0 };
+    by[p].n++;
+    if (m.settled) { by[p].saldados++; continue; }
     if (m.type === "out") by[p].puso += Number(m.amount) || 0;
     else by[p].cobro += Number(m.amount) || 0;
-    by[p].n++;
   }
   const nombres = Object.keys(by).sort();
-  if (!nombres.length) {
+  if (nombres.length) {
+    let tp = 0, tc = 0;
+    const filas = nombres.map((n) => {
+      const x = by[n];
+      tp += x.puso; tc += x.cobro;
+      const saldo = x.puso - x.cobro;
+      const detalle = `${x.n} movimiento${x.n === 1 ? "" : "s"}` + (x.saldados ? ` · ${x.saldados} ya saldado${x.saldados === 1 ? "" : "s"}` : "");
+      return `<tr><td class="g"><b>${escHtml(n)}</b><br><span class="muted">${detalle}</span></td>` +
+        `<td class="neg">${money(x.puso)}</td><td class="pos">${money(x.cobro)}</td>` +
+        `<td class="${saldo > 0 ? "pos" : saldo < 0 ? "neg" : ""}"><b>${saldo > 0 ? "le deben " : saldo < 0 ? "debe " : ""}${money(Math.abs(saldo))}</b></td></tr>`;
+    }).join("");
+    box.innerHTML = `<table class="fin"><tr><th>Quién</th><th>Puso en gastos</th><th>Cobró</th><th>Saldo por saldar</th></tr>${filas}` +
+      `<tr><td class="g"><b>Total</b></td><td class="neg"><b>${money(tp)}</b></td><td class="pos"><b>${money(tc)}</b></td><td></td></tr></table>`;
+  } else {
     box.innerHTML = '<p class="muted">Todavía ningún movimiento dice quién pagó. ' +
       'Al registrar un gasto llena el campo “Quién pagó” y aquí aparece el saldo de cada quien.</p>';
-    return;
   }
-  const sinEtiqueta = movs.filter((m) => !(m.payer || "").trim()).length;
-  let tp = 0, tc = 0;
-  const filas = nombres.map((n) => {
-    const x = by[n];
-    tp += x.puso; tc += x.cobro;
-    const saldo = x.puso - x.cobro;
-    return `<tr><td class="g"><b>${escHtml(n)}</b><br><span class="muted">${x.n} movimiento${x.n === 1 ? "" : "s"}</span></td>` +
-      `<td class="neg">${money(x.puso)}</td><td class="pos">${money(x.cobro)}</td>` +
-      `<td class="${saldo > 0 ? "pos" : saldo < 0 ? "neg" : ""}"><b>${saldo > 0 ? "le deben " : saldo < 0 ? "debe " : ""}${money(Math.abs(saldo))}</b></td></tr>`;
-  }).join("");
-  box.innerHTML = `<table class="fin"><tr><th>Quién</th><th>Puso en gastos</th><th>Cobró</th><th>Saldo</th></tr>${filas}` +
-    `<tr><td class="g"><b>Total</b></td><td class="neg"><b>${money(tp)}</b></td><td class="pos"><b>${money(tc)}</b></td><td></td></tr></table>` +
-    (sinEtiqueta ? `<p class="muted" style="margin-top:.6rem">⚠️ ${sinEtiqueta} movimiento${sinEtiqueta === 1 ? "" : "s"} sin “quién pagó”, así que no ${sinEtiqueta === 1 ? "entra" : "entran"} en esta cuenta.</p>` : "");
+
+  // Por saldar: cada movimiento con nombre se puede marcar cuando ya se liquidó
+  const porSaldar = movs.filter((m) => (m.payer || "").trim() && !m.settled);
+  if (porSaldar.length) {
+    const det = document.createElement("details");
+    det.className = "saldar";
+    det.innerHTML = `<summary>Marcar saldados · ${porSaldar.length} movimiento${porSaldar.length === 1 ? "" : "s"} en la cuenta</summary>`;
+    for (const m of porSaldar) {
+      const fila = document.createElement("div");
+      fila.className = "fila";
+      fila.innerHTML = `<span style="text-align:left"><b>${escHtml(m.concept)}</b> ` +
+        `<span class="muted">· ${fmtD(m.date)} · ${m.type === "in" ? "cobró" : "puso"} ${escHtml(m.payer)} · ${money(m.amount)}</span></span>`;
+      const ok = document.createElement("button");
+      ok.className = "quiet";
+      ok.textContent = "Saldado ✓";
+      ok.title = "Ya se liquidó entre ustedes: sale del saldo, no del historial";
+      ok.addEventListener("click", () => marcarSaldado(m, ok));
+      fila.appendChild(ok);
+      det.appendChild(fila);
+    }
+    box.appendChild(det);
+  }
+
+  // Movimientos sin "quién pagó": se completan aquí mismo, sin ir a editar
+  const sinP = movs.filter((m) => !(m.payer || "").trim());
+  if (sinP.length) {
+    const aviso = document.createElement("p");
+    aviso.className = "muted";
+    aviso.style.marginTop = ".6rem";
+    aviso.textContent = `⚠️ ${sinP.length} movimiento${sinP.length === 1 ? "" : "s"} sin “quién pagó” — no ${sinP.length === 1 ? "entra" : "entran"} en la cuenta. Ponles nombre aquí:`;
+    box.appendChild(aviso);
+    const TOPE_SINP = 12;
+    for (const m of sinP.slice(0, TOPE_SINP)) {
+      const fila = document.createElement("div");
+      fila.className = "fila";
+      fila.innerHTML = `<span style="text-align:left"><span class="tag ${m.type}">${m.type === "in" ? "INGRESO" : "GASTO"}</span>` +
+        `<b>${escHtml(m.concept)}</b> <span class="muted">· ${fmtD(m.date)} · ${money(m.amount)}</span></span>`;
+      const wrap = document.createElement("span");
+      wrap.className = "row";
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.setAttribute("list", "payerlist");
+      inp.placeholder = "Lau, Ro, Bi…";
+      inp.style.width = "110px";
+      inp.setAttribute("aria-label", `Quién pagó ${m.concept}`);
+      const ok = document.createElement("button");
+      ok.className = "quiet";
+      ok.textContent = "Guardar";
+      ok.addEventListener("click", () => ponerPagador(m, inp.value, ok));
+      inp.addEventListener("keydown", (e) => { if (e.key === "Enter") ponerPagador(m, inp.value, ok); });
+      wrap.append(inp, ok);
+      fila.appendChild(wrap);
+      box.appendChild(fila);
+    }
+    if (sinP.length > TOPE_SINP) {
+      const mas = document.createElement("p");
+      mas.className = "muted";
+      mas.textContent = `…y ${sinP.length - TOPE_SINP} más: en Movimientos, filtra por “Sin quién pagó” y edítalos ahí.`;
+      box.appendChild(mas);
+    }
+  }
+}
+
+async function ponerPagador(m, valor, btn) {
+  const p = (valor || "").trim();
+  if (!p) return msg("Escribe quién pagó.", false);
+  if (btn) { btn.disabled = true; btn.textContent = "Guardando…"; }
+  try {
+    const r = await api(`&action=finance-update&id=${encodeURIComponent(m.id)}&payer=${encodeURIComponent(p)}`);
+    if (!r.ok) throw new Error(r.error);
+    applyFinance(r.movs || FIN);
+    msg(`Anotado: lo pagó ${p} ✅`);
+  } catch {
+    msg("No se pudo guardar quién pagó.", false);
+    if (btn) { btn.disabled = false; btn.textContent = "Guardar"; }
+  }
+}
+
+async function marcarSaldado(m, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = "Guardando…"; }
+  try {
+    const r = await api(`&action=finance-update&id=${encodeURIComponent(m.id)}&settled=1`);
+    if (!r.ok) throw new Error(r.error);
+    applyFinance(r.movs || FIN);
+    msg("Saldado ✅ · para des-saldarlo: Movimientos → Editar");
+  } catch {
+    msg("No se pudo marcar como saldado.", false);
+    if (btn) { btn.disabled = false; btn.textContent = "Saldado ✓"; }
+  }
 }
 
 // Cuánto pagó y cuánto costó cada huésped
@@ -1503,6 +1719,8 @@ function startEditMov(m) {
   $("f-concept").value = m.concept || "";
   $("f-guest").value = m.guest || "";
   $("f-payer").value = m.payer || "";
+  const fs = $("f-settled");
+  if (fs) fs.checked = !!m.settled;
   $("f-amount").value = m.amount;
   $("mov-title").textContent = "Editar movimiento";
   $("f-add").textContent = "Guardar cambios";
@@ -1522,6 +1740,7 @@ function nuevoMov() {
 function resetMovForm() {
   EDIT_MOV = null;
   $("f-concept").value = ""; $("f-amount").value = ""; $("f-guest").value = ""; $("f-payer").value = "";
+  const fs = $("f-settled"); if (fs) fs.checked = false;
   // Quita las marcas de "revisa esto" que hubiera dejado la lectura de un ticket
   ["f-amount", "f-date", "f-concept", "f-cat"].forEach((id) => { const e = $(id); if (e) e.classList.remove("revisar"); });
   const ft = $("f-ticket-file"); if (ft) ft.value = "";
@@ -1540,20 +1759,21 @@ async function addMovFromForm() {
   const category = $("f-cat").value, amount = parseFloat($("f-amount").value);
   const guest = $("f-guest").value.trim();
   const payer = $("f-payer").value.trim();
+  const settled = $("f-settled") && $("f-settled").checked ? "1" : "0";
   if (!date || !concept || !(amount > 0)) return msg("Faltan datos: fecha, concepto y monto.", false);
   const btn = $("f-add");
   finBusy = true;
   if (btn) { btn.disabled = true; btn.dataset.txt = btn.textContent; btn.textContent = "Guardando…"; }
   try {
     if (EDIT_MOV) {
-      const qs = Object.entries({ id: EDIT_MOV, type, date, concept, category, guest, payer, amount })
+      const qs = Object.entries({ id: EDIT_MOV, type, date, concept, category, guest, payer, settled, amount })
         .map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join("");
       const r = await api("&action=finance-update" + qs);
       if (!r.ok) throw new Error(r.error);
       applyFinance(r.movs || FIN);
       msg("Movimiento actualizado ✅");
     } else {
-      const r = await financeAdd({ type, date, concept, category, guest, payer, amount });
+      const r = await financeAdd({ type, date, concept, category, guest, payer, settled, amount });
       applyFinance(r.movs || FIN.concat(r.mov));
       msg(type === "in" ? "Ingreso registrado ✅" : "Gasto registrado ✅");
     }
@@ -2298,7 +2518,18 @@ document.addEventListener("DOMContentLoaded", () => {
   $("f-type").addEventListener("change", fillCats);
   $("f-add").addEventListener("click", addMovFromForm);
   $("f-cancel").addEventListener("click", () => { resetMovForm(); msg("Edición cancelada."); });
-  $("periodo-sel").addEventListener("change", (e) => { PERIODO = e.target.value; renderStats(FIN); });
+  $("periodo-sel").addEventListener("change", (e) => { PERIODO = e.target.value; renderStats(FIN); renderCats(FIN); });
+  // Filtros y buscador de Movimientos: cambiar cualquiera regresa a la página 1
+  const fb = $("f-buscar");
+  if (fb) fb.addEventListener("input", () => { MOVF.q = fb.value; MOVF.pag = 1; renderMovs(); });
+  const ftipo = $("f-filtro-tipo");
+  if (ftipo) ftipo.addEventListener("change", () => { MOVF.tipo = ftipo.value; MOVF.pag = 1; renderMovs(); });
+  const fcat = $("f-filtro-cat");
+  if (fcat) fcat.addEventListener("change", () => { MOVF.cat = fcat.value; MOVF.pag = 1; renderMovs(); });
+  const fpag = $("f-filtro-pagador");
+  if (fpag) fpag.addEventListener("change", () => { MOVF.pagador = fpag.value; MOVF.pag = 1; renderMovs(); });
+  const fcsv = $("f-csv");
+  if (fcsv) fcsv.addEventListener("click", descargarCSV);
   $("r-add").addEventListener("click", addRecurring);
   $("hoy-extender").addEventListener("click", abrirExtender);
   $("ext-guardar").addEventListener("click", guardarExtension);
