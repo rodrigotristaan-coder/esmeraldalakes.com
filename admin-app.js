@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260810-4";
+const VERSION = "20260811-1";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -22,6 +22,13 @@ const TZ_MX = "America/Mexico_City";
 const hoyMx = () => new Date().toLocaleDateString("en-CA", { timeZone: TZ_MX });
 // Suma días a un YYYY-MM-DD anclando al mediodía para que el huso no lo mueva.
 const masDias = (ds, n) => new Date(new Date(ds + "T12:00:00Z").getTime() + n * 86400000).toISOString().slice(0, 10);
+// Suma meses de calendario a una fecha; el día se topa en 28 para no caer en
+// un 31 de febrero. Sirve para estimar cuándo debería llegar un recibo bimestral.
+const masMeses = (ds, n) => {
+  const [y, m, d] = ds.split("-").map(Number);
+  const t = (m - 1) + n;
+  return `${y + Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}-${String(Math.min(d, 28)).padStart(2, "0")}`;
+};
 const KEY_STORE = "esmeralda_admin_key";
 let KEY = localStorage.getItem(KEY_STORE) || "";
 
@@ -71,9 +78,10 @@ function cuentas() {
   const rec = typeof pendientesDelMes === "function" ? pendientesDelMes().length : 0;
   const resArr = typeof pendientesDeReservas === "function" ? pendientesDeReservas() : [];
   const res = resArr.length;
+  const ing = typeof ingresosPendientes === "function" ? ingresosPendientes().length : 0;
   // El globito de Biandra solo cuenta lo que YA se le debe (estancias
   // terminadas); las futuras aún no son deuda.
-  return { hoy: rec + res + RV_PEND, recurrentes: rec + res, gente: RV_PEND, biandra: resArr.filter((x) => !x.futuro).length };
+  return { hoy: rec + res + ing + RV_PEND, recurrentes: rec + res, gente: RV_PEND, biandra: resArr.filter((x) => !x.futuro).length };
 }
 
 function pintarMenu() {
@@ -909,6 +917,19 @@ function renderHoy() {
       items.push({ ico: "💳", txt: `${pendMovs.length} movimiento${pendMovs.length === 1 ? "" : "s"} por pagar o por cobrar`,
         sub: `${money(total)} en total · ${pendMovs.map((m) => m.concept).slice(0, 3).join(", ")}${pendMovs.length > 3 ? "…" : ""}`, btn: "Ver", ir: "dinero" });
     }
+    // ⚡ Recibos que se saltan meses (luz bimestral): si ya pasó su ventana
+    // esperada y no hay registro nuevo, se avisa aparte — en la lista normal
+    // de recurrentes es fácil que pase desapercibido.
+    for (const r of RECUR) {
+      if (!r.activo || !(r.cadaMeses > 1)) continue;
+      const ult = movsDe(r)[0];
+      if (!ult) continue; // sin historial, la lista de recurrentes ya lo pide
+      const esperada = masMeses(ult.date, r.cadaMeses);
+      if (hoyDs > masDias(esperada, 10)) {
+        items.push({ ico: "⚡", txt: `${r.concept}: el recibo ya debía haber llegado`,
+          sub: `El último registrado fue el ${fmtD(ult.date)}; se esperaba alrededor del ${fmtD(esperada)}.`, btn: "Registrar", ir: "recurrentes" });
+      }
+    }
     if (RV_PEND) {
       items.push({ ico: "📝", txt: `${RV_PEND} reseña${RV_PEND === 1 ? "" : "s"} esperando tu visto bueno`,
         sub: "Nadie la ve en la landing hasta que la apruebes.", btn: "Revisar", ir: "gente" });
@@ -922,9 +943,16 @@ function renderHoy() {
       items.push({ ico: "💵", txt: `${sinCobrar.length} reserva${sinCobrar.length === 1 ? "" : "s"} terminada${sinCobrar.length === 1 ? "" : "s"} sin ingreso registrado`,
         sub: sinCobrar.map((b) => `${b.name} (${fmtD(b.start)})`).join(", "), btn: "Ir a reservas", ir: "calendario" });
     }
-    if (!items.length && !res.length) {
+    const ingHoy = ingresosPendientes();
+    if (!items.length && !res.length && !ingHoy.length) {
       box.innerHTML = '<div class="vacio"><b>Todo al día</b>No hay nada pendiente por ahora.</div>';
     } else {
+      if (ingHoy.length) {
+        const total = ingHoy.reduce((a, x) => a + x.neto, 0);
+        box.insertAdjacentHTML("beforeend",
+          `<p class="muted">💰 ${ingHoy.length} depósito${ingHoy.length === 1 ? "" : "s"} de plataforma por confirmar · ${money(total)} en total</p>`);
+        for (const it of ingHoy) box.appendChild(cardIngresoPlataforma(it));
+      }
       if (res.length) {
         const total = res.reduce((a, r) => a + r.amount, 0);
         box.insertAdjacentHTML("beforeend",
@@ -1600,6 +1628,12 @@ async function marcarSaldado(m, btn) {
 const esPagoBiandra = (m) => m.type === "out" &&
   (["Limpieza", "Recepción"].includes((m.category || "").trim()) || /biandra/i.test(m.concept || ""));
 
+// El pagador "Bi" de la cuenta de socios ES Biandra (Rodrigo lo confirmó el
+// 11-ago-2026): a veces pone dinero de su bolsa (el súper, un encargo) y se
+// le debe hasta que se marca saldado. Es la MISMA cuenta que "Quién puso el
+// dinero" en Dinero — saldar en un lado salda en el otro.
+const esPayerBiandra = (m) => ["bi", "biandra"].includes((m.payer || "").trim().toLowerCase());
+
 function renderBiandra() {
   const stats = $("b-stats");
   if (!stats) return;
@@ -1613,10 +1647,15 @@ function renderBiandra() {
   const pend = pendientesDeReservas();
   const deuda = pend.filter((x) => !x.futuro);
   const porVenir = pend.filter((x) => x.futuro);
-  const totDeuda = deuda.reduce((a, x) => a + x.amount, 0) + suma(porPagarMovs);
-  const nDeuda = deuda.length + porPagarMovs.length;
+  // Lo que puso de su bolsa (pagador Bi) y no se ha saldado; si cobró algo,
+  // se descuenta. Los pendientes de pagar no entran: aún no salieron de su bolsa.
+  const bolsa = FIN.filter((m) => esPayerBiandra(m) && !m.settled && !esPendiente(m));
+  let saldoBolsa = 0;
+  for (const m of bolsa) saldoBolsa += (m.type === "out" ? 1 : -1) * (Number(m.amount) || 0);
+  const totDeuda = deuda.reduce((a, x) => a + x.amount, 0) + suma(porPagarMovs) + saldoBolsa;
+  const nDeuda = deuda.length + porPagarMovs.length + bolsa.length;
   stats.innerHTML = `
-    <div class="stat"><span class="lbl">Le debes hoy</span><b class="${totDeuda ? "neg" : "pos"}">${money(totDeuda)}</b><span class="muted">${nDeuda ? nDeuda + " pendiente" + (nDeuda === 1 ? "" : "s") : "al corriente 🎉"}</span></div>
+    <div class="stat"><span class="lbl">Le debes hoy</span><b class="${totDeuda ? "neg" : "pos"}">${money(totDeuda)}</b><span class="muted">${nDeuda ? nDeuda + " pendiente" + (nDeuda === 1 ? "" : "s") + (saldoBolsa ? ` · ${money(saldoBolsa)} de su bolsa` : "") : "al corriente 🎉"}</span></div>
     <div class="stat"><span class="lbl">Pagado · ${mesLabel(ym)}</span><b>${money(suma(pagos.filter((m) => m.date.startsWith(ym))))}</b></div>
     <div class="stat"><span class="lbl">Pagado · ${yy}</span><b>${money(suma(pagos.filter((m) => m.date.startsWith(yy))))}</b></div>
     <div class="stat"><span class="lbl">Pagado · histórico</span><b>${money(suma(pagos))}</b><span class="muted">${pagos.length} pago${pagos.length === 1 ? "" : "s"}</span></div>`;
@@ -1626,7 +1665,7 @@ function renderBiandra() {
   const bd = $("b-deuda");
   if (bd) {
     bd.innerHTML = "";
-    if (!deuda.length && !porPagarMovs.length) {
+    if (!deuda.length && !porPagarMovs.length && !bolsa.length) {
       bd.innerHTML = '<div class="vacio"><b>Al corriente</b>No le debes nada registrado ni pendiente.</div>';
     } else {
       for (const it of deuda) bd.appendChild(cardCostoReserva(it));
@@ -1638,6 +1677,20 @@ function renderBiandra() {
         const ok = document.createElement("button");
         ok.textContent = "Ya le pagué ✓";
         ok.addEventListener("click", () => marcarPagado(m, ok));
+        fila.appendChild(ok);
+        bd.appendChild(fila);
+      }
+      // Lo que puso de su bolsa: se salda con un toque (misma cuenta que
+      // "Quién puso el dinero" en Dinero)
+      for (const m of bolsa) {
+        const fila = document.createElement("div");
+        fila.className = "card";
+        fila.innerHTML = `<span style="text-align:left"><span class="tag ${m.type}">${m.type === "out" ? "DE SU BOLSA" : "COBRÓ"}</span>` +
+          `<b>${escHtml(m.concept)}</b> <span class="muted">· ${fmtD(m.date)} · ${money(m.amount)}</span></span>`;
+        const ok = document.createElement("button");
+        ok.textContent = "Saldado ✓";
+        ok.title = "Ya se lo devolviste: sale del saldo, no del historial";
+        ok.addEventListener("click", () => marcarSaldado(m, ok));
         fila.appendChild(ok);
         bd.appendChild(fila);
       }
@@ -2134,19 +2187,88 @@ function renderResPend() {
 }
 
 // El mismo listado dentro de Dinero. El bloque entero solo se muestra cuando
-// hay cobros esperando, para no dejar un cajón vacío entre las cifras.
+// hay algo esperando, para no dejar un cajón vacío entre las cifras.
 function renderFinPend() {
   const box = $("f-pending");
   if (!box) return;
   const pend = pendientesDeReservas();
+  const ing = ingresosPendientes();
   const bloque = box.closest(".bloque");
-  if (bloque) bloque.hidden = !pend.length;
+  if (bloque) bloque.hidden = !pend.length && !ing.length;
   box.innerHTML = "";
-  if (!pend.length) return;
-  const total = pend.reduce((a, r) => a + r.amount, 0);
+  if (!pend.length && !ing.length) return;
+  const partes = [];
+  if (ing.length) partes.push(`${ing.length} depósito${ing.length === 1 ? "" : "s"} de plataforma (${money(ing.reduce((a, x) => a + x.neto, 0))})`);
+  if (pend.length) partes.push(`${pend.length} cobro${pend.length === 1 ? "" : "s"} de recepción y limpieza (${money(pend.reduce((a, r) => a + r.amount, 0))})`);
   box.insertAdjacentHTML("beforeend",
-    `<p class="muted">${pend.length} cobro${pend.length === 1 ? "" : "s"} de recepción y limpieza · ${money(total)} en total. Nada se registra hasta que confirmes.</p>`);
+    `<p class="muted">${partes.join(" · ")}. Nada se registra hasta que confirmes.</p>`);
+  for (const it of ing) box.appendChild(cardIngresoPlataforma(it));
   for (const it of pend) box.appendChild(cardCostoReserva(it));
+}
+
+// ===================== Depósitos de plataforma por confirmar =====================
+// El desglose de cada reserva de Airbnb ya dice cuánto te depositaron (neto).
+// En cuanto la estancia empieza, ese ingreso se propone por confirmar — antes
+// había que capturarlo a mano y era fácil que se quedara en el tintero.
+// Dedup: si ya hay un ingreso de ese huésped con fecha cerca de la estancia
+// (por nombre en el campo huésped o en el concepto), no se vuelve a proponer —
+// así los que Rodrigo capturó a mano con texto libre no salen duplicados, y una
+// huésped que regresa meses después sí genera su propuesta nueva.
+function ingresosPendientes() {
+  const out = [];
+  const hoyDs = hoyMx();
+  const desde = masDias(hoyDs, -60);
+  for (const b of todasReservas()) {
+    if (!(b.source === "airbnb" || b.plataforma)) continue;
+    const name = (b.name || "").trim();
+    if (!name) continue;
+    const d = desglosar(b);
+    if (!d || !(d.neto > 0)) continue;
+    if (b.start > hoyDs || b.start < desde) continue;
+    const nl = name.toLowerCase();
+    const ya = FIN.some((m) => m.type === "in" &&
+      m.date >= masDias(b.start, -7) && m.date <= masDias(b.end, 30) &&
+      ((m.guest || "").trim().toLowerCase() === nl || (m.concept || "").toLowerCase().includes(nl)));
+    if (ya) continue;
+    out.push({ b, name, neto: d.neto, n: noches(b) });
+  }
+  return out.sort((a, x) => a.b.start.localeCompare(x.b.start));
+}
+
+function cardIngresoPlataforma(it) {
+  const div = document.createElement("div");
+  div.className = "card";
+  div.innerHTML = `<span style="text-align:left"><span class="tag in">INGRESO</span>` +
+    `<b>${escHtml(it.name)}</b> <span class="muted">· ${escHtml(it.b.plataforma || "Airbnb")} · ${fmtD(it.b.start)} → ${fmtD(it.b.end)} · ${it.n} noche${it.n === 1 ? "" : "s"}</span></span>`;
+  const wrap = document.createElement("span");
+  wrap.className = "row";
+  const amt = document.createElement("input");
+  amt.type = "number"; amt.step = "0.01"; amt.min = "0"; amt.value = it.neto;
+  amt.style.width = "105px";
+  amt.setAttribute("aria-label", `Depósito de ${it.name}`);
+  const ok = document.createElement("button");
+  ok.textContent = "Confirmar";
+  ok.addEventListener("click", () => confirmarIngresoPlataforma(it, parseFloat(amt.value), ok));
+  wrap.append(amt, ok);
+  div.appendChild(wrap);
+  return div;
+}
+
+async function confirmarIngresoPlataforma(it, amount, btn) {
+  if (!(amount > 0)) return msg("Revisa el monto.", false);
+  if (btn) { btn.disabled = true; btn.textContent = "Guardando…"; }
+  try {
+    const res = await financeAdd({
+      type: "in", date: it.b.start,
+      concept: `Reserva ${it.b.plataforma || "Airbnb"} — ${it.name} · ${it.n} noche${it.n === 1 ? "" : "s"}`,
+      category: "Reserva", amount, guest: it.name,
+    });
+    applyFinance(res.movs || FIN.concat(res.mov));
+    msg(`Depósito de ${it.name} registrado ✅`);
+  } catch {
+    msg("Error al registrar el ingreso.", false);
+    if (btn) { btn.disabled = false; btn.textContent = "Confirmar"; }
+  }
 }
 
 async function confirmarCostoReserva(it, amount, btn) {
