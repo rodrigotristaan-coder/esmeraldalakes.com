@@ -9,7 +9,12 @@ const TOPE_TICKETS_DIA = 40;
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
   const q = req.query || {};
-  const key = q.key || req.headers["x-admin-key"];
+  // La cabecera manda sobre la query. La llave sigue aceptándose por URL para no
+  // romper lo que se corre a mano desde el navegador, pero por ese camino el
+  // secreto queda en los logs de Vercel, en el Referer y en el historial: cuando
+  // llega así se responde con aviso para cachar clientes viejos.
+  const key = req.headers["x-admin-key"] || q.key;
+  const llavePorUrl = !req.headers["x-admin-key"] && !!q.key;
 
   // Acepta: (a) ADMIN_KEY o PORTAL_SECRET (secretos server-only), o
   // (b) sesión magic-link con rol admin (cookie firmada del portal).
@@ -21,6 +26,7 @@ module.exports = async (req, res) => {
   if (!authed) {
     return res.status(401).json({ ok: false, error: "no autorizado" });
   }
+  if (llavePorUrl) res.setHeader("X-Aviso", "la llave viajo en la URL; usa la cabecera x-admin-key");
 
   const action = q.action || "list";
   const { start, end } = q;
@@ -63,6 +69,10 @@ module.exports = async (req, res) => {
       direct: upcoming(aplicarNotas(direct, notas), today),
       all: upcoming(todos, today),
       pasadas: pasadas(todos, today),
+      // Le dice al panel si esta petición la autorizó la cookie del magic-link.
+      // Con sesión, el enlace al calendario no necesita llevar la llave en la URL
+      // (una navegación no puede mandar cabeceras). Ver admin-app.js:applyBlocks.
+      sesion: !!(sess && sess.admin),
     };
   };
 

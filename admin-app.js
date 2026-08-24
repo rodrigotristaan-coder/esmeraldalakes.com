@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260811-1";
+const VERSION = "20260824-1";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -31,6 +31,9 @@ const masMeses = (ds, n) => {
 };
 const KEY_STORE = "esmeralda_admin_key";
 let KEY = localStorage.getItem(KEY_STORE) || "";
+// ¿El servidor nos reconoció por la cookie del magic-link? Lo contesta él en cada
+// listado. Solo se usa para el enlace al calendario: ver applyBlocks().
+let SESION_ADMIN = false;
 
 function msg(t, ok = true) {
   const el = $("msg");
@@ -38,9 +41,16 @@ function msg(t, ok = true) {
   el.style.color = ok ? "#8effcd" : "#ff8f8f";
 }
 
+// La llave viaja en una cabecera, no en la dirección: en la URL quedaba grabada
+// en los registros de Vercel, en el Referer y en el historial del navegador.
+// Los `params` de cada llamada empiezan con "&", así que el primero pasa a "?".
+const urlAdmin = (params) => "/api/admin?" + String(params).replace(/^&/, "");
+// Sin llave guardada entramos por la cookie del magic-link, y mandar la cabecera
+// vacía solo ensucia la petición.
+const cabeceraLlave = () => (KEY ? { "x-admin-key": KEY } : {});
+
 async function api(params) {
-  const url = "/api/admin?key=" + encodeURIComponent(KEY) + params;
-  const r = await fetch(url);
+  const r = await fetch(urlAdmin(params), { headers: cabeceraLlave() });
   if (r.status === 401) throw new Error("401");
   return r.json();
 }
@@ -48,10 +58,9 @@ async function api(params) {
 // Igual que api(), pero manda un cuerpo JSON. La foto del ticket no cabe en la
 // dirección: tiene que viajar en el cuerpo de la petición.
 async function apiPost(params, body) {
-  const url = "/api/admin?key=" + encodeURIComponent(KEY) + params;
-  const r = await fetch(url, {
+  const r = await fetch(urlAdmin(params), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...cabeceraLlave() },
     body: JSON.stringify(body),
   });
   if (r.status === 401) throw new Error("401");
@@ -386,13 +395,20 @@ async function load() {
 // llamada: volver a pedir "list" ahí puede traer el blob viejo y perder el cambio.
 function applyBlocks(data) {
   OCC = calcOccupancy(data.all || []);
+  if (typeof data.sesion === "boolean") SESION_ADMIN = data.sesion;
   $("logout").classList.remove("hidden");
 
   // Mini calendario interactivo + link a la vista completa
   BLOCKS = data.all || [];
   renderMiniCal();
   const open = $("cal-open");
-  if (open) open.href = "/calendario" + (KEY ? "?adminkey=" + encodeURIComponent(KEY) : "");
+  // Este es un enlace de NAVEGACIÓN (abre /calendario en un iframe), y una
+  // navegación no puede llevar cabeceras: aquí la llave en la URL no se puede
+  // cambiar por `x-admin-key`. Lo que sí se puede es dejar de ponerla cuando no
+  // hace falta: con sesión de magic-link, api/calendar.js ya autoriza por cookie.
+  // Queda en la URL solo para quien entró tecleando la llave y no tiene cookie —
+  // quitársela lo dejaría sin calendario.
+  if (open) open.href = "/calendario" + (KEY && !SESION_ADMIN ? "?adminkey=" + encodeURIComponent(KEY) : "");
 
   // Reservas directas (editar / liberar / registrar ingreso)
   const direct = data.direct || [];
