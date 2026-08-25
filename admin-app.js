@@ -402,7 +402,8 @@ function applyBlocks(data) {
   BLOCKS = data.all || [];
   renderMiniCal();
   const open = $("cal-open");
-  // Este es un enlace de NAVEGACIÓN (abre /calendario en un iframe), y una
+  // Este es un enlace de NAVEGACIÓN — abre /calendario en una PESTAÑA NUEVA
+  // (admin.html:338 lo declara con target="_blank"; no es un iframe) — y una
   // navegación no puede llevar cabeceras: aquí la llave en la URL no se puede
   // cambiar por `x-admin-key`. Lo que sí se puede es dejar de ponerla cuando no
   // hace falta: con sesión de magic-link, api/calendar.js ya autoriza por cookie.
