@@ -1,9 +1,18 @@
 // Webhook de Telegram: botones de confirmación de reserva (doble toque) y
 // comandos del anfitrión (/calendario, /ingreso, /gasto).
 // Solo actúa sobre el grupo/chat configurado y verifica el secreto del webhook.
+//
+// Desde el 17-sep-2026 este mismo archivo atiende los avisos que salen SOLOS
+// (`?tarea=diario` y `?tarea=airbnb`, que dispara n8n con su propio secreto).
+// Van aquí y no en una ruta nueva porque /api está en 12 de 12 funciones del
+// plan Hobby: un archivo más y el despliegue truena.
 const crypto = require("crypto");
-const { addBlock, upsertCustomerFromBooking, readFinance, writeFinance, getAllBlocks, hoyMx } = require("./_lib");
+const {
+  addBlock, removeBlock, readBlocks, upsertCustomerFromBooking, readFinance, writeFinance,
+  getAllBlocks, hoyMx, safeEqual,
+} = require("./_lib");
 const { sendCalendarPhoto, occupancy, todayAcapulco, ymd } = require("./_calimg");
+const avisos = require("./_avisos");
 
 async function tg(method, body) {
   return fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/${method}`, {
@@ -71,9 +80,198 @@ async function sendResumen(chatId) {
 const MENU_KEYBOARD = { inline_keyboard: [
   [{ text: "📅 Calendario anual", callback_data: "cmd|cal" }, { text: "📊 Resumen", callback_data: "cmd|fin" }],
   [{ text: "💵 Registrar ingreso", callback_data: "cmd|in" }, { text: "💸 Registrar gasto", callback_data: "cmd|out" }],
+  [{ text: "📋 Qué falta por hacer", callback_data: "cmd|pend" }, { text: "🔌 Servicios", callback_data: "cmd|srv" }],
 ] };
 
+// /libre 2026-09-15 2026-09-20 — enseña qué se va a liberar y pide confirmación.
+//
+// Liberar NO es lo mismo que bloquear: en cuanto las fechas quedan libres,
+// Airbnb las lee de /calendar.ics y las puede vender. Por eso va con doble
+// toque, igual que el botón de pago recibido.
+async function pedirLiberar(chatId, text) {
+  const f = text.match(/(\d{4}-\d{2}-\d{2})\s+(\d{4}-\d{2}-\d{2})/);
+  if (!f) {
+    await tg("sendMessage", { chat_id: chatId, text: "Dime las dos fechas así: /libre 2026-09-15 2026-09-20\n(llegada y salida, tal como están en el calendario)" });
+    return;
+  }
+  const [, start, end] = f;
+  const reserva = (await readBlocks()).find((b) => b.start === start && b.end === end);
+  if (!reserva) {
+    await tg("sendMessage", { chat_id: chatId, text: `No tengo ninguna reserva directa del ${start} al ${end}. Mándame /calendario para ver cuáles hay.` });
+    return;
+  }
+  const quien = reserva.name || "sin nombre";
+  await tg("sendMessage", {
+    chat_id: chatId,
+    text: `¿Libero estas fechas?\n\n🗓 ${start} → ${end}\n👤 ${quien}${reserva.rate ? `\n💵 ${money(reserva.rate)}/noche` : ""}\n\n⚠️ Al liberarlas, Airbnb las va a ver disponibles y las puede vender.`,
+    reply_markup: { inline_keyboard: [[
+      { text: "✅ Sí, liberar", callback_data: `lib|${start}|${end}` },
+      { text: "↩️ Cancelar", callback_data: "nada" },
+    ]] },
+  });
+}
+
+// /bloquear 2026-12-20 2026-12-27 Nombre — al revés que liberar, esto no quita
+// nada: en el peor caso sobra un bloqueo y se quita con /libre. Va directo.
+async function bloquear(chatId, text) {
+  const f = text.match(/(\d{4}-\d{2}-\d{2})\s+(\d{4}-\d{2}-\d{2})\s*(.*)$/s);
+  if (!f) {
+    await tg("sendMessage", { chat_id: chatId, text: "Así: /bloquear 2026-12-20 2026-12-27 Nombre del huésped" });
+    return;
+  }
+  const [, start, end, nombre] = f;
+  if (!(start < end)) {
+    await tg("sendMessage", { chat_id: chatId, text: "La salida tiene que ser después de la llegada." });
+    return;
+  }
+  await addBlock(start, end, { name: (nombre || "").trim().slice(0, 80) });
+  await tg("sendMessage", { chat_id: chatId, text: `🔒 Bloqueado ${start} → ${end}${nombre ? ` · ${nombre.trim()}` : ""}` });
+  await sendCalendarPhoto(`📅 Así queda el calendario`);
+}
+
+// /pague luz 581 [2026-09-17] — registra el gasto del servicio y mueve su fecha.
+async function pagarServicio(chatId, text) {
+  const m = text.match(/^\/?pagu[eé]\s+(\w+)\s+\$?\s*(\d[\d.,]*)\s*(\d{4}-\d{2}-\d{2})?/i);
+  if (!m) {
+    await tg("sendMessage", { chat_id: chatId, text: "Así: /pague luz 581\n(o con fecha: /pague luz 581 2026-09-15). Escribe /servicios para ver las claves." });
+    return;
+  }
+  const monto = parseFloat(m[2].replace(/,/g, ""));
+  if (!(monto > 0)) {
+    await tg("sendMessage", { chat_id: chatId, text: "Revisa el monto." });
+    return;
+  }
+  const r = await avisos.registrarServicio(m[1].toLowerCase(), monto, m[3]);
+  await tg("sendMessage", { chat_id: chatId, text: r.error ? `No pude: ${r.error}` : r.texto });
+}
+
+async function sendServicios(chatId) {
+  const servicios = await avisos.readServicios();
+  const hoy = hoyMx();
+  const lineas = Object.entries(servicios).map(([clave, s]) => {
+    const vence = avisos.venceServicio(s, hoy);
+    const estado = !vence ? "cuando llegue el recibo"
+      : vence < hoy ? `🔴 venció el ${avisos.fmtD(vence)}`
+      : `🟡 vence el ${avisos.fmtD(vence)}`;
+    const ultimo = s.ultimo ? ` · último: ${avisos.fmtD(s.ultimo)}${s.ultimoMonto ? ` ${money(s.ultimoMonto)}` : ""}` : "";
+    return `• ${clave} — ${s.nombre}: ${estado}${ultimo}`;
+  });
+  await tg("sendMessage", {
+    chat_id: chatId,
+    text: `🔌 SERVICIOS DEL DEPA\n\n${lineas.join("\n")}\n\nCuando pagues uno: /pague luz 581`,
+  });
+}
+
+// /airbnb 2026-11-27 2026-11-30 Nombre 4500 — le pone nombre y depósito a una
+// estancia de Airbnb mientras todavía existe en su calendario.
+async function anotarAirbnb(chatId, text) {
+  const f = text.match(/(\d{4}-\d{2}-\d{2})\s+(\d{4}-\d{2}-\d{2})\s*(.*)$/s);
+  if (!f) {
+    await tg("sendMessage", { chat_id: chatId, text: "Así: /airbnb 2026-11-27 2026-11-30 Nombre del huésped 4500" });
+    return;
+  }
+  const [, start, end, resto] = f;
+  // El monto es el último número del mensaje; lo demás es el nombre.
+  const mMonto = String(resto).match(/(\d[\d.,]*)\s*$/);
+  const monto = mMonto ? parseFloat(mMonto[1].replace(/,/g, "")) : 0;
+  const name = String(resto).replace(/(\d[\d.,]*)\s*$/, "").trim();
+  if (!name && !(monto > 0)) {
+    await tg("sendMessage", { chat_id: chatId, text: "Dime al menos el nombre o el depósito: /airbnb 2026-11-27 2026-11-30 Nombre 4500" });
+    return;
+  }
+  const r = await avisos.anotarAirbnb(start, end, name, monto);
+  await tg("sendMessage", { chat_id: chatId, text: r.error ? `No pude: ${r.error}` : r.texto });
+}
+
+// Lo que falta por hacer, a demanda. Es el mismo texto del aviso de las 8:00.
+async function sendPendientes(chatId) {
+  const items = await avisos.pendientes();
+  const msg = avisos.armarDiario(items);
+  if (!msg) {
+    await tg("sendMessage", { chat_id: chatId, text: "✅ Todo al día: no hay nada pendiente por capturar." });
+    return;
+  }
+  await tg("sendMessage", { chat_id: chatId, ...msg });
+}
+
+// --- avisos programados (los dispara n8n, no Telegram) -----------------------
+//
+// `diario`: una vez al día, todo lo que falta capturar, con un botón por renglón.
+//           Si no hay nada pendiente NO manda mensaje: un aviso que llega
+//           siempre se vuelve ruido y se deja de leer.
+// `airbnb`: cada pocas horas, las estancias de Airbnb que siguen sin nombre ni
+//           monto. El iCal las borra al terminar; después ya no hay de dónde.
+async function correrTarea(tarea) {
+  const chatId = process.env.OWNER_CHAT_ID;
+  const hoy = hoyMx();
+
+  if (tarea === "diario") {
+    const estado = await avisos.readAvisos();
+    if (estado.diario === hoy) return { ok: true, saltado: "ya se mandó hoy" };
+    const items = await avisos.pendientes();
+    const msg = avisos.armarDiario(items);
+    if (!msg) {
+      await avisos.marcarAviso("diario", hoy);
+      return { ok: true, pendientes: 0 };
+    }
+    const r = await tg("sendMessage", { chat_id: chatId, ...msg });
+    if (!r.ok) {
+      // Sin marcar: que el siguiente intento lo vuelva a mandar. Un aviso que se
+      // pierde en silencio es justo lo que este proyecto ya vivió.
+      const detalle = await r.text().catch(() => "");
+      console.error("aviso diario:", r.status, detalle.slice(0, 300));
+      return { ok: false, error: `telegram ${r.status}`, detalle: detalle.slice(0, 300) };
+    }
+    await avisos.marcarAviso("diario", hoy);
+    return { ok: true, pendientes: items.length };
+  }
+
+  if (tarea === "airbnb") {
+    const sinNota = await avisos.airbnbSinNota();
+    const estado = await avisos.readAvisos();
+    const ya = estado.airbnb || {};
+    let mandados = 0;
+    for (const b of sinNota) {
+      // Se avisa una vez al aparecer y otra cuando está por terminar, que es la
+      // última oportunidad de anotarla antes de que el iCal la borre.
+      const etapa = b.porTerminar ? "termina" : "nueva";
+      if (ya[b.clave] === etapa || ya[b.clave] === "termina") continue;
+      await tg("sendMessage", {
+        chat_id: chatId,
+        text: (etapa === "termina"
+          ? `⏳ ÚLTIMA LLAMADA — Airbnb\nEsta estancia termina el ${avisos.fmtD(b.end)} y después desaparece del calendario de Airbnb para siempre.`
+          : `🆕 Estancia nueva de Airbnb`) +
+          `\n\n🗓 ${b.start} → ${b.end}\n\n¿De quién es y cuánto te depositaron? Sin eso, esta estancia no queda en ningún lado (ya pasó con Cristian y con Mau).`,
+        reply_markup: { inline_keyboard: [[
+          { text: "✍️ Anotar quién y cuánto", switch_inline_query_current_chat: `/airbnb ${b.start} ${b.end} nombre monto` },
+        ]] },
+      });
+      ya[b.clave] = etapa;
+      mandados++;
+    }
+    await avisos.marcarAviso("airbnb", ya);
+    return { ok: true, avisadas: mandados, sinNota: sinNota.length };
+  }
+
+  return { ok: false, error: "tarea desconocida" };
+}
+
 module.exports = async (req, res) => {
+  // Entrada de los avisos programados. Va ANTES del secreto de Telegram porque
+  // no viene de Telegram: la llama n8n con el secreto del proyecto.
+  const tarea = (req.query || {}).tarea;
+  if (tarea) {
+    const esperado = process.env.ESM_N8N_SECRET || "";
+    const dado = req.headers["x-esm-secret"] || "";
+    if (!esperado || !safeEqual(String(dado), esperado)) return res.status(401).json({ ok: false });
+    try {
+      return res.status(200).json(await correrTarea(String(tarea)));
+    } catch (e) {
+      console.error("tarea " + tarea + ":", e.message);
+      return res.status(500).json({ ok: false, error: e.message });
+    }
+  }
+
   // Verifica que el llamado venga de Telegram (secreto del webhook)
   if (req.headers["x-telegram-bot-api-secret-token"] !== process.env.TELEGRAM_WEBHOOK_SECRET) {
     return res.status(401).json({ ok: false });
@@ -91,11 +289,31 @@ module.exports = async (req, res) => {
       await financeCommand(msg.chat.id, text);
     } else if (isOwner && /^\/?resumen\s*$/i.test(text)) {
       await sendResumen(msg.chat.id);
+    } else if (isOwner && /^\/?libre\b/i.test(text)) {
+      await pedirLiberar(msg.chat.id, text);
+    } else if (isOwner && /^\/?bloquear\b/i.test(text)) {
+      await bloquear(msg.chat.id, text);
+    } else if (isOwner && /^\/?servicios\s*$/i.test(text)) {
+      await sendServicios(msg.chat.id);
+    } else if (isOwner && /^\/?pagu[eé]\b/i.test(text)) {
+      await pagarServicio(msg.chat.id, text);
+    } else if (isOwner && /^\/?(pendientes|falta)\s*$/i.test(text)) {
+      await sendPendientes(msg.chat.id);
+    } else if (isOwner && /^\/?airbnb\b/i.test(text)) {
+      await anotarAirbnb(msg.chat.id, text);
+    } else if (isOwner && /^\/?quiensoy\s*$/i.test(text)) {
+      // Para poder restringir después quién confirma pagos: hoy cualquiera del
+      // grupo puede, porque el permiso es del chat, no de la persona.
+      const u = msg.from || {};
+      await tg("sendMessage", { chat_id: msg.chat.id, text:
+        `Tu id de Telegram es ${u.id}${u.first_name ? ` (${u.first_name})` : ""}.\nEl id de este chat es ${msg.chat.id}.` });
     } else if (isOwner && /^\/?(menu|menú|start|ayuda|hola)\s*$/i.test(text)) {
       await tg("sendMessage", { chat_id: msg.chat.id, text: "¿Qué necesitas? 🌴", reply_markup: MENU_KEYBOARD });
     } else if (isOwner && /^\//.test(text)) {
       await tg("sendMessage", { chat_id: msg.chat.id, text:
-        "Comandos:\n🌴 /menu — botones de todo\n📅 /calendario — foto del calendario al día\n📊 /resumen — mes, año y ocupación\n💵 /ingreso 4500 Reserva María\n💸 /gasto 650 Limpieza salida" });
+        "Comandos:\n🌴 /menu — botones de todo\n📅 /calendario — foto del calendario al día\n📊 /resumen — mes, año y ocupación\n📋 /pendientes — qué falta por capturar\n" +
+        "💵 /ingreso 4500 Reserva María\n💸 /gasto 650 Limpieza salida\n🔌 /servicios — luz, gas, internet, cuota\n✅ /pague luz 581\n" +
+        "🔓 /libre 2026-09-15 2026-09-20 — liberar fechas\n🔒 /bloquear 2026-12-20 2026-12-27 Nombre\n🏠 /airbnb 2026-11-27 2026-11-30 Nombre 4500" });
     }
     return res.status(200).json({ ok: true });
   }
@@ -119,11 +337,37 @@ module.exports = async (req, res) => {
     if (action === "cmd") {
       if (ci === "cal") { await answer("Va 📅"); await sendCalendarPhoto("📅 Calendario al día de hoy"); }
       else if (ci === "fin") { await answer(); await sendResumen(chatId); }
+      else if (ci === "pend") { await answer(); await sendPendientes(chatId); }
+      else if (ci === "srv") { await answer(); await sendServicios(chatId); }
       else if (ci === "in") { await answer(); await tg("sendMessage", { chat_id: chatId, text: "Escríbeme: /ingreso 4500 Reserva María\n(monto primero, luego el concepto)" }); }
       else if (ci === "out") { await answer(); await tg("sendMessage", { chat_id: chatId, text: "Escríbeme: /gasto 650 Limpieza salida\n(monto primero, luego el concepto)" }); }
       else await answer();
       return res.status(200).json({ ok: true });
     }
+    // Botón del aviso diario: registra la recepción y limpieza de una salida.
+    if (action === "lim") {
+      const r = await avisos.registrarLimpieza(ci);
+      await answer(r.error ? `No pude: ${r.error}` : "Registrado ✅");
+      await tg("sendMessage", { chat_id: chatId, text: r.error ? `⚠️ ${r.error}` : r.texto });
+      return res.status(200).json({ ok: true });
+    }
+
+    // Segundo toque de /libre: aquí sí se quitan las fechas.
+    if (action === "lib") {
+      const antes = await readBlocks();
+      const reserva = antes.find((b) => b.start === ci && b.end === co);
+      await removeBlock(ci, co);
+      await tg("editMessageReplyMarkup", {
+        chat_id: chatId, message_id: msgId,
+        reply_markup: { inline_keyboard: [[{ text: `🔓 Liberado ${ci} → ${co}`, callback_data: "nada" }]] },
+      });
+      await answer("Fechas liberadas");
+      await sendCalendarPhoto(`📅 Calendario con ${ci} → ${co} ya libre${reserva && reserva.name ? ` (era de ${reserva.name})` : ""}`);
+      return res.status(200).json({ ok: true });
+    }
+
+    if (action === "nada") { await answer(); return res.status(200).json({ ok: true }); }
+
     if (action === "ask") {
       // Botón "Pago recibido" → pide una confirmación antes de disparar toda la cadena
       await tg("editMessageReplyMarkup", {

@@ -663,6 +663,9 @@ module.exports = {
   // portal
   normEmail, isEmail, readCustomers, writeCustomers, upsertCustomerFromBooking, ownerOfRefCode, seedCustomer,
   issueCode, verifyCode, sessionCookie, clearSessionCookie, readSession, isAdminEmail,
+  // documentos sueltos (servicios.json, avisos.json y lo que venga): mismo
+  // almacén, cada cosa en su propio renglón para no cargarle banderas a finanzas
+  readJsonObj, writeJsonObj,
   // finanzas
   readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, mutarFinanzas, mutarClientes, contarTicket,
   sanitizeCliente, REGLAMENTO_VERSION,
