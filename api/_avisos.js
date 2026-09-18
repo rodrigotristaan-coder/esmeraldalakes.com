@@ -23,7 +23,17 @@ const SERVICIOS = "servicios.json"; // luz, gas, internet, cuota: cada cuándo t
 const COSTO_POR_HUESPED = 500;
 
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+// Para leer: "7-sep".
 const fmtD = (ds) => (ds ? `${Number(ds.slice(8, 10))}-${MESES[Number(ds.slice(5, 7)) - 1]}` : "");
+// Para el CONCEPTO de un movimiento: "07-sep-2026", exactamente como lo escribe
+// el panel (admin-app.js). No es cosmético: el concepto es lo que se compara
+// para saber si un gasto ya está registrado. Con el formato corto, las cuatro
+// limpiezas de julio y agosto que ya estaban pagadas volvían a aparecer como
+// pendientes, y un toque en el botón habría metido $2,000 de gasto duplicado.
+const fmtDoc = (ds) => (ds ? `${ds.slice(8, 10)}-${MESES[Number(ds.slice(5, 7)) - 1]}-${ds.slice(0, 4)}` : "");
+// Mismo texto que arma el panel, para que los dos lados se reconozcan.
+const conceptoEstancia = (b) =>
+  `Recepción y limpieza — ${b.name || (b.source === "airbnb" ? "Airbnb" : "Reserva directa")} ${fmtDoc(b.end)}`;
 const money = (n) => "$" + (Number(n) || 0).toLocaleString("es-MX", { maximumFractionDigits: 2 });
 const norm = (s) => String(s || "").trim().toLowerCase();
 
@@ -132,8 +142,7 @@ async function pendientes() {
   for (const b of todos) {
     if (b.end < desde || b.end > hasta || sigueDespues(b, todos)) continue;
     const quien = b.name || (b.source === "airbnb" ? "Airbnb" : "Reserva directa");
-    const concept = `Recepción y limpieza — ${quien} ${fmtD(b.end)}`;
-    if (conceptos.has(norm(concept))) continue;
+    if (conceptos.has(norm(conceptoEstancia(b)))) continue;
     out.push({
       tipo: "limpieza", id: `lim|${b.start}_${b.end}`, ico: "🧹",
       txt: `${quien} (salida ${fmtD(b.end)}): recepción y limpieza ${money(COSTO_POR_HUESPED)}`,
@@ -252,8 +261,7 @@ async function registrarLimpieza(clave) {
   const { todos } = await estado();
   const b = todos.find((x) => x.start === start && x.end === end);
   if (!b) return { error: "esa reserva ya no está en el calendario" };
-  const quien = b.name || (b.source === "airbnb" ? "Airbnb" : "Reserva directa");
-  const concept = `Recepción y limpieza — ${quien} ${fmtD(b.end)}`;
+  const concept = conceptoEstancia(b);
   const r = await mutarFinanzas((doc) => {
     if (doc.movs.some((m) => norm(m.concept) === norm(concept))) return { error: "ya estaba registrada" };
     doc.movs.push(movimiento({
@@ -273,7 +281,7 @@ async function registrarServicio(clave, monto, fecha) {
   const date = fecha || hoyMx();
   const r = await mutarFinanzas((doc) => {
     doc.movs.push(movimiento({
-      type: "out", date, concept: `${s.nombre} ${fmtD(date)}`,
+      type: "out", date, concept: `${s.nombre} ${fmtDoc(date)}`,
       category: "Servicios", amount: monto,
     }));
   });
@@ -316,7 +324,7 @@ async function marcarAviso(campo, valor) {
 }
 
 module.exports = {
-  COSTO_POR_HUESPED, fmtD, money,
+  COSTO_POR_HUESPED, fmtD, fmtDoc, money,
   estado, pendientes, armarDiario, airbnbSinNota, anotarAirbnb,
   readServicios, venceServicio, registrarLimpieza, registrarServicio,
   readAvisos, marcarAviso,
