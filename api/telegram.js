@@ -26,7 +26,10 @@ const money = (n) => "$" + (Number(n) || 0).toLocaleString("es-MX", { maximumFra
 
 // /ingreso 4500 Reserva María · /gasto 650 Limpieza salida
 // Registra el movimiento en finance.json (el mismo del panel admin) con fecha de hoy.
-async function financeCommand(chatId, text) {
+// `conResumen` en false (grupo de operación): confirma el registro y ya. El
+// acumulado del mes es información del negocio y ahí no va.
+async function financeCommand(chatId, text, opts = {}) {
+  const conResumen = opts.conResumen !== false;
   const m = text.match(/^\/?(ingreso|gasto)\s+\$?\s*(\d[\d.,]*)\s+(.+)$/is);
   if (!m) {
     await tg("sendMessage", { chat_id: chatId, text: "Formato: ingreso 4500 Reserva María\n(o: gasto 650 Limpieza salida). Monto primero, luego el concepto." });
@@ -47,13 +50,17 @@ async function financeCommand(chatId, text) {
     at: new Date().toISOString(), via: "telegram",
   });
   await writeFinance(movs);
+  const linea = `✅ ${type === "in" ? "Ingreso" : "Gasto"} registrado: ${money(amount)} — ${concept} (${date})`;
+  if (!conResumen) {
+    await tg("sendMessage", { chat_id: chatId, text: linea + "\n¡Gracias! Ya quedó anotado." });
+    return;
+  }
   // Resumen del mes con el movimiento ya incluido
   const ym = date.slice(0, 7);
   let inM = 0, outM = 0;
   for (const x of movs) if ((x.date || "").slice(0, 7) === ym) { if (x.type === "in") inM += Number(x.amount) || 0; else outM += Number(x.amount) || 0; }
   await tg("sendMessage", { chat_id: chatId, text:
-    `✅ ${type === "in" ? "Ingreso" : "Gasto"} registrado: ${money(amount)} — ${concept} (${date})\n` +
-    `📊 Este mes: ingresos ${money(inM)} · gastos ${money(outM)} · utilidad ${money(inM - outM)}` });
+    linea + `\n📊 Este mes: ingresos ${money(inM)} · gastos ${money(outM)} · utilidad ${money(inM - outM)}` });
 }
 
 // /resumen — mes + año + ocupación de los próximos 12 meses
@@ -81,6 +88,13 @@ const MENU_KEYBOARD = { inline_keyboard: [
   [{ text: "📅 Calendario anual", callback_data: "cmd|cal" }, { text: "📊 Resumen", callback_data: "cmd|fin" }],
   [{ text: "💵 Registrar ingreso", callback_data: "cmd|in" }, { text: "💸 Registrar gasto", callback_data: "cmd|out" }],
   [{ text: "📋 Qué falta por hacer", callback_data: "cmd|pend" }, { text: "🔌 Servicios", callback_data: "cmd|srv" }],
+] };
+
+// El grupo de operación (con Biandra) ve solo lo suyo: el calendario y la forma
+// de mandar un ticket. Nada de dinero del negocio.
+const MENU_OPERACION = { inline_keyboard: [
+  [{ text: "📅 Calendario", callback_data: "cmd|cal" }],
+  [{ text: "🧾 Cómo registrar un ticket", callback_data: "cmd|ticket" }],
 ] };
 
 // /libre 2026-09-15 2026-09-20 — enseña qué se va a liberar y pide confirmación.
@@ -202,8 +216,12 @@ async function sendPendientes(chatId) {
 // `airbnb`: cada pocas horas, las estancias de Airbnb que siguen sin nombre ni
 //           monto. El iCal las borra al terminar; después ya no hay de dónde.
 async function correrTarea(tarea) {
-  const chatId = process.env.OWNER_CHAT_ID;
+  // Los dos avisos son de dinero: van al canal de negocio. Si todavía no está
+  // configurado, no se mandan a ningún lado — antes que soltarlos en el grupo
+  // de operación, se quedan sin mandar y queda dicho en la respuesta.
+  const chatId = avisos.chatNegocio();
   const hoy = hoyMx();
+  if (!chatId) return { ok: false, error: "falta NEGOCIO_CHAT_ID: no hay dónde mandar lo de dinero" };
 
   if (tarea === "diario") {
     const estado = await avisos.readAvisos();
@@ -277,43 +295,75 @@ module.exports = async (req, res) => {
     return res.status(401).json({ ok: false });
   }
 
-  // Comandos del anfitrión (solo OWNER_CHAT_ID)
+  // Comandos. Dos canales con permisos distintos: el de operación (con Biandra)
+  // registra cosas pero no recibe números del negocio; el de negocio (con Laura)
+  // ve todo. Ver el bloque de canales en _avisos.js.
   const msg = (req.body || {}).message;
   if (msg && msg.text) {
-    const isOwner = String(msg.chat && msg.chat.id) === String(process.env.OWNER_CHAT_ID);
+    const chatId = msg.chat && msg.chat.id;
+    const esNegocio = avisos.esChatDeNegocio(chatId);
+    const esOperacion = avisos.esChatDeOperacion(chatId);
+    // Solo el canal de negocio ve números. Si todavía no existe, NADIE los ve
+    // por Telegram: es preferible quedarse sin el dato a soltarlo en el grupo
+    // equivocado, que es justo lo que se pidió el 17-sep.
+    const mandaTodo = esNegocio;
+    const autorizado = esNegocio || esOperacion;
     const text = msg.text.trim();
+
+    // Lo que pide números del negocio y se pidió en el grupo de Biandra: no se
+    // contesta ahí. Se dice dónde, sin soltar el dato.
+    const soloNegocio = async () => {
+      await tg("sendMessage", { chat_id: chatId, text: "Eso va en el canal de negocio, no aquí 🙂" });
+    };
+
     // Los comandos funcionan con o sin "/" (las palabras sueltas deben ser el mensaje completo)
-    if (isOwner && /^\/?(calendario|calendar)\s*$/i.test(text)) {
-      await sendCalendarPhoto("📅 Calendario al día de hoy");
-    } else if (isOwner && /^\/?(ingreso|gasto)\b/i.test(text)) {
-      await financeCommand(msg.chat.id, text);
-    } else if (isOwner && /^\/?resumen\s*$/i.test(text)) {
-      await sendResumen(msg.chat.id);
-    } else if (isOwner && /^\/?libre\b/i.test(text)) {
-      await pedirLiberar(msg.chat.id, text);
-    } else if (isOwner && /^\/?bloquear\b/i.test(text)) {
-      await bloquear(msg.chat.id, text);
-    } else if (isOwner && /^\/?servicios\s*$/i.test(text)) {
-      await sendServicios(msg.chat.id);
-    } else if (isOwner && /^\/?pagu[eé]\b/i.test(text)) {
-      await pagarServicio(msg.chat.id, text);
-    } else if (isOwner && /^\/?(pendientes|falta)\s*$/i.test(text)) {
-      await sendPendientes(msg.chat.id);
-    } else if (isOwner && /^\/?airbnb\b/i.test(text)) {
-      await anotarAirbnb(msg.chat.id, text);
-    } else if (isOwner && /^\/?quiensoy\s*$/i.test(text)) {
-      // Para poder restringir después quién confirma pagos: hoy cualquiera del
-      // grupo puede, porque el permiso es del chat, no de la persona.
+    if (autorizado && /^\/?(calendario|calendar)\s*$/i.test(text)) {
+      // El calendario sí: quién llega y quién sale es justo lo que Biandra necesita.
+      await sendCalendarPhoto("📅 Calendario al día de hoy", chatId);
+    } else if (autorizado && /^\/?gasto\b/i.test(text)) {
+      // Un gasto se registra desde los dos lados (tickets, transferencias,
+      // encargos). En el de operación se confirma SIN el resumen del mes.
+      await financeCommand(chatId, text, { conResumen: mandaTodo });
+    } else if (autorizado && /^\/?ingreso\b/i.test(text)) {
+      if (!mandaTodo) return soloNegocio(), res.status(200).json({ ok: true });
+      await financeCommand(chatId, text, { conResumen: true });
+    } else if (autorizado && /^\/?resumen\s*$/i.test(text)) {
+      if (!mandaTodo) return soloNegocio(), res.status(200).json({ ok: true });
+      await sendResumen(chatId);
+    } else if (autorizado && /^\/?libre\b/i.test(text)) {
+      if (!mandaTodo) return soloNegocio(), res.status(200).json({ ok: true });
+      await pedirLiberar(chatId, text);
+    } else if (autorizado && /^\/?bloquear\b/i.test(text)) {
+      if (!mandaTodo) return soloNegocio(), res.status(200).json({ ok: true });
+      await bloquear(chatId, text);
+    } else if (autorizado && /^\/?servicios\s*$/i.test(text)) {
+      if (!mandaTodo) return soloNegocio(), res.status(200).json({ ok: true });
+      await sendServicios(chatId);
+    } else if (autorizado && /^\/?pagu[eé]\b/i.test(text)) {
+      if (!mandaTodo) return soloNegocio(), res.status(200).json({ ok: true });
+      await pagarServicio(chatId, text);
+    } else if (autorizado && /^\/?(pendientes|falta)\s*$/i.test(text)) {
+      if (!mandaTodo) return soloNegocio(), res.status(200).json({ ok: true });
+      await sendPendientes(chatId);
+    } else if (autorizado && /^\/?airbnb\b/i.test(text)) {
+      if (!mandaTodo) return soloNegocio(), res.status(200).json({ ok: true });
+      await anotarAirbnb(chatId, text);
+    } else if (autorizado && /^\/?(quiensoy|aqui|aquí)\s*$/i.test(text)) {
+      // `/aqui` en el grupo nuevo devuelve su id, que es lo que hay que pegar en
+      // NEGOCIO_CHAT_ID. `/quiensoy` da además el id de la persona.
       const u = msg.from || {};
-      await tg("sendMessage", { chat_id: msg.chat.id, text:
-        `Tu id de Telegram es ${u.id}${u.first_name ? ` (${u.first_name})` : ""}.\nEl id de este chat es ${msg.chat.id}.` });
-    } else if (isOwner && /^\/?(menu|menú|start|ayuda|hola)\s*$/i.test(text)) {
-      await tg("sendMessage", { chat_id: msg.chat.id, text: "¿Qué necesitas? 🌴", reply_markup: MENU_KEYBOARD });
-    } else if (isOwner && /^\//.test(text)) {
-      await tg("sendMessage", { chat_id: msg.chat.id, text:
-        "Comandos:\n🌴 /menu — botones de todo\n📅 /calendario — foto del calendario al día\n📊 /resumen — mes, año y ocupación\n📋 /pendientes — qué falta por capturar\n" +
-        "💵 /ingreso 4500 Reserva María\n💸 /gasto 650 Limpieza salida\n🔌 /servicios — luz, gas, internet, cuota\n✅ /pague luz 581\n" +
-        "🔓 /libre 2026-09-15 2026-09-20 — liberar fechas\n🔒 /bloquear 2026-12-20 2026-12-27 Nombre\n🏠 /airbnb 2026-11-27 2026-11-30 Nombre 4500" });
+      await tg("sendMessage", { chat_id: chatId, text:
+        `El id de este chat es ${chatId}.\nTu id de Telegram es ${u.id}${u.first_name ? ` (${u.first_name})` : ""}.\n` +
+        `Este chat es: ${esNegocio ? "el de negocio" : "el de operación"}.` });
+    } else if (autorizado && /^\/?(menu|menú|start|ayuda|hola)\s*$/i.test(text)) {
+      await tg("sendMessage", { chat_id: chatId, text: "¿Qué necesitas? 🌴",
+        reply_markup: mandaTodo ? MENU_KEYBOARD : MENU_OPERACION });
+    } else if (autorizado && /^\//.test(text)) {
+      await tg("sendMessage", { chat_id: chatId, text: mandaTodo
+        ? "Comandos:\n🌴 /menu — botones de todo\n📅 /calendario — foto del calendario al día\n📊 /resumen — mes, año y ocupación\n📋 /pendientes — qué falta por capturar\n" +
+          "💵 /ingreso 4500 Reserva María\n💸 /gasto 650 Limpieza salida\n🔌 /servicios — luz, gas, internet, cuota\n✅ /pague luz 581\n" +
+          "🔓 /libre 2026-09-15 2026-09-20 — liberar fechas\n🔒 /bloquear 2026-12-20 2026-12-27 Nombre\n🏠 /airbnb 2026-11-27 2026-11-30 Nombre 4500"
+        : "Comandos de este grupo:\n📅 /calendario — quién llega y quién sale\n💸 /gasto 650 Cloro y bolsas — para registrar un ticket o una transferencia\n🌴 /menu" });
     }
     return res.status(200).json({ ok: true });
   }
@@ -326,19 +376,35 @@ module.exports = async (req, res) => {
   const [action, ci, co, lang] = String(cq.data || "").split("|");
   const answer = (text) => tg("answerCallbackQuery", { callback_query_id: cq.id, text }).catch(() => {});
 
-  // Solo el grupo/chat configurado puede confirmar
-  if (String(chatId) !== String(process.env.OWNER_CHAT_ID)) {
+  // Los dos chats pueden tocar botones, pero no los mismos: lo que mueve dinero
+  // del negocio (cobros, servicios, liberar fechas, confirmar un pago) es solo
+  // del canal de negocio.
+  const esNegocioCb = avisos.esChatDeNegocio(chatId);
+  const esOperacionCb = avisos.esChatDeOperacion(chatId);
+  if (!esNegocioCb && !esOperacionCb) {
     await answer("No autorizado");
+    return res.status(200).json({ ok: true });
+  }
+  const soloNegocioCb = ["cob", "srv", "lib", "ask", "do"].includes(action) ||
+    (action === "cmd" && ["fin", "pend", "srv", "in"].includes(ci));
+  if (soloNegocioCb && !esNegocioCb) {
+    await answer("Eso va en el canal de negocio");
     return res.status(200).json({ ok: true });
   }
 
   try {
     // Botones del /menu
     if (action === "cmd") {
-      if (ci === "cal") { await answer("Va 📅"); await sendCalendarPhoto("📅 Calendario al día de hoy"); }
+      if (ci === "cal") { await answer("Va 📅"); await sendCalendarPhoto("📅 Calendario al día de hoy", chatId); }
       else if (ci === "fin") { await answer(); await sendResumen(chatId); }
       else if (ci === "pend") { await answer(); await sendPendientes(chatId); }
       else if (ci === "srv") { await answer(); await sendServicios(chatId); }
+      else if (ci === "ticket") {
+        await answer();
+        await tg("sendMessage", { chat_id: chatId, text:
+          "Para registrar un gasto, escríbeme así:\n\n/gasto 650 Cloro, bolsas y suavitel\n\n" +
+          "Primero el monto, luego qué fue. Si mandas la transferencia o el ticket, ponlo igual y queda anotado." });
+      }
       else if (ci === "in") { await answer(); await tg("sendMessage", { chat_id: chatId, text: "Escríbeme: /ingreso 4500 Reserva María\n(monto primero, luego el concepto)" }); }
       else if (ci === "out") { await answer(); await tg("sendMessage", { chat_id: chatId, text: "Escríbeme: /gasto 650 Limpieza salida\n(monto primero, luego el concepto)" }); }
       else await answer();

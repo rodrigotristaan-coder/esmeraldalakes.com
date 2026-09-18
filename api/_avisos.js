@@ -315,6 +315,25 @@ async function anotarAirbnb(start, end, name, monto) {
   };
 }
 
+// --- a quién se le dice qué --------------------------------------------------
+//
+// Hay DOS chats y no ven lo mismo (decisión de Rodrigo, 17-sep-2026):
+//
+//   OWNER_CHAT_ID     grupo de operación, con Biandra. Entradas y salidas,
+//                     limpiezas, tickets y transferencias PARA REGISTRAR. Aquí
+//                     entra información, pero no sale: nada de ingresos,
+//                     utilidad, tarifas ni de cuánto pagó cada huésped.
+//   NEGOCIO_CHAT_ID   grupo de negocio, con Laura. Ahí va todo lo de dinero.
+//
+// Si el de negocio todavía no está configurado, lo de dinero NO se manda al de
+// operación: sale un aviso mudo ("hay algo que ver en el panel"). Así no se
+// pierde el aviso y tampoco se filtra lo que no toca.
+const chatOperacion = () => process.env.OWNER_CHAT_ID || "";
+const chatNegocio = () => process.env.NEGOCIO_CHAT_ID || "";
+const hayCanalDeNegocio = () => Boolean(chatNegocio());
+const esChatDeNegocio = (id) => hayCanalDeNegocio() && String(id) === String(chatNegocio());
+const esChatDeOperacion = (id) => String(id) === String(chatOperacion());
+
 // --- memoria de lo ya avisado ------------------------------------------------
 const readAvisos = () => readDoc(AVISOS);
 async function marcarAviso(campo, valor) {
@@ -328,4 +347,6 @@ module.exports = {
   estado, pendientes, armarDiario, airbnbSinNota, anotarAirbnb,
   readServicios, venceServicio, registrarLimpieza, registrarServicio,
   readAvisos, marcarAviso,
+  // canales
+  chatOperacion, chatNegocio, hayCanalDeNegocio, esChatDeNegocio, esChatDeOperacion,
 };

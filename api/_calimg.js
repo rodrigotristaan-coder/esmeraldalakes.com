@@ -255,11 +255,14 @@ async function renderCalendarPng(opts = {}) {
   return Buffer.from(resvg.render().asPng());
 }
 
-// Manda el calendario como foto al chat del anfitrión. Best-effort: nunca truena.
-async function sendCalendarPhoto(caption) {
+// Manda el calendario como foto. Sin destino explícito va al chat de siempre
+// (el de operación); con destino, a donde se le diga — el calendario lo pueden
+// ver los dos grupos, porque dice quién llega y quién sale, no cuánto pagó.
+// Best-effort: nunca truena.
+async function sendCalendarPhoto(caption, destino) {
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.OWNER_CHAT_ID;
+    const chatId = destino || process.env.OWNER_CHAT_ID;
     if (!token || !chatId) return false;
     const png = await renderCalendarPng();
     const fd = new FormData();

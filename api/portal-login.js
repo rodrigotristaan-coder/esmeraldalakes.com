@@ -39,12 +39,12 @@ module.exports = async (req, res) => {
     }
     // Admins: el código también llega al Telegram del anfitrión al instante
     // (el correo M365 a veces tarda). Best-effort.
-    if (admin && process.env.TELEGRAM_BOT_TOKEN && process.env.OWNER_CHAT_ID) {
+    if (admin && process.env.TELEGRAM_BOT_TOKEN && process.env.NEGOCIO_CHAT_ID) {
       sends.push(fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          chat_id: process.env.OWNER_CHAT_ID,
+          chat_id: process.env.NEGOCIO_CHAT_ID,
           text: `🔐 Código de acceso al panel para ${email}: ${issued.code}\n(válido 15 min — si no fuiste tú, ignóralo)`,
         }),
       }).catch((e) => console.error("tg portal code:", e.message)));

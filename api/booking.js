@@ -38,7 +38,12 @@ module.exports = async (req, res) => {
   }
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.OWNER_CHAT_ID;
+  // Una solicitud trae nombre, correo, teléfono y tarifa: eso es del canal de
+  // negocio. Si todavía no está configurado, al de operación solo le llega el
+  // aviso mudo de abajo — así no se pierde la reserva ni se filtran los datos.
+  const chatNegocio = process.env.NEGOCIO_CHAT_ID || "";
+  const chatId = chatNegocio || process.env.OWNER_CHAT_ID;
+  const mudo = !chatNegocio;
   if (!token || !chatId) return res.status(500).json({ ok: false, error: "config" });
 
   // Re-chequeo de disponibilidad del lado del servidor
@@ -70,20 +75,30 @@ module.exports = async (req, res) => {
     inline_keyboard: [[{ text: "💰 Pago recibido", callback_data: `ask|${b.checkin}|${b.checkout}|${b.lang || "es"}` }]],
   };
 
+  // Sin canal de negocio configurado, al grupo de operación solo le avisamos que
+  // ENTRÓ una solicitud, sin nombre, correo, teléfono ni tarifa, y sin el botón
+  // de pago recibido (ese botón manda el correo al huésped y bloquea fechas).
+  const textoMudo = `📥 Entró una solicitud de reserva por la web para el ${esc(b.checkin)} → ${esc(b.checkout)} (${nights} noches).\nLos datos están en el panel.`;
+
   try {
     const tg = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown", disable_web_page_preview: true, reply_markup }),
+      body: JSON.stringify(mudo
+        ? { chat_id: chatId, text: textoMudo, parse_mode: "Markdown", disable_web_page_preview: true }
+        : { chat_id: chatId, text, parse_mode: "Markdown", disable_web_page_preview: true, reply_markup }),
     });
     if (!tg.ok) throw new Error("telegram " + tg.status);
 
     // Bitácora en Excel (OneDrive) + correo a anfitriones y acuse al huésped, vía n8n→M365 (best-effort)
     await notifyN8n(b, nights);
 
-    // Pantallazo del calendario actual (la solicitud aún NO bloquea fechas)
+    // Pantallazo del calendario actual (la solicitud aún NO bloquea fechas). El
+    // calendario lo pueden ver los dos grupos: dice fechas, no dinero.
     const { sendCalendarPhoto } = require("./_calimg");
-    await sendCalendarPhoto(`📅 Calendario al llegar la solicitud de ${esc(b.name)} (${b.checkin} → ${b.checkout}, aún sin bloquear)`);
+    await sendCalendarPhoto(mudo
+      ? `📅 Calendario al llegar la solicitud (${b.checkin} → ${b.checkout}, aún sin bloquear)`
+      : `📅 Calendario al llegar la solicitud de ${esc(b.name)} (${b.checkin} → ${b.checkout}, aún sin bloquear)`, chatId);
 
     return res.status(200).json({ ok: true, conflict });
   } catch (err) {

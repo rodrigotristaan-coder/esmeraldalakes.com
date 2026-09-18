@@ -53,7 +53,7 @@ module.exports = async (req, res) => {
 
   // Aviso por Telegram (best-effort, pero con await: sin él la función se
   // congela al responder y el mensaje a veces nunca sale)
-  const token = process.env.TELEGRAM_BOT_TOKEN, chatId = process.env.OWNER_CHAT_ID;
+  const token = process.env.TELEGRAM_BOT_TOKEN, chatId = process.env.NEGOCIO_CHAT_ID || "";
   if (token && chatId) {
     const msg = `📝 *Nueva reseña pendiente* (esmeraldalakes.com)\n\n${"⭐".repeat(rating)} (${rating}/5)\n👤 ${name}\n\n${text}\n\nApruébala o recházala en el panel: /admin.html`;
     const send = (body) =>
