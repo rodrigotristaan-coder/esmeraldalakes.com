@@ -310,6 +310,20 @@ module.exports = async (req, res) => {
     const autorizado = esNegocio || esOperacion;
     const text = msg.text.trim();
 
+    // Excepción a la autorización: `/aqui` contesta en cualquier chat, porque es
+    // el comando con el que se da de alta un grupo nuevo (sin él, el grupo de
+    // negocio recién creado no tendría forma de decir cuál es su id). Solo
+    // devuelve el id de ese chat; ninguna otra cosa funciona sin autorizar.
+    if (/^\/?(aqui|aquí)\s*$/i.test(text)) {
+      const dondeEstoy = esNegocio ? "el canal de NEGOCIO"
+        : esOperacion ? "el canal de OPERACIÓN"
+        : "un chat que todavía NO está configurado";
+      await tg("sendMessage", { chat_id: chatId, text:
+        `El id de este chat es:\n\n${chatId}\n\nEste chat es ${dondeEstoy}.` +
+        (esNegocio || esOperacion ? "" : "\nPásale ese número a quien configura el bot para darlo de alta.") });
+      return res.status(200).json({ ok: true });
+    }
+
     // Lo que pide números del negocio y se pidió en el grupo de Biandra: no se
     // contesta ahí. Se dice dónde, sin soltar el dato.
     const soloNegocio = async () => {
@@ -348,7 +362,7 @@ module.exports = async (req, res) => {
     } else if (autorizado && /^\/?airbnb\b/i.test(text)) {
       if (!mandaTodo) return soloNegocio(), res.status(200).json({ ok: true });
       await anotarAirbnb(chatId, text);
-    } else if (autorizado && /^\/?(quiensoy|aqui|aquí)\s*$/i.test(text)) {
+    } else if (autorizado && /^\/?quiensoy\s*$/i.test(text)) {
       // `/aqui` en el grupo nuevo devuelve su id, que es lo que hay que pegar en
       // NEGOCIO_CHAT_ID. `/quiensoy` da además el id de la persona.
       const u = msg.from || {};
