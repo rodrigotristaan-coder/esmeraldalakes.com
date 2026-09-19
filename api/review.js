@@ -29,9 +29,11 @@ module.exports = async (req, res) => {
   const rating = Math.max(1, Math.min(5, parseInt(b.rating, 10) || 0));
   if (!name || !text || !rating) return res.status(422).json({ ok: false, error: "Faltan campos" });
 
-  // Foto opcional: solo data URL de imagen y con tope de tamaño (~140 KB)
+  // Foto opcional: solo data URL de imagen y con tope de tamaño (~140 KB).
+  // El patrón va anclado hasta el final: después de la coma solo cabe base64.
+  // Antes bastaba el prefijo y detrás podía ir cualquier cosa, comillas incluidas.
   let photo = null;
-  if (typeof b.photo === "string" && /^data:image\/(jpeg|png|webp);base64,/.test(b.photo) && b.photo.length < 140000) {
+  if (typeof b.photo === "string" && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/.test(b.photo) && b.photo.length < 140000) {
     photo = b.photo;
   }
 

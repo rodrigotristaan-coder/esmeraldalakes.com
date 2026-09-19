@@ -6,9 +6,30 @@ const { safeEqual, readBlocks, addBlock, removeBlock, updateBlock, getAllBlocks,
 // saldo de la API: el prepago ya topa el daño en el saldo, esto lo topa antes.
 const TOPE_TICKETS_DIA = 40;
 
+// Límite de intentos contra la llave (el mismo de casa-avandaro). Vive en memoria
+// de la instancia: un despliegue lo reinicia y cada instancia lleva su cuenta,
+// pero frena la prueba masiva de llaves, que hasta hoy no tenía ningún freno
+// (medido el 31-ago: once 401 seguidos, ningún 429). Solo cuentan los intentos
+// FALLIDOS; entrar bien limpia el contador de esa IP.
+const INTENTOS_MAX = 10;
+const VENTANA_MS = 15 * 60 * 1000;
+const intentosPorIp = new Map();
+const ipDe = (req) =>
+  String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+  req.socket?.remoteAddress || "desconocida";
+
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
   const q = req.query || {};
+
+  const ip = ipDe(req);
+  const reg = intentosPorIp.get(ip);
+  if (reg && Date.now() - reg.desde > VENTANA_MS) intentosPorIp.delete(ip);
+  const vivo = intentosPorIp.get(ip);
+  if (vivo && vivo.n >= INTENTOS_MAX) {
+    res.setHeader("Retry-After", String(Math.ceil((vivo.desde + VENTANA_MS - Date.now()) / 1000)));
+    return res.status(429).json({ ok: false, error: "demasiados intentos" });
+  }
   // La cabecera manda sobre la query. La llave sigue aceptándose por URL para no
   // romper lo que se corre a mano desde el navegador, pero por ese camino el
   // secreto queda en los logs de Vercel, en el Referer y en el historial: cuando
@@ -24,8 +45,15 @@ module.exports = async (req, res) => {
   const sess = readSession(req.headers.cookie);
   const authed = keyAuthed || !!(sess && sess.admin);
   if (!authed) {
+    if (intentosPorIp.size > 1000) {
+      for (const [k, v] of intentosPorIp) if (Date.now() - v.desde > VENTANA_MS) intentosPorIp.delete(k);
+    }
+    const r = intentosPorIp.get(ip) || { n: 0, desde: Date.now() };
+    r.n += 1;
+    intentosPorIp.set(ip, r);
     return res.status(401).json({ ok: false, error: "no autorizado" });
   }
+  intentosPorIp.delete(ip);
   if (llavePorUrl) res.setHeader("X-Aviso", "la llave viajo en la URL; usa la cabecera x-admin-key");
 
   const action = q.action || "list";

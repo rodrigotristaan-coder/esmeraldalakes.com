@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260824-1";
+const VERSION = "20260919-1";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -52,6 +52,7 @@ const cabeceraLlave = () => (KEY ? { "x-admin-key": KEY } : {});
 async function api(params) {
   const r = await fetch(urlAdmin(params), { headers: cabeceraLlave() });
   if (r.status === 401) throw new Error("401");
+  if (r.status === 429) throw new Error("429");
   return r.json();
 }
 
@@ -64,6 +65,7 @@ async function apiPost(params, body) {
     body: JSON.stringify(body),
   });
   if (r.status === 401) throw new Error("401");
+  if (r.status === 429) throw new Error("429");
   return r.json();
 }
 
@@ -377,7 +379,8 @@ async function load() {
     data = await api("&action=list");
   } catch (e) {
     showLogin();
-    msg("Contraseña incorrecta.", false);
+    // 429: el servidor frenó esta IP tras 10 llaves equivocadas (se libera sola en 15 min).
+    msg(e.message === "429" ? "Demasiados intentos. Espera 15 minutos y vuelve a probar." : "Contraseña incorrecta.", false);
     return;
   }
   $("login").classList.add("hidden");
@@ -1034,7 +1037,9 @@ function applyReviews(all) {
     for (const r of list) {
       const div = document.createElement("div");
       div.className = "card";
-      const photo = r.photo ? `<img src="${r.photo}" alt="" style="width:46px;height:46px;border-radius:50%;object-fit:cover" />` : "";
+      // La foto la manda el huésped: escapada, como en script.js, para que no
+      // pueda meter atributos en el panel (donde vive la llave).
+      const photo = r.photo ? `<img src="${escHtml(r.photo)}" alt="" style="width:46px;height:46px;border-radius:50%;object-fit:cover" />` : "";
       div.innerHTML = `<span style="display:flex;align-items:center;gap:10px;text-align:left">${photo}<span><b>${escHtml(r.name)}</b> <span class="muted">${"★".repeat(r.rating)}</span><br><span class="muted">${escHtml(r.text)}</span></span></span>`;
       const wrap = document.createElement("span");
       wrap.className = "row";
@@ -1048,7 +1053,7 @@ function applyReviews(all) {
       del.className = "danger";
       del.textContent = isPending ? "Rechazar" : "Quitar";
       del.addEventListener("click", () => reviewAction("reject", r.id, isPending));
-      acciones.appendChild(del);
+      wrap.appendChild(del);
       div.appendChild(wrap);
       box.appendChild(div);
     }
