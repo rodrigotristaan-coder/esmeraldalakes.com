@@ -51,7 +51,9 @@ const readDoc = (clave) => readJsonObj(clave);
 const SERVICIOS_SEMILLA = {
   cuota:     { nombre: "Cuota de mantenimiento", cada: "mes", diaLimite: 10, nota: "después del día 10 sube de $3,900 a $4,300" },
   internet:  { nombre: "Internet (izzi)",        cada: "mes", diaLimite: 10 },
-  luz:       { nombre: "Luz (CFE)",              cada: "bimestre", ultimo: "2026-07-07" },
+  // Domiciliada (Rodrigo, 19-sep): se cobra sola, así que nunca «vence». Lo único
+  // que falta cada bimestre es que alguien diga cuánto fue para registrarlo.
+  luz:       { nombre: "Luz (CFE)",              cada: "bimestre", ultimo: "2026-07-07", domiciliado: true },
   gas:       { nombre: "Gas",                    cada: "cuando toca" },
 };
 
@@ -166,6 +168,17 @@ async function pendientes() {
     const vence = venceServicio(s, hoy);
     if (!vence) continue;
     if (s.ultimo && s.ultimo >= vence) continue; // ya se pagó el de este ciclo
+    // Domiciliado: no hay nada que pagar, hay que pedir el monto una vez cobrado.
+    if (s.domiciliado) {
+      if (vence > hoy) continue;
+      out.push({
+        tipo: "servicio", id: `srv|${clave}`, ico: "💡",
+        txt: `${s.nombre}: se cobró sola el ${fmtD(vence)} — ¿cuánto fue el recibo?`,
+        boton: `💡 Anotar monto de ${s.nombre.slice(0, 16)}`,
+        prefill: `/pague ${clave} `,
+      });
+      continue;
+    }
     const limite = masDias(hoy, 3);
     if (vence > limite) continue;
     const vencido = vence < hoy;
@@ -278,7 +291,10 @@ async function registrarServicio(clave, monto, fecha) {
   const servicios = await readServicios();
   const s = servicios[clave];
   if (!s) return { error: "no conozco ese servicio" };
-  const date = fecha || hoyMx();
+  // Domiciliado sin fecha: se registra el día en que se cobró, no el día en que
+  // alguien lo anota; si no, el siguiente bimestre se iría recorriendo.
+  const cobro = s.domiciliado ? venceServicio(s, hoyMx()) : null;
+  const date = fecha || (cobro && cobro <= hoyMx() ? cobro : hoyMx());
   const r = await mutarFinanzas((doc) => {
     doc.movs.push(movimiento({
       type: "out", date, concept: `${s.nombre} ${fmtDoc(date)}`,

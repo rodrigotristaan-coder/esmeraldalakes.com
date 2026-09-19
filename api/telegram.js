@@ -164,7 +164,9 @@ async function sendServicios(chatId) {
   const hoy = hoyMx();
   const lineas = Object.entries(servicios).map(([clave, s]) => {
     const vence = avisos.venceServicio(s, hoy);
+    const cobrado = s.ultimo && vence && s.ultimo >= vence;
     const estado = !vence ? "cuando llegue el recibo"
+      : s.domiciliado ? (vence <= hoy && !cobrado ? `💡 se cobró sola el ${avisos.fmtD(vence)}: falta anotar el monto` : `se cobra sola el ${avisos.fmtD(vence)}`)
       : vence < hoy ? `🔴 venció el ${avisos.fmtD(vence)}`
       : `🟡 vence el ${avisos.fmtD(vence)}`;
     const ultimo = s.ultimo ? ` · último: ${avisos.fmtD(s.ultimo)}${s.ultimoMonto ? ` ${money(s.ultimoMonto)}` : ""}` : "";
