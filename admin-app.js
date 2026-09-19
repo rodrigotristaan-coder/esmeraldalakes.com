@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 // Versión de este archivo. Debe coincidir con el ?v= del <script> en admin.html.
 // Sirve para detectar que el panel abierto quedó viejo: con la pestaña abierta el
 // navegador nunca vuelve a pedir el JS y los cambios no llegan nunca.
-const VERSION = "20260919-1";
+const VERSION = "20260919-2";
 
 // Pregunta al servidor qué versión está publicada y avisa si la abierta quedó atrás
 async function revisarVersion() {
@@ -380,12 +380,16 @@ async function load() {
   } catch (e) {
     showLogin();
     // 429: el servidor frenó esta IP tras 10 llaves equivocadas (se libera sola en 15 min).
-    msg(e.message === "429" ? "Demasiados intentos. Espera 15 minutos y vuelve a probar." : "Contraseña incorrecta.", false);
+    // Sin llave guardada no hubo intento: es la primera visita, no se regaña a nadie.
+    $("login-msg").textContent = e.message === "429" ? "Demasiados intentos. Espera 15 minutos y vuelve a probar."
+      : KEY ? "Contraseña incorrecta." : "";
     return;
   }
   $("login").classList.add("hidden");
   $("app").classList.remove("hidden");
   applyBlocks(data);
+  ofrecerFaceId(!!data.sesion);
+  cargarPreguntas();
 
   loadReviews();
   loadCustomers();
@@ -2794,6 +2798,177 @@ function showLogin() {
   $("app").classList.add("hidden");
   $("login").classList.remove("hidden");
   $("logout").classList.add("hidden");
+  const fid = faceIdPosible();
+  $("fid-entrar").classList.toggle("hidden", !fid);
+  $("fid-o").classList.toggle("hidden", !fid);
+}
+
+// ===================== Entrar sin contraseña =====================
+// Tres puertas al panel: Face ID (passkey), enlace por correo (el código de 6
+// dígitos va dentro del correo y también como botón) y la llave de siempre.
+// Las dos primeras dejan una cookie de sesión admin; el servidor solo la acepta
+// si el correo sigue en ADMIN_EMAILS.
+const FID_STORE = "esmeralda_faceid";
+const WA = () => window.SimpleWebAuthnBrowser;
+const faceIdPosible = () => !!(window.PublicKeyCredential && WA() && WA().browserSupportsWebAuthn());
+const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+
+async function postPortal(ruta, body) {
+  const r = await fetch(ruta, {
+    method: "POST", credentials: "same-origin",
+    headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  let j = {};
+  try { j = await r.json(); } catch {}
+  return { status: r.status, ...j };
+}
+
+async function entrarFaceId() {
+  const m = $("login-msg");
+  m.textContent = "";
+  try {
+    const opciones = await postPortal("/api/portal-verify", { op: "reto", para: "entrar" });
+    if (!opciones.challenge) throw new Error("reto");
+    const respuesta = await WA().startAuthentication({ optionsJSON: opciones });
+    const r = await postPortal("/api/portal-verify", { op: "entrar", respuesta });
+    if (!r.ok) { m.textContent = "Ese Face ID no está dado de alta en el panel. Entra con tu correo y actívalo desde «Hoy»."; return; }
+    lsSet(FID_STORE, "1");
+    load();
+  } catch (e) {
+    m.textContent = e && e.name === "NotAllowedError" ? "Se canceló el Face ID." : "No se pudo con Face ID. Entra con tu correo.";
+  }
+}
+
+let ML_EMAIL = "";
+async function mandarEnlace() {
+  const m = $("login-msg");
+  const email = $("ml-email").value.trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { m.textContent = "Escribe tu correo."; return; }
+  $("ml-enviar").disabled = true;
+  try {
+    const r = await postPortal("/api/portal-login", { email });
+    if (r.status === 429) { m.textContent = `Ya te mandamos uno hace poco. Espera ${r.wait || 45} segundos.`; return; }
+    if (r.ok && r.exists === false) { m.textContent = "Ese correo no tiene acceso al panel."; return; }
+    if (!r.ok) throw new Error(r.error || "server");
+    ML_EMAIL = email;
+    $("ml-paso1").classList.add("hidden");
+    $("ml-paso2").classList.remove("hidden");
+    m.textContent = "";
+    $("ml-codigo").focus();
+  } catch { m.textContent = "No se pudo mandar el correo. Intenta otra vez."; }
+  finally { $("ml-enviar").disabled = false; }
+}
+
+async function canjearCodigo(email, code) {
+  const m = $("login-msg");
+  const r = await postPortal("/api/portal-verify", { email, code });
+  if (r.ok && r.admin) { m.textContent = ""; load(); return true; }
+  m.textContent = r.ok ? "Ese correo no tiene acceso al panel."
+    : r.error === "expired" ? "El enlace o el código ya venció. Pide otro."
+    : r.error === "attempts" ? "Demasiados intentos con ese código. Pide otro."
+    : "El código no es correcto.";
+  return false;
+}
+
+// El botón del correo trae correo y código en el fragmento (#entrar=…): se canjea
+// solo y se borra de la barra para que no quede en el historial.
+async function entrarPorEnlace() {
+  const m = location.hash.match(/^#entrar=([A-Za-z0-9_-]+)\.(\d{6})$/);
+  if (!m) return false;
+  history.replaceState(null, "", location.pathname + location.search);
+  let email = "";
+  try { email = atob(m[1].replace(/-/g, "+").replace(/_/g, "/")); } catch { return false; }
+  showLogin();
+  $("login-msg").textContent = "Entrando…";
+  // Se da por usado aunque falle: así el aviso («ya venció», etc.) no lo borra
+  // el intento de carga que viene después.
+  await canjearCodigo(email, m[2]);
+  return true;
+}
+
+function ofrecerFaceId(conSesion) {
+  let luego = false;
+  try { luego = sessionStorage.getItem(FID_STORE) === "luego"; } catch {}
+  const ofrecer = conSesion && faceIdPosible() && lsGet(FID_STORE) !== "1" && !luego;
+  $("hoy-faceid").classList.toggle("hidden", !ofrecer);
+}
+
+async function activarFaceId() {
+  const ua = navigator.userAgent;
+  const apodo = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? "Android" : /Mac/.test(ua) ? "Mac" : "Este dispositivo";
+  try {
+    const opciones = await postPortal("/api/portal-verify", { op: "reto", para: "alta" });
+    if (!opciones.challenge) throw new Error(opciones.error === "sin_sesion" ? "entra primero con tu correo" : "no hubo reto");
+    const respuesta = await WA().startRegistration({ optionsJSON: opciones });
+    const r = await postPortal("/api/portal-verify", { op: "alta", respuesta, apodo });
+    if (!r.ok) throw new Error(r.error || "no se guardó");
+    lsSet(FID_STORE, "1");
+    $("hoy-faceid").classList.add("hidden");
+    msg(`Face ID activado en este ${apodo} ✅ La próxima vez entra con «Entrar con Face ID».`);
+  } catch (e) {
+    if (e && e.name === "InvalidStateError") { lsSet(FID_STORE, "1"); $("hoy-faceid").classList.add("hidden"); msg("Este dispositivo ya tenía Face ID ✅"); return; }
+    if (e && e.name === "NotAllowedError") { msg("Se canceló.", false); return; }
+    msg("No se pudo activar Face ID: " + (e && e.message ? e.message : e), false);
+  }
+}
+
+// ===================== Te pregunto =====================
+// Preguntas que deja Claude para Rodrigo y Laura, y los servicios domiciliados
+// que esperan su monto. Contestar NO mueve dinero: la respuesta queda escrita.
+async function cargarPreguntas() {
+  let d;
+  try { d = await api("&action=preguntas"); } catch { return; }
+  if (!d || !d.ok) return;
+  pintarPreguntas(d.preguntas || [], d.servicios || []);
+}
+
+function pintarPreguntas(preguntas, servicios) {
+  const box = $("hoy-preguntas");
+  box.innerHTML = "";
+  for (const s of servicios) {
+    const div = document.createElement("div");
+    div.className = "preg";
+    div.innerHTML = `<b>💡 ${escHtml(s.nombre)}: se cobró sola el ${fmtD(s.cobro)}. ¿Cuánto fue el recibo?</b>` +
+      (s.ultimoMonto ? `<p class="muted preg__det">El recibo anterior fue de ${money(s.ultimoMonto)}.</p>` : "") +
+      `<div class="row"><input type="number" min="0" step="0.01" inputmode="decimal" placeholder="Monto" aria-label="Monto del recibo"><button type="button">Registrar</button></div>`;
+    const inp = div.querySelector("input"), btn = div.querySelector("button");
+    btn.addEventListener("click", async () => {
+      const monto = Number(inp.value);
+      if (!(monto > 0)) { msg("Escribe el monto del recibo.", false); return; }
+      btn.disabled = true;
+      try {
+        const r = await api(`&action=servicio-pagar&clave=${encodeURIComponent(s.clave)}&monto=${monto}`);
+        if (!r.ok) throw new Error(r.error || "error");
+        msg((r.texto || "Registrado") + " ✅");
+        cargarPreguntas();
+        loadFinance();
+      } catch (e) { msg("No se pudo registrar: " + e.message, false); btn.disabled = false; }
+    });
+    box.appendChild(div);
+  }
+  for (const p of preguntas) {
+    const div = document.createElement("div");
+    div.className = "preg";
+    div.innerHTML = `<b>${escHtml(p.texto)}</b>` +
+      (p.detalle ? `<p class="muted preg__det">${escHtml(p.detalle)}</p>` : "") +
+      `<textarea placeholder="Tu respuesta" aria-label="Tu respuesta"></textarea>` +
+      `<div class="row"><button type="button">Responder</button></div>`;
+    const ta = div.querySelector("textarea"), btn = div.querySelector("button");
+    btn.addEventListener("click", async () => {
+      const respuesta = ta.value.trim();
+      if (!respuesta) { msg("Escribe tu respuesta.", false); return; }
+      btn.disabled = true;
+      try {
+        const r = await apiPost("&action=pregunta-responder", { id: p.id, respuesta });
+        if (!r.ok) throw new Error(r.error || "error");
+        msg("Respuesta guardada ✅");
+        pintarPreguntas(r.preguntas || [], servicios);
+      } catch (e) { msg("No se pudo guardar: " + e.message, false); btn.disabled = false; }
+    });
+    box.appendChild(div);
+  }
+  $("hoy-preguntas-bloque").classList.toggle("hidden", !(preguntas.length + servicios.length));
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -2818,6 +2993,20 @@ document.addEventListener("DOMContentLoaded", () => {
     load();
   });
   $("key").addEventListener("keydown", (e) => { if (e.key === "Enter") $("enter").click(); });
+  $("fid-entrar").addEventListener("click", entrarFaceId);
+  $("ml-enviar").addEventListener("click", mandarEnlace);
+  $("ml-email").addEventListener("keydown", (e) => { if (e.key === "Enter") mandarEnlace(); });
+  $("ml-verificar").addEventListener("click", () => {
+    const code = $("ml-codigo").value.trim();
+    if (!/^\d{6}$/.test(code)) { $("login-msg").textContent = "El código son 6 dígitos."; return; }
+    canjearCodigo(ML_EMAIL, code);
+  });
+  $("ml-codigo").addEventListener("keydown", (e) => { if (e.key === "Enter") $("ml-verificar").click(); });
+  $("fid-activar").addEventListener("click", activarFaceId);
+  $("fid-luego").addEventListener("click", () => {
+    try { sessionStorage.setItem(FID_STORE, "luego"); } catch {}
+    $("hoy-faceid").classList.add("hidden");
+  });
   $("addblock").addEventListener("click", addBlock);
   $("canceledit").addEventListener("click", resetBlockForm);
   $("c-seed").addEventListener("click", seedCustomer);
@@ -2886,7 +3075,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try { await fetch("/api/portal-logout", { method: "POST", credentials: "same-origin" }); } catch (e) {}
     showLogin();
   });
-  // Intenta cargar siempre: autentica con contraseña guardada o con la
-  // cookie de sesión admin (magic link vía /portal).
-  load();
+  // Si llegó por el botón del correo, primero canjea ese enlace. Si no, intenta
+  // cargar siempre: con la contraseña guardada o con la cookie de sesión admin.
+  entrarPorEnlace().then((usado) => { if (!usado) load(); });
 });

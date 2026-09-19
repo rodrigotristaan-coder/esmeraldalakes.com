@@ -666,6 +666,9 @@ module.exports = {
   // documentos sueltos (servicios.json, avisos.json y lo que venga): mismo
   // almacén, cada cosa en su propio renglón para no cargarle banderas a finanzas
   readJsonObj, writeJsonObj,
+  // escritura con candado de versión para cualquier documento, y la firma del
+  // portal (la usan las llaves de Face ID en _llaves.js)
+  mutarDoc, leerDoc, psign,
   // finanzas
   readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, mutarFinanzas, mutarClientes, contarTicket,
   sanitizeCliente, REGLAMENTO_VERSION,

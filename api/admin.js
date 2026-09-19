@@ -1,6 +1,11 @@
 // Panel de administración (protegido con ADMIN_KEY): fechas, reseñas, clientes y finanzas.
 const crypto = require("crypto");
-const { safeEqual, readBlocks, addBlock, removeBlock, updateBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail, readSession, readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, mutarFinanzas, mutarClientes, contarTicket, sanitizeCliente, notaKey, aplicarNotas, hoyMx } = require("./_lib");
+const { safeEqual, readBlocks, addBlock, removeBlock, updateBlock, getAllBlocks, readReviews, writeReviews, readCustomers, writeCustomers, seedCustomer, normEmail, readSession, readFinance, writeFinance, readFinanceDoc, writeFinanceDoc, mutarFinanzas, mutarClientes, contarTicket, sanitizeCliente, notaKey, aplicarNotas, hoyMx, mutarDoc, leerDoc } = require("./_lib");
+const avisos = require("./_avisos");
+
+// Preguntas pendientes para los dueños: { items: [{ id, fecha, texto, detalle, respuesta?, respondida?, quien? }] }
+const PREGUNTAS = "preguntas.json";
+const normPreguntas = (o) => ({ items: Array.isArray(o && o.items) ? o.items : [] });
 
 // Tope de lecturas de ticket por día. Es la red contra un ciclo que queme el
 // saldo de la API: el prepago ya topa el daño en el saldo, esto lo topa antes.
@@ -481,6 +486,47 @@ module.exports = async (req, res) => {
       );
       if (outRT.error) return res.status(outRT.error === "recurrente" ? 404 : 500).json({ ok: false, error: outRT.error });
       return res.status(200).json({ ok: true, recurring: outRT.doc.recurring });
+    }
+
+    // --- Preguntas para Rodrigo y Laura (las deja Claude, se contestan aquí) ---
+    // Viven en su propio documento (`preguntas.json`), no en finanzas. Contestar
+    // NO toca el dinero: la respuesta se queda escrita y quien la lea la aplica.
+    // En el mismo viaje van los servicios domiciliados que esperan su monto (la
+    // luz se cobra sola, pero el monto hay que anotarlo).
+    if (action === "preguntas") {
+      const { valor } = await leerDoc(PREGUNTAS);
+      const items = normPreguntas(valor).items.filter((p) => !p.respondida);
+      const hoy = hoyMx();
+      const servicios = [];
+      for (const [clave, s] of Object.entries(await avisos.readServicios())) {
+        if (!s.domiciliado) continue;
+        const vence = avisos.venceServicio(s, hoy);
+        if (vence && vence <= hoy && !(s.ultimo && s.ultimo >= vence)) {
+          servicios.push({ clave, nombre: s.nombre, cobro: vence, ultimoMonto: s.ultimoMonto || null });
+        }
+      }
+      return res.status(200).json({ ok: true, preguntas: items, servicios });
+    }
+    if (action === "pregunta-responder") {
+      const body = req.body || {};
+      const id = String(body.id || q.id || "");
+      const respuesta = String(body.respuesta || "").replace(/[\u0000-\u0008\u000b-\u001f]+/g, " ").trim().slice(0, 2000);
+      if (!id || !respuesta) return res.status(422).json({ ok: false, error: "datos" });
+      const quien = sess && sess.admin ? sess.email : "llave del panel";
+      const out = await mutarDoc(PREGUNTAS, normPreguntas, (doc) => {
+        const p = doc.items.find((x) => x.id === id);
+        if (!p) return { error: "pregunta" };
+        p.respuesta = respuesta; p.respondida = new Date().toISOString(); p.quien = quien;
+      }, null, "pregunta-responder");
+      if (out.error) return res.status(out.error === "pregunta" ? 404 : 500).json({ ok: false, error: out.error });
+      return res.status(200).json({ ok: true, preguntas: out.doc.items.filter((p) => !p.respondida) });
+    }
+    if (action === "servicio-pagar") {
+      const monto = Math.round(Number(q.monto) * 100) / 100;
+      if (!(monto > 0) || monto > 1000000 || (q.fecha && !validDate(q.fecha))) return res.status(422).json({ ok: false, error: "datos" });
+      const r = await avisos.registrarServicio(String(q.clave || ""), monto, q.fecha || undefined);
+      if (r.error) return res.status(422).json({ ok: false, error: r.error });
+      return res.status(200).json({ ok: true, texto: r.texto });
     }
 
     if (action === "finance-del") {

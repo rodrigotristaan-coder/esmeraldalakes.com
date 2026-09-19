@@ -50,6 +50,20 @@
     #login h1 { font-family:Georgia,serif; font-size:1.3rem; margin-bottom:1rem; }
     #login input { width:100%; margin-bottom:.7rem; text-align:center; }
     #login button { width:100%; }
+    #login .o { display:flex; align-items:center; gap:.6rem; margin:1rem 0; font-size:.8rem; opacity:.6; }
+    #login .o::before, #login .o::after { content:""; flex:1; border-top:1px solid var(--borde); }
+    #login details { margin-top:1rem; }
+    #login summary { cursor:pointer; font-size:.85rem; margin-bottom:.7rem; }
+    #login-msg { margin-top:.8rem; font-size:.85rem; min-height:1.2em; }
+
+    /* ---------- preguntas pendientes (Hoy) ---------- */
+    .preg { background:var(--glass2); border:1px solid var(--borde); border-radius:20px; padding:1rem 1.1rem; margin-bottom:.8rem; }
+    .preg b { display:block; margin-bottom:.35rem; }
+    .preg .preg__det { white-space:pre-line; font-size:.88rem; margin-bottom:.7rem; }
+    .preg textarea { width:100%; min-height:4.2rem; margin-bottom:.6rem; padding:.6rem .8rem; border-radius:14px; font:inherit;
+      border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.93); color:var(--ink); resize:vertical; }
+    .preg .row { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; }
+    .preg input[type=number] { max-width:10rem; }
 
     /* ---------- armazón: riel de menú + contenido ---------- */
     .shell { display:block; }
@@ -315,8 +329,23 @@
 <!-- ===================== LOGIN ===================== -->
 <div id="login">
   <h1><span style="color:var(--aqua)">◆</span> Esmeralda · Panel</h1>
-  <input id="key" type="password" placeholder="Contraseña del panel" autocomplete="current-password" />
-  <button id="enter" type="button">Entrar</button>
+  <button id="fid-entrar" type="button" class="hidden">Entrar con Face ID</button>
+  <div class="o hidden" id="fid-o">o</div>
+  <div id="ml-paso1">
+    <input id="ml-email" type="email" placeholder="Tu correo" autocomplete="email" inputmode="email" />
+    <button id="ml-enviar" type="button" class="ghost">Mandarme el enlace para entrar</button>
+  </div>
+  <div id="ml-paso2" class="hidden">
+    <p class="muted" style="margin-bottom:.7rem">Te mandamos un correo. Toca el botón <b>Entrar al panel</b> desde este mismo dispositivo, o escribe aquí el código de 6 dígitos:</p>
+    <input id="ml-codigo" type="text" inputmode="numeric" maxlength="6" placeholder="Código" autocomplete="one-time-code" />
+    <button id="ml-verificar" type="button">Entrar</button>
+  </div>
+  <details id="login-llave">
+    <summary class="muted">Entrar con la contraseña del panel</summary>
+    <input id="key" type="password" placeholder="Contraseña del panel" autocomplete="current-password" />
+    <button id="enter" type="button" class="ghost">Entrar</button>
+  </details>
+  <p id="login-msg" class="muted" aria-live="polite"></p>
 </div>
 
 <!-- ===================== PANEL ===================== -->
@@ -367,6 +396,22 @@
         <div class="cinta" id="hoy-cinta" aria-label="Ocupación de los próximos 30 días"></div>
         <div class="cinta__ejes"><span id="hoy-eje-a"></span><span id="hoy-eje-b"></span></div>
         <p id="hoy-dia" aria-live="polite">Media barra = ese día alguien sale (izquierda) o entra (derecha). Pasa el cursor para ver quién y cuánto se movió.</p>
+      </div>
+
+      <div class="bloque hidden" id="hoy-faceid">
+        <div class="preg">
+          <b>Activa Face ID en este dispositivo</b>
+          <p class="muted preg__det">La próxima vez entras al panel con la cara o la huella, sin correo ni contraseña.</p>
+          <div class="row">
+            <button type="button" id="fid-activar">Activar Face ID</button>
+            <button type="button" class="ghost" id="fid-luego">Ahora no</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bloque hidden" id="hoy-preguntas-bloque">
+        <h2>Te pregunto</h2>
+        <div id="hoy-preguntas"></div>
       </div>
 
       <div class="bloque" data-plegable>
@@ -806,6 +851,7 @@
   </div>
 </dialog>
 
-<script src="/admin-app.js?v=20260919-1" defer></script>
+<script src="/assets/simplewebauthn-browser-14.0.0.umd.min.js" defer></script>
+<script src="/admin-app.js?v=20260919-2" defer></script>
 </body>
 </html>

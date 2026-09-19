@@ -1,12 +1,19 @@
 // Portal: paso 2 del magic-link. Recibe {email, code}; si el código es válido,
 // emite la cookie de sesión firmada (HttpOnly) y devuelve los datos del cliente.
+// Con `op` es Face ID del panel (passkeys): la lógica vive en _llaves.js.
 const { normEmail, isEmail, verifyCode, readCustomers, sessionCookie, isAdminEmail } = require("./_lib");
+const llaves = require("./_llaves");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
+  res.setHeader("Cache-Control", "no-store");
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "method" });
 
   const b = req.body || {};
+  if (b.op) {
+    try { return await llaves.handle(req, res, b); }
+    catch (e) { console.error("faceid:", e.message); return res.status(500).json({ ok: false, error: "server" }); }
+  }
   const email = normEmail(b.email);
   const code = String(b.code || "").trim();
   if (!isEmail(email) || !/^\d{6}$/.test(code)) return res.status(422).json({ ok: false, error: "input" });

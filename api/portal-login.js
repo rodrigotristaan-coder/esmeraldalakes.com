@@ -26,13 +26,20 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, exists: true }); // no se pudo emitir, pero la cuenta existe
     }
 
+    // Admins: además del código, el correo trae un botón que entra al panel de un
+    // clic. Correo y código van en el fragmento (#): el navegador no lo manda a
+    // ningún servidor al abrir la liga, así que no queda en registros. Es el
+    // mismo código de un solo uso, 15 min y 5 intentos: la liga no abre más.
+    const link = admin
+      ? `https://esmeraldalakes.com/admin.html#entrar=${Buffer.from(email).toString("base64url")}.${issued.code}`
+      : "";
     const url = process.env.N8N_PORTAL_CODE_WEBHOOK;
     const sends = [];
     if (url) {
       sends.push(fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: issued.code, name: admin ? "Admin" : (customers[email].name || ""), lang, secret: process.env.ESM_N8N_SECRET || "" }),
+        body: JSON.stringify({ email, code: issued.code, link, name: admin ? "Admin" : (customers[email].name || ""), lang, secret: process.env.ESM_N8N_SECRET || "" }),
       }).catch((e) => console.error("n8n portal code:", e.message)));
     } else {
       console.error("N8N_PORTAL_CODE_WEBHOOK no configurado");

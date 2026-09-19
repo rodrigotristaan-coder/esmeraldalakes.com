@@ -53,7 +53,7 @@ const SERVICIOS_SEMILLA = {
   internet:  { nombre: "Internet (izzi)",        cada: "mes", diaLimite: 10 },
   // Domiciliada (Rodrigo, 19-sep): se cobra sola, así que nunca «vence». Lo único
   // que falta cada bimestre es que alguien diga cuánto fue para registrarlo.
-  luz:       { nombre: "Luz (CFE)",              cada: "bimestre", ultimo: "2026-07-07", domiciliado: true },
+  luz:       { nombre: "Luz (CFE)",              cada: "bimestre", ultimo: "2026-07-07", ultimoMonto: 581, domiciliado: true },
   gas:       { nombre: "Gas",                    cada: "cuando toca" },
 };
 
